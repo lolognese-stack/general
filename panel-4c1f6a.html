@@ -2882,6 +2882,7 @@ let arrastrando = false;
 let convDias = [];
 let convCargado = false;
 let convVista = 'semana';    // dia | semana | mes | total
+let convVistaElegida = false; // true cuando la persona tocó el switch: ahí no se cambia sola
 let convAbierto = null;
 let convFiltro = { modo:'todo', valor:'' }; // modo: 'todo' | 'semana' | 'dia' -- excluyentes
 
@@ -9209,9 +9210,10 @@ function cvRenderLineChart(keys, grp){
         html += `<path d="${d} L${pts[pts.length-1][0].toFixed(1)},${base} L${pts[0][0].toFixed(1)},${base} Z" fill="url(#cv-area)"/>`;
         areaHecha = true;
       }
-      html += `<path class="cvx-line" d="${d}" stroke="${s.color}"/>`;
+      const grosor = { conversaciones:5, enviados:3.25, completados:2 }[s.campo] || 2.25;
+      html += `<path class="cvx-line" d="${d}" stroke="${s.color}" style="stroke-width:${grosor};stroke-opacity:${s.campo === 'conversaciones' ? .55 : 1}"/>`;
     }
-    if(keys.length <= 2){
+    if(keys.length <= 6){
       pts.forEach(p => { html += `<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="${s.color}"/>`; });
     }
   });
@@ -9241,6 +9243,15 @@ function renderConversacion(){
     `<option value="${o.value}" ${convFiltro.modo==='semana' && o.value===convFiltro.valor?'selected':''}>${esc(o.label)}</option>`).join('');
   el('cv-flt-dia').value = convFiltro.modo === 'dia' ? convFiltro.valor : '';
 
+  // Con pocos datos, Semanal da 1 o 2 puntos y el gráfico parece roto: hasta
+  // que la persona elija una vista, se abre en Diario.
+  if(!convVistaElegida && convVista === 'semana'){
+    const semanas = new Set(convDias.filter(cvInRange).map(d => isoWeek(new Date(d.fecha + 'T12:00:00'))));
+    if(semanas.size < 3){
+      convVista = 'dia';
+      el('cv-vswitch').querySelectorAll('button').forEach(x => x.setAttribute('aria-current', String(x.dataset.v === 'dia')));
+    }
+  }
   const dias = convDias.filter(cvInRange);
   const conv = dias.reduce((s,x) => s + (+x.conversaciones||0), 0);
   const env  = dias.reduce((s,x) => s + (+x.enviados||0), 0);
@@ -10615,7 +10626,7 @@ el('search').addEventListener('blur', () => setTimeout(gsCerrar, 120));
 
 el('cv-vswitch').querySelectorAll('button').forEach(b => {
   b.addEventListener('click', () => {
-    convVista = b.dataset.v; convAbierto = null;
+    convVista = b.dataset.v; convAbierto = null; convVistaElegida = true;
     el('cv-vswitch').querySelectorAll('button').forEach(x => x.setAttribute('aria-current', String(x === b)));
     renderConversacion();
   });
