@@ -3,7 +3,12 @@
 //
 // Dos tipos de envío (campo `tipo`):
 //
-//   registro  { tipo, setter: 'Setter 1', eventos: [{ evento, fecha, momento, id_suscriptor, nombre }] }
+//   registro  { tipo, setter?: 'Setter 1', eventos: [{ evento, fecha, momento, id_suscriptor, nombre, pieza?, setter? }] }
+//     Sheet nuevo "Luna Llena | Setting" (apps-script-sheet/Setting.gs): una
+//     sola hoja Registro, el setter va por fila y RECORRIDO trae la Pieza.
+//     Conversaciones = personas con DIAS en el día; formularios enviados =
+//     FORMULARIO; completados = CONSULTA (se recalculan solos en metricas_dia).
+//
 //     Filas de "Registro Setter N" (las escribe ManyChat). Se guardan en
 //     sheet_eventos (sin duplicar), se recalcula `conversaciones` de
 //     metricas_dia con los INBOUND del día y se une la persona con su lead por
@@ -34,8 +39,7 @@ export async function onRequestPost({ request, env }) {
 }
 
 async function registro(env, body) {
-  const setter = texto(body.setter, 40);
-  if (!setter) return json({ error: 'falta setter' }, 400);
+  const setterLote = texto(body.setter, 40);
   if (!Array.isArray(body.eventos) || !body.eventos.length) return json({ error: 'eventos vacío' }, 400);
   if (body.eventos.length > MAX_FILAS) return json({ error: `máximo ${MAX_FILAS} eventos por pedido` }, 400);
 
@@ -52,7 +56,12 @@ async function registro(env, body) {
     const nombreRaw = texto(e.nombre, 120);
     const ig = usuarioIg(nombreRaw);
     if (!id && !ig && !nombreRaw) return descartados.push({ i, motivo: 'sin ID Suscriptor ni Nombre' });
-    validos.push({ ev, fecha, momento, id, ig, nombreRaw, clave: [setter, momento, ev, id || ig || nombreRaw].join('|') });
+    const pieza = texto(e.pieza, 120) || null;
+    const setter = texto(e.setter, 40) || setterLote || 'ManyChat';
+    // La pieza entra en la clave: dos RECORRIDO en el mismo segundo con piezas
+    // distintas son dos filas, no un duplicado.
+    validos.push({ ev, fecha, momento, id, ig, nombreRaw, pieza, setter,
+      clave: [setter, momento, ev, id || ig || nombreRaw, pieza || ''].join('|') });
   });
   if (!validos.length) {
     return json({ ok: true, recibidos: body.eventos.length, nuevos: 0, duplicados: 0, descartados,
@@ -63,9 +72,9 @@ async function registro(env, body) {
 
   // 1) Guardar los eventos. `changes` dice cuáles eran nuevos.
   const ins = await db.batch(validos.map((v) => db.prepare(
-    `INSERT OR IGNORE INTO sheet_eventos (clave, setter, evento, fecha, momento, manychat_id, ig_username, nombre_raw, creado_en)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).bind(v.clave, setter, v.ev, v.fecha, v.momento, v.id, v.ig, v.nombreRaw, ahora)));
+    `INSERT OR IGNORE INTO sheet_eventos (clave, setter, evento, fecha, momento, manychat_id, ig_username, nombre_raw, pieza, creado_en)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(v.clave, v.setter, v.ev, v.fecha, v.momento, v.id, v.ig, v.nombreRaw, v.pieza, ahora)));
   const nuevos = ins.filter((r) => r.meta?.changes > 0).length;
 
   // 2) Personas distintas del pedido, para buscarlas en leads de una sola vez.
@@ -73,11 +82,12 @@ async function registro(env, body) {
   for (const v of validos) {
     const k = v.id ? 'm:' + v.id : v.ig ? 'u:' + v.ig : null;
     if (!k) continue;
-    const p = personas.get(k) || { id: v.id, ig: v.ig, eventos: new Set(), fechaCall: null };
+    const p = personas.get(k) || { id: v.id, ig: v.ig, eventos: new Set(), fechaCall: null, setter: v.setter };
     p.id = p.id || v.id;
     p.ig = p.ig || v.ig;
     p.eventos.add(v.ev);
-    if (v.ev === 'CALL' && (!p.fechaCall || v.fecha < p.fechaCall)) p.fechaCall = v.fecha;
+    // CONSULTA (antes CALL) es la fecha que va a fecha_agenda del lead.
+    if (v.ev === 'CONSULTA' && (!p.fechaCall || v.fecha < p.fechaCall)) p.fechaCall = v.fecha;
     personas.set(k, p);
   }
 
@@ -116,13 +126,13 @@ async function registro(env, body) {
            fecha_agenda = coalesce(nullif(fecha_agenda, ''), ?),
            actualizado_en = ?
          WHERE id = ?`
-      ).bind(p.id, p.ig, setter, p.fechaCall, ahora, leadId));
-    } else if (p.eventos.has('CALENDARIO') || p.eventos.has('CALL')) {
+      ).bind(p.id, p.ig, p.setter, p.fechaCall, ahora, leadId));
+    } else if (p.eventos.has('FORMULARIO') || p.eventos.has('CONSULTA')) {
       creados++;
       stmts.push(db.prepare(
         `INSERT INTO leads (nombre, manychat_id, ig_username, setter, fuente, etapa, fecha_agenda, fecha_alta, creado_en, actualizado_en)
          VALUES (?, ?, ?, ?, 'Instagram', 'lead_nuevo', ?, ?, ?, ?)`
-      ).bind(p.ig || 'Suscriptor ' + p.id, p.id, p.ig, setter, p.fechaCall, ahora, ahora, ahora));
+      ).bind(p.ig || 'Suscriptor ' + p.id, p.id, p.ig, p.setter, p.fechaCall, ahora, ahora, ahora));
       stmts.push(db.prepare(
         `INSERT INTO eventos (lead_id, etapa_desde, etapa_hasta, quien, creado_en)
          VALUES ((SELECT last_insert_rowid()), NULL, 'lead_nuevo', 'sheet', ?)`
@@ -130,17 +140,23 @@ async function registro(env, body) {
     }
   }
 
-  // Conversaciones del día = INBOUND de todas las hojas. Solo se toca esa
-  // columna: formularios enviados/completados siguen siendo de la carga manual.
-  const dias = [...new Set(validos.filter((v) => v.ev === 'INBOUND').map((v) => v.fecha))];
+  // Pestaña Conversación, sola: por día, personas distintas con DIAS (o
+  // INBOUND, del Sheet viejo) = conversaciones; con FORMULARIO = enviados;
+  // con CONSULTA = completados. Los días con eventos pisan la carga manual.
+  const CUENTA = ['DIAS', 'INBOUND', 'FORMULARIO', 'CONSULTA'];
+  const dias = [...new Set(validos.filter((v) => CUENTA.includes(v.ev)).map((v) => v.fecha))];
+  const per = (evs) => `(SELECT COUNT(DISTINCT coalesce(manychat_id, ig_username, nombre_raw)) FROM sheet_eventos
+                          WHERE fecha = ?1 AND evento IN (${evs}))`;
   for (const d of dias) {
     stmts.push(db.prepare(
       `INSERT INTO metricas_dia (fecha, conversaciones, formularios_enviados, formularios_completados, actualizado_en)
-       VALUES (?, (SELECT COUNT(*) FROM sheet_eventos WHERE fecha = ? AND evento = 'INBOUND'), 0, 0, ?)
+       VALUES (?1, ${per("'DIAS','INBOUND'")}, ${per("'FORMULARIO'")}, ${per("'CONSULTA'")}, ?2)
        ON CONFLICT(fecha) DO UPDATE SET
          conversaciones = excluded.conversaciones,
+         formularios_enviados = excluded.formularios_enviados,
+         formularios_completados = excluded.formularios_completados,
          actualizado_en = excluded.actualizado_en`
-    ).bind(d, d, ahora));
+    ).bind(d, ahora));
   }
 
   if (stmts.length) await db.batch(stmts);

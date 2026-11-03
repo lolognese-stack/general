@@ -4,7 +4,16 @@ const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/;
 // Usuario de Instagram: letras, números, punto y guion bajo, hasta 30.
 const RE_IG = /^[a-z0-9._]{1,30}$/;
 
-export const EVENTOS = ['INBOUND', 'FUP', 'CALENDARIO', 'CALL'];
+// Etapas de prospección de Luna Llena, en orden (cada automatización de
+// ManyChat escribe la suya en el Sheet): DIAS ("¿cuántos días?", abre la
+// conversación) -> RECORRIDO (cada pieza que consume; trae la columna Pieza)
+// -> PITCH (pitch del formulario) -> FORMULARIO (formulario enviado) ->
+// CONSULTA (formulario completado / confirmación).
+// INBOUND y FUP quedan del modelo anterior.
+export const ETAPAS = ['DIAS', 'RECORRIDO', 'PITCH', 'FORMULARIO', 'CONSULTA'];
+export const EVENTOS = [...ETAPAS, 'INBOUND', 'FUP'];
+// Nombres viejos del Sheet anterior (modelo con llamadas).
+const RENOMBRES = { CALENDARIO: 'FORMULARIO', CALL: 'CONSULTA', FUPS: 'FUP', 'DÍAS': 'DIAS' };
 
 export function texto(v, max = 200) {
   if (v === undefined || v === null) return '';
@@ -24,7 +33,8 @@ export function usuarioIg(v) {
 }
 
 export function evento(v) {
-  const s = texto(v, 30).toUpperCase().replace(/^FUPS$/, 'FUP');
+  let s = texto(v, 30).toUpperCase();
+  s = RENOMBRES[s] || s;
   return EVENTOS.includes(s) ? s : null;
 }
 

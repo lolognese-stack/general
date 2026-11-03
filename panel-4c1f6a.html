@@ -1308,6 +1308,11 @@ tr:hover .pz-link-edit,.pz-link-edit:focus-visible{opacity:1}
 .cvx-tip-row i{width:8px;height:8px;border-radius:3px;flex:none}
 .cvx-tip-row b{margin-left:auto;padding-left:var(--s3);color:var(--ink);font-variant-numeric:tabular-nums}
 .cv-toolbar-top{align-items:center;margin-bottom:var(--s4)}
+.cv-emb-ev{font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--ink-3);margin-left:4px}
+.cv-emb-pie{display:flex;flex-wrap:wrap;gap:6px var(--s4);margin-top:var(--s2);padding-top:var(--s3);border-top:1px solid var(--line);font-size:12px;color:var(--ink-3)}
+.cv-emb-pie b{color:var(--ink);font-variant-numeric:tabular-nums}
+.cv-emb-warn{color:var(--masomenos)}
+.cv-emb-etq{font-size:11px;color:var(--ink-3);margin-top:2px}
 .cv-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:var(--s3);margin-bottom:var(--s5)}
 .cv-kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:var(--s4);box-shadow:var(--shadow);display:flex;align-items:center;gap:var(--s3)}
 .cv-kpi .ring{position:relative;width:52px;height:52px;flex:none}
@@ -2074,6 +2079,9 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
       <div class="pf2-rangoinfo" id="cv-rangoinfo"></div>
       <div class="pf2-grid" id="cv-cards"></div>
 
+      <div class="ag-sec-h"><h2>Embudo de prospección</h2><span class="hint" id="cv-emb-hint">personas que entraron en el período y hasta qué etapa llegaron · sale del Sheet de setting</span></div>
+      <div id="cv-embudo"><div class="wb-panel"><div class="pf2-empty">Cargando…</div></div></div>
+
       <div class="ag-sec-h"><h2>Evolución comparada</h2><span class="hint">cada línea usa su propia escala: se compara la forma, no la altura · clic en la leyenda para ocultar una serie</span></div>
       <div class="cvx">
         <div class="cvx-legend" id="cv-legend" role="group" aria-label="Series del gráfico">
@@ -2092,6 +2100,9 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 
       <div class="ag-sec-h" style="margin-top:var(--s5)"><h2>Tasas</h2><span class="hint">la curva es la tasa de cada período · el número grande es el total del rango</span></div>
       <div class="pf2-grid" id="cv-tasas"></div>
+
+      <div class="ag-sec-h" style="margin-top:var(--s5)"><h2>Contenido del recorrido</h2><span class="hint">por pieza: apertura (la primera), nutrición (las del medio) y gatillo (la última antes del formulario)</span></div>
+      <div id="cv-recorrido"></div>
 
       <div class="ag-sec-h" style="margin-top:var(--s5)"><h2 id="cv-chart-title">Por semana</h2><span class="hint" id="cv-exp-hint"></span></div>
       <div class="cv-tblwrap"><table>
@@ -9238,6 +9249,78 @@ function cvRenderLineChart(keys, grp){
   xrow.innerHTML = keys.map((k,i) => `<span style="width:${colW}px">${i % paso === 0 ? cvPeriodLabelCorto(k) : ''}</span>`).join('');
 }
 
+/* ---- Embudo de prospección y recorrido (GET /api/embudo) ---- */
+// Sale del Sheet "Luna Llena | Setting": DIAS -> RECORRIDO -> PITCH ->
+// FORMULARIO -> CONSULTA. Cohorte = quienes entraron en el rango.
+const CV_ETAPAS = {
+  DIAS:       'Abrieron conversación',
+  RECORRIDO:  'Consumieron una pieza',
+  PITCH:      'Recibieron el pitch',
+  FORMULARIO: 'Formulario enviado',
+  CONSULTA:   'Consulta (formulario completado)',
+};
+let cvEmb = { clave:null, datos:null, cargando:false, error:null };
+
+function cvPedirEmbudo(dias){
+  const fechas = dias.map(d => d.fecha).sort();
+  const q = convFiltro.modo === 'todo' || !fechas.length ? '' : `desde=${fechas[0]}&hasta=${fechas[fechas.length-1]}`;
+  if(cvEmb.clave === q && (cvEmb.datos || cvEmb.cargando)) return cvRenderEmbudo();
+  cvEmb = { clave:q, datos:null, cargando:true, error:null };
+  cvRenderEmbudo();
+  api('/api/embudo' + (q ? '?' + q : '')).then(d => {
+    if(cvEmb.clave !== q) return;
+    cvEmb.datos = d; cvEmb.cargando = false; cvRenderEmbudo();
+  }).catch(e => {
+    if(cvEmb.clave !== q) return;
+    cvEmb.cargando = false; cvEmb.error = e.message; cvRenderEmbudo();
+  });
+}
+
+function cvRenderEmbudo(){
+  const caja = el('cv-embudo'), tabla = el('cv-recorrido');
+  if(!caja) return;
+  const d = cvEmb.datos;
+  if(cvEmb.cargando){ caja.innerHTML = `<div class="wb-panel"><div class="pf2-empty">Cargando…</div></div>`; tabla.innerHTML = ''; return; }
+  if(cvEmb.error || !d){ caja.innerHTML = `<div class="wb-panel"><div class="pf2-empty">No se pudo cargar el embudo${cvEmb.error ? ': ' + esc(cvEmb.error) : ''}.</div></div>`; tabla.innerHTML = ''; return; }
+  if(!d.personas){
+    caja.innerHTML = `<div class="wb-panel"><div class="pf2-empty">Todavía no llegaron eventos del Sheet de setting${d.desde ? ' en este rango' : ''}.<br>
+      Cuando ManyChat empiece a escribir DIAS, RECORRIDO, PITCH, FORMULARIO y CONSULTA en la hoja Registro, el embudo se arma solo.</div></div>`;
+    tabla.innerHTML = '';
+    return;
+  }
+  const base = d.etapas[0].personas || d.personas;
+  const maxE = Math.max(d.personas, 1);
+  const dec1 = v => v == null ? '—' : v.toLocaleString('es-AR', { maximumFractionDigits:1 });
+  const pasos = d.etapas.map((e, i) => {
+    const ant = i ? d.etapas[i-1].personas : null;
+    const w = e.personas / maxE * 100;
+    return `<div class="wb-paso${e.etapa === 'FORMULARIO' || e.etapa === 'CONSULTA' ? ' crm' : ''}">
+      <span class="lbl">${CV_ETAPAS[e.etapa] || e.etapa} <small class="cv-emb-ev">${e.etapa}</small></span>
+      <div class="bar"><i style="width:${e.personas ? Math.max(w, 1.2).toFixed(1) : 0}%"></i></div>
+      <b>${num(e.personas)}</b>
+      <span class="pct">${i ? `${pct(ant ? e.personas/ant : NaN)} del paso anterior · ${pct(base ? e.personas/base : NaN)} del total` : 'base del embudo'}</span>
+    </div>`;
+  }).join('');
+  caja.innerHTML = `<div class="wb-panel wb-embudo2">${pasos}
+    <div class="cv-emb-pie">
+      <span>${num(d.personas)} personas entraron${d.desde ? ` entre ${fechaCorta(d.desde)} y ${fechaCorta(d.hasta)}` : ''}</span>
+      <span>de la entrada al formulario: <b>${dec1(d.dias_mediana.formulario)} días</b> (mediana)</span>
+      <span>a la consulta: <b>${dec1(d.dias_mediana.consulta)} días</b></span>
+      <span>con venta: <b>${num(d.con_venta)}</b> · de ≥ USD ${num(d.ticket_x_usd)}: <b>${num(d.con_venta_x)}</b></span>
+      ${d.sin_pieza ? `<span class="cv-emb-warn">${num(d.sin_pieza)} sin ninguna pieza registrada: falta la columna Pieza en sus filas</span>` : ''}
+    </div></div>`;
+
+  const ps = d.piezas || [];
+  tabla.innerHTML = ps.length ? `<div class="cv-tblwrap"><table>
+    <thead><tr><th>Pieza</th><th>Apertura</th><th>Nutrición</th><th>Gatillo</th><th>Llegaron a formulario</th><th>Consultas</th><th>Ventas</th><th>Ventas ≥ USD ${num(d.ticket_x_usd)}</th></tr></thead>
+    <tbody>${ps.map(p => `<tr>
+      <td style="white-space:normal">${p.tema ? `<b style="color:var(--ink)">${esc(p.tema)}</b><div class="cv-emb-etq">${esc(p.etiqueta)}${p.formato ? ' · ' + esc(p.formato) : ''}</div>` : `${esc(p.etiqueta)}<div class="cv-emb-etq cv-emb-warn">no está en el Planificador</div>`}</td>
+      <td>${num(p.aperturas)}</td><td>${num(p.nutricion)}</td><td>${num(p.gatillos)}</td>
+      <td>${num(p.formularios)}</td><td>${num(p.consultas)}</td><td>${num(p.ventas)}</td><td class="pct">${num(p.ventas_x)}</td></tr>`).join('')}
+    </tbody></table></div>`
+    : `<div class="wb-panel"><div class="pf2-empty">Ninguna pieza registrada todavía. Las automatizaciones de RECORRIDO tienen que escribir la etiqueta de la pieza en la columna Pieza.</div></div>`;
+}
+
 function renderConversacion(){
   el('cv-flt-semana').innerHTML = `<option value="">Todas las semanas</option>` + pzVentanaSemanas(convFiltro.modo==='semana' ? convFiltro.valor : '', convDias).map(o =>
     `<option value="${o.value}" ${convFiltro.modo==='semana' && o.value===convFiltro.valor?'selected':''}>${esc(o.label)}</option>`).join('');
@@ -9332,6 +9415,8 @@ function renderConversacion(){
 
   cvRenderLineChart(keys, grp);
   el('cv-legend').querySelectorAll('button[data-s]').forEach(b => b.setAttribute('aria-pressed', String(!cvOcultas.has(b.dataset.s))));
+
+  cvPedirEmbudo(dias);
 
   const expandible = convVista === 'semana' || convVista === 'mes';
   el('cv-exp-hint').textContent = expandible ? 'Clic en una fila para ver el día a día' : '';
