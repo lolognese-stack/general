@@ -1648,7 +1648,7 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 #view-web > .cv-card > :not(h3):not(.csub){flex-basis:100%;min-width:0}
 #view-web > .cv-card > .ag-empty,#view-web > .cv-card > .wb-mc{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:var(--s4)}
 #view-web > .cv-card > .ag-empty{text-align:center;color:var(--ink-3);font-size:13px}
-#view-web .wb-grid .cv-card h3{font-size:13.5px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--ink)}
+#view-formulario .wb-grid .cv-card h3,#view-web .wb-grid .cv-card h3{font-size:13.5px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--ink)}
 .wb-grid.wb-grid-tablas{grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr))}
 /* Dentro de una tarjeta de la grilla, la tabla no es otra tarjeta: va al ras. */
 .wb-grid .cv-card .cv-tblwrap{border:none;border-top:1px solid var(--line);border-radius:0;box-shadow:none;
@@ -1668,6 +1668,16 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 .wb-paso .pct{font-size:11.5px;color:var(--ink-3);font-variant-numeric:tabular-nums}
 .wb-paso.crm:first-of-type,.wb-paso:not(.crm) + .wb-paso.crm{margin-top:6px;padding-top:12px;border-top:1px dashed var(--line)}
 .wb-curva svg{display:block;width:100%;height:190px}
+.fm-mini .pf2-card{padding-bottom:var(--s4)}
+.fm-mini .pf2-val{font-size:22px}
+.fm-envios{overflow-x:auto}
+.fm-envios tbody tr[data-lead]{cursor:pointer}
+.fm-envios td{vertical-align:top}
+.fm-horas{display:flex;align-items:flex-end;gap:3px;height:130px;padding-bottom:18px}
+.fm-horas .col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;position:relative;min-width:0}
+.fm-horas .col i{display:block;background:var(--cv-c2);opacity:.35;border-radius:3px 3px 0 0}
+.fm-horas .col i.env{background:var(--si);opacity:1;border-radius:0}
+.fm-horas .col span{position:absolute;top:100%;left:0;right:0;text-align:center;font-size:10px;color:var(--ink-3);margin-top:3px}
 .wb-curva-x{position:relative;height:18px;margin-top:6px}
 .wb-curva-x span{position:absolute;transform:translateX(-50%);font-size:11px;color:var(--ink-3);white-space:nowrap}
 .wb-curva-x span:first-child{transform:none}
@@ -1986,6 +1996,10 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
         <span>Web</span>
       </button>
+      <button data-seccion="formulario">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>
+        <span>Formulario</span>
+      </button>
       <button data-seccion="agendas">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>
         <span>Agendas &amp; Setteo</span>
@@ -2054,6 +2068,7 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
     <section class="view" id="view-ventas" hidden></section>
 
     <section class="view" id="view-web" hidden></section>
+    <section class="view" id="view-formulario" hidden></section>
 
     <section class="view" id="view-inbox" hidden></section>
 
@@ -3137,6 +3152,7 @@ function render(){
   else if(seccion === 'historias') renderHistorias();
   else if(seccion === 'performance') renderPerformance();
   else if(seccion === 'web') renderWeb();
+  else if(seccion === 'formulario') renderFormulario();
   else if(seccion === 'inbox' && ibActivo) renderInbox();
   else if(seccion === 'setter' && ibActivo) renderSetter();
 }
@@ -3199,14 +3215,15 @@ function irA(nuevaSeccion){
   el('view-objetivos').hidden     = seccion !== 'objetivos';
   el('view-ventas').hidden        = seccion !== 'ventas';
   el('view-web').hidden           = seccion !== 'web';
+  el('view-formulario').hidden    = seccion !== 'formulario';
   el('view-inbox').hidden         = seccion !== 'inbox';
   el('view-setter').hidden        = seccion !== 'setter';
   if(seccion !== 'objetivos') document.body.classList.remove('ob-weekly');
   el('kpis').hidden               = seccion !== 'leads' && seccion !== 'ventas';
   el('subtabs').hidden            = seccion !== 'leads';
   el('vt-subtabs').hidden         = seccion !== 'ventas';
-  el('search-wrap').hidden        = seccion === 'conversacion' || seccion === 'performance' || seccion === 'objetivos' || seccion === 'web' || seccion === 'inbox' || seccion === 'setter';
-  el('new-btn').hidden            = seccion === 'conversacion' || seccion === 'performance' || seccion === 'planificador' || seccion === 'historias' || seccion === 'objetivos' || seccion === 'web' || seccion === 'inbox' || seccion === 'setter';
+  el('search-wrap').hidden        = seccion === 'conversacion' || seccion === 'performance' || seccion === 'objetivos' || seccion === 'web' || seccion === 'formulario' || seccion === 'inbox' || seccion === 'setter';
+  el('new-btn').hidden            = seccion === 'conversacion' || seccion === 'performance' || seccion === 'planificador' || seccion === 'historias' || seccion === 'objetivos' || seccion === 'web' || seccion === 'formulario' || seccion === 'inbox' || seccion === 'setter';
 
   el('new-btn-txt').textContent   = seccion === 'ventas' ? 'Nueva venta' : 'Nuevo lead';
 
@@ -3220,6 +3237,7 @@ function irA(nuevaSeccion){
   if(seccion === 'objetivos')    el('view-title').textContent = 'Objetivos';
   if(seccion === 'objetivos') cargarObjetivos();
   if(seccion === 'web'){ el('view-title').textContent = 'Web'; if(!wbCargado) cargarWeb(); }
+  if(seccion === 'formulario'){ el('view-title').textContent = 'Formulario'; if(!fmCargado) cargarFormulario(); }
   if(seccion === 'setter'){
     el('view-title').textContent = 'Setter IA';
     if(ibActivo){ if(!stDatos) cargarSetter(); else renderSetter(); }
@@ -3311,7 +3329,7 @@ function parseHash(){
     }
     return;
   }
-  const m = location.hash.match(/^#\/(leads|agendas|conversacion|planificador|historias|performance|objetivos|web|inbox|setter)(?:\/(pipeline|calificacion|tabla|cuenta|contenido|ranking|acumulado|detalle|calendario|leads|resumen|config|semana|weekly|agentes|analiticas|recursos|conocimiento|aprobar|simulador|salud|ajustes))?/);
+  const m = location.hash.match(/^#\/(leads|agendas|conversacion|planificador|historias|performance|objetivos|web|formulario|inbox|setter)(?:\/(pipeline|calificacion|tabla|cuenta|contenido|ranking|acumulado|detalle|calendario|leads|resumen|config|semana|weekly|agentes|analiticas|recursos|conocimiento|aprobar|simulador|salud|ajustes))?/);
   if(!m) return;
   if(m[1] === 'leads' && m[2]){
     vista = m[2];
@@ -10969,7 +10987,8 @@ function wbTablaSegmento(titulo, sub, filas){
 // Curva diaria de visitas y consultas, con el mismo trazo suave que las
 // tarjetas de Performance. Cada día tiene una franja con <title>: el tooltip
 // nativo da el número exacto sin JavaScript extra.
-function wbCurvaDiaria(dias){
+function wbCurvaDiaria(dias, rotulos){
+  const R = rotulos || { a:'visitas', b:'consultaron' };
   const W = 1000, H = 190, PT = 12, PB = 4;
   const mx = Math.max(...dias.map(x => +x.sesiones || 0), 1);
   const paso = dias.length > 1 ? W / (dias.length - 1) : 0;
@@ -10983,7 +11002,7 @@ function wbCurvaDiaria(dias){
   let grid = '';
   for(let g = 1; g <= 3; g++){ const yy = (PT + (H - PT - PB) * g / 4).toFixed(1); grid += `<line x1="0" x2="${W}" y1="${yy}" y2="${yy}" stroke="var(--line)" stroke-width="1" vector-effect="non-scaling-stroke"/>`; }
   const franja = dias.length > 1 ? paso : W;
-  const hits = dias.map((x, i) => `<rect x="${Math.max(0, xi(i) - franja/2)}" y="0" width="${franja}" height="${H}" fill="transparent"><title>${x.fecha.slice(8,10)}/${x.fecha.slice(5,7)}: ${num(x.sesiones)} visitas · ${num(x.consultaron)} consultaron (${pct(wbRatio(x.consultaron, x.sesiones))})</title></rect>`).join('');
+  const hits = dias.map((x, i) => `<rect x="${Math.max(0, xi(i) - franja/2)}" y="0" width="${franja}" height="${H}" fill="transparent"><title>${x.fecha.slice(8,10)}/${x.fecha.slice(5,7)}: ${num(x.sesiones)} ${R.a} · ${num(x.consultaron)} ${R.b} (${pct(wbRatio(x.consultaron, x.sesiones))})</title></rect>`).join('');
   const cada = Math.max(1, Math.ceil(dias.length / 8));
   const etiquetas = dias.map((x, i) => (i % cada === 0 && dias.length - 1 - i >= cada * 0.6) || i === dias.length - 1
     ? `<span style="left:${(dias.length > 1 ? i / (dias.length - 1) : .5) * 100}%">${x.fecha.slice(8,10)}/${x.fecha.slice(5,7)}</span>` : '').join('');
@@ -11205,6 +11224,205 @@ function renderWeb(){
   }));
 }
 el('reload-btn').addEventListener('click', () => { if(seccion === 'web') cargarWeb(); });
+el('reload-btn').addEventListener('click', () => { if(seccion === 'formulario') cargarFormulario(); });
+
+/* ---------------- Formulario: el de viaje (luna-llena-viaje) ---------------- */
+// GET /api/formulario. Misma estructura que Performance y Web: controles,
+// línea de rango, tarjetas con curva, y abajo cada bloque con su título.
+let fmCargado = false, fmCargando = false, fmData = null;
+let fmPeriodo = '30', fmForm = '';
+const FM_PASOS = {
+  pasajes:'¿Ya tiene pasajes?', destinos:'Destinos', dias:'Días', fechaAprox:'Fecha aproximada',
+  fechaExacta:'Fechas exactas', personas:'Personas', paquete:'Paquete', nombre:'Nombre', email:'Email',
+  whatsapp:'WhatsApp', notas:'Notas', presupuesto:'Presupuesto', aereos:'Aéreos',
+};
+const FM_DIAS_SEM = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+
+function fmRango(){
+  if(fmPeriodo === 'todo') return {};
+  const ymd = d => d.toISOString().slice(0,10);
+  const hasta = new Date();
+  return { desde: ymd(new Date(hasta.getTime() - (Number(fmPeriodo) - 1) * 86400000)), hasta: ymd(hasta) };
+}
+
+async function cargarFormulario(){
+  if(fmCargando) return;
+  fmCargando = true;
+  const host = el('view-formulario');
+  if(!fmData) host.innerHTML = `<div class="ag-empty">Cargando…</div>`;
+  try{
+    const p = new URLSearchParams(fmRango());
+    if(fmForm) p.set('formulario', fmForm);
+    fmData = await api('/api/formulario?' + p.toString());
+    fmCargado = true;
+    if(seccion === 'formulario') renderFormulario();
+  }catch(e){
+    if(e.message !== 'unauthorized') host.innerHTML = `<div class="ag-empty">No se pudo cargar — reintenta con "Actualizar ahora".</div>`;
+  }finally{ fmCargando = false; }
+}
+
+function fmPasoLbl(p){ return FM_PASOS[p] || p; }
+
+function fmCsv(){
+  const filas = (fmData && fmData.envios) || [];
+  if(!filas.length){ toast('No hay envíos en este período.'); return; }
+  const cols = ['creado_en','nombre','email','whatsapp','pais','residencia','personas','edades_menores','destinos','fecha_viaje','llegada','salida','dias','pasajes','presupuesto_pp','categoria_hotel','ocupacion','regimen','servicio','ocasion','vuelos_internos','notas','rama','tipo_cotizacion','score','score_detalle','etapa','calificado','utm_source','utm_campaign','manychat_id','ig_username','formulario','dispositivo','pais_sesion','origen','referer','t_total_ms','errores','atras','whatsapp_en','instagram_en','meta'];
+  const cel = v => { const s = v == null ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v); return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const csv = '﻿' + cols.join(',') + '\n' + filas.map(f => cols.map(c => cel(f[c])).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type:'text/csv;charset=utf-8' }));
+  a.download = `formulario-${(fmRango().desde || 'todo')}-${(fmRango().hasta || 'hoy')}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+function renderFormulario(){
+  const host = el('view-formulario');
+  if(!fmData){ if(!host.innerHTML) host.innerHTML = `<div class="ag-empty">Cargando…</div>`; return; }
+  const d = fmData, r = d.resumen || {};
+  const dias = d.por_dia || [];
+  const envios = d.envios || [];
+
+  const ultimo = envios[0] ? new Date(envios[0].creado_en) : null;
+  const horas = ultimo ? (Date.now() - ultimo.getTime()) / 3600000 : null;
+  const fresh = ultimo ? `<span class="pf2-fresh${horas > 72 ? ' viejo' : ''}"><i></i>último envío ${horas < 1 ? 'hace minutos' : horas < 24 ? `hace ${Math.round(horas)} h` : `hace ${Math.round(horas/24)} d`}</span>` : '';
+  const rango = fmRango();
+
+  const tools = `<div class="ag-sec-h cv-toolbar-top">
+    <div class="cv-vswitch" id="fm-periodo" role="group" aria-label="Período">
+      ${[['7','7 días'],['30','30 días'],['90','90 días'],['todo','Todo']].map(([v,t]) => `<button data-v="${v}" aria-current="${String(fmPeriodo === v)}">${t}</button>`).join('')}
+    </div>
+    <div class="cv-vswitch" id="fm-form" role="group" aria-label="Formulario">
+      ${[['','Los dos'],['personalizado','Personalizado'],['paquete','Paquete']].map(([v,t]) => `<button data-v="${v}" aria-current="${String(fmForm === v)}">${t}</button>`).join('')}
+    </div>
+    <button type="button" class="btn btn-ghost btn-sm" id="fm-csv">Descargar envíos (CSV)</button>
+    ${fresh}
+  </div>
+  <div class="pf2-rangoinfo">${rango.desde ? `${fechaCorta(rango.desde)} – ${fechaCorta(rango.hasta)}` : 'toda la historia'} · formulario de viaje (luna-llena-viaje.pages.dev) · sin sesiones de prueba · las curvas van por día</div>`;
+
+  if(!r.sesiones){
+    host.innerHTML = tools + `<div class="wb-panel"><div class="pf2-empty">Nadie abrió el formulario en este período.</div></div>`;
+    fmWire(host); return;
+  }
+
+  const serie = c => dias.map(x => +x[c] || 0);
+  const minutos = ms => ms == null ? '—' : ms < 60000 ? Math.round(ms/1000) + ' s' : (ms/60000).toLocaleString('es-AR', { maximumFractionDigits:1 }) + ' min';
+  const cards = `<div class="pf2-grid">
+    ${pfTarjeta('Abrieron', num(r.sesiones), `<b>${num(r.restaurados)}</b> volvieron a una sesión guardada`, serie('sesiones'), 'var(--cv-c2)')}
+    ${pfTarjeta('Empezaron', num(r.empezaron), `<b>${pct(wbRatio(r.empezaron, r.sesiones))}</b> de los que abrieron`, serie('empezaron'), 'var(--cv-c1)')}
+    ${pfTarjeta('Enviaron', num(r.enviados), `<b>${pct(wbRatio(r.enviados, r.empezaron))}</b> de los que empezaron`, serie('enviados'), 'var(--si)')}
+    ${pfTarjeta('Tasa de envío', pct(wbRatio(r.enviados, r.sesiones)), `enviados sobre abiertos · <b>${num(r.whatsapp)}</b> tocaron WhatsApp`, dias.map(x => x.sesiones ? 1000 * x.enviados / x.sesiones : 0), 'var(--glacier)')}
+  </div>
+  <div class="pf2-grid fm-mini">
+    <div class="pf2-card"><div class="pf2-lbl">Tiempo para completar</div><div class="pf2-val">${minutos(r.mediana_total_ms)}</div><div class="pf2-sub">mediana de quienes enviaron</div></div>
+    <div class="pf2-card"><div class="pf2-lbl">Del envío al WhatsApp</div><div class="pf2-val">${minutos(r.mediana_envio_a_whatsapp_ms)}</div><div class="pf2-sub">mediana, de quienes tocaron el botón</div></div>
+    <div class="pf2-card"><div class="pf2-lbl">Con ManyChat ID</div><div class="pf2-val">${num(r.con_manychat)}</div><div class="pf2-sub"><b>${pct(wbRatio(r.con_manychat, r.sesiones))}</b> de las sesiones: se cruzan con el chat</div></div>
+    <div class="pf2-card"><div class="pf2-lbl">Fricción</div><div class="pf2-val">${num(r.con_errores)}</div><div class="pf2-sub">sesiones con error · <b>${num(r.con_atras)}</b> volvieron atrás</div></div>
+  </div>`;
+
+  // Embudo paso a paso (por formulario)
+  const forms = [...new Set((d.pasos || []).map(p => p.formulario))];
+  const embudo = forms.map(fm => {
+    const ps = d.pasos.filter(p => p.formulario === fm);
+    const base = Math.max(ps[0] ? ps[0].vistos : 0, 1);
+    return `<div class="ag-sec-h"><h2>Paso a paso${forms.length > 1 ? ' · ' + esc(fm) : ''}</h2><span class="hint">largo = vieron el paso, sobre los que vieron el primero · el % es cuántos lo completaron · tiempo mediano en el paso</span></div>
+      <div class="wb-panel wb-embudo2">${ps.map(p => `<div class="wb-paso">
+        <span class="lbl">${esc(fmPasoLbl(p.paso))}</span>
+        <div class="bar"><i style="width:${Math.max(p.vistos / base * 100, p.vistos ? 1.2 : 0).toFixed(1)}%"></i></div>
+        <b>${num(p.vistos)}</b>
+        <span class="pct">${pct(wbRatio(p.completados, p.vistos))} lo completan · ${minutos(p.mediana_ms)}${p.errores ? ` · <span class="cv-emb-warn">${num(p.errores)} errores</span>` : ''}${p.atras ? ` · ${num(p.atras)} atrás` : ''}</span>
+      </div>`).join('')}</div>`;
+  }).join('');
+
+  const porDia = `<div class="ag-sec-h" style="margin-top:var(--s5)"><h2>Por día</h2>
+      <span class="hint wb-leyenda"><i style="background:var(--cv-c2)"></i>abrieron <i style="background:var(--si)"></i>enviaron · pasa el mouse para ver cada día</span></div>
+    <div class="wb-panel">${dias.length ? wbCurvaDiaria(dias.map(x => ({ fecha:x.fecha, sesiones:x.sesiones, consultaron:x.enviados })), { a:'abrieron', b:'enviaron' }) : `<div class="pf2-empty">Sin datos.</div>`}</div>`;
+
+  const card = (titulo, sub, cuerpo) => `<div class="cv-card"><h3>${titulo}</h3><div class="csub">${sub}</div>${cuerpo}</div>`;
+  const barras = (filas, lbl, clase) => wbBarras(filas || [], x => lbl ? lbl(x) : String(x.clave ?? '—'), x => +x.n || 0, clase);
+  const R = d.respuestas || {};
+  const respuestas = `<div class="ag-sec-h wb-grupo"><h2>Qué responden</h2><span class="hint">de cada paso completado, incluso de quienes después no envían</span></div>
+    <div class="wb-grid">
+      ${card('Destinos', 'los que marcan', barras(R.destinos))}
+      ${card('Días de viaje', 'agrupados', barras(R.dias))}
+      ${card('Cuándo viajan', 'mes elegido', barras(R.meses))}
+      ${card('Personas', 'adultos + niños', barras(R.personas, x => `${x.clave} ${+x.clave === 1 ? 'persona' : 'personas'}`))}
+      ${card('Con niños', 'según el paso Personas', barras(R.ninos, null, 'ok'))}
+      ${card('¿Ya tiene pasajes?', 'rama del formulario', barras(R.pasajes, x => x.clave === true || x.clave === 1 || x.clave === 'si' ? 'Sí' : x.clave === false || x.clave === 0 || x.clave === 'no' ? 'No' : String(x.clave ?? '—')))}
+      ${R.otros_destinos && R.otros_destinos.length ? card('Otros destinos', 'texto libre', barras(R.otros_destinos)) : ''}
+      ${R.paquetes && R.paquetes.length ? card('Paquetes', 'en el formulario de paquete', barras(R.paquetes)) : ''}
+      ${R.dominios && R.dominios.length ? card('Email', 'dominio', barras(R.dominios)) : ''}
+    </div>`;
+
+  const ab = d.abandono_por_paso || [];
+  const abandono = `<div class="ag-sec-h wb-grupo"><h2>Dónde se van</h2><span class="hint">último paso de quienes no enviaron</span></div>
+    <div class="wb-grid">
+      ${card('Último paso antes de irse', `${num(ab.reduce((s,x) => s + x.n, 0))} sesiones sin enviar`, wbBarras(ab, x => (forms.length > 1 ? x.formulario + ' · ' : '') + fmPasoLbl(x.paso), x => x.n))}
+      ${card('Errores de validación', 'qué mensaje vieron y en qué paso', (d.errores || []).length ? `<div class="cv-tblwrap"><table><thead><tr><th>Paso</th><th>Mensaje</th><th>Veces</th><th>Sesiones</th></tr></thead><tbody>${d.errores.map(x => `<tr><td>${esc(fmPasoLbl(x.paso))}</td><td style="white-space:normal">${esc(x.mensaje || '—')}</td><td>${num(x.n)}</td><td>${num(x.sesiones)}</td></tr>`).join('')}</tbody></table></div>` : `<div class="ag-empty">Ninguno.</div>`)}
+    </div>`;
+
+  const segTabla = (titulo, filas) => card(titulo, 'abrieron · empezaron · enviaron · tasa de envío', (filas || []).length ? `<div class="cv-tblwrap"><table><thead><tr><th></th><th>Abrieron</th><th>Empezaron</th><th>Enviaron</th><th>Tasa</th></tr></thead><tbody>${filas.map(f => `<tr><td>${esc(f.clave)}</td><td>${num(f.sesiones)}</td><td>${num(f.empezaron)}</td><td>${num(f.enviados)}</td><td class="pct">${pct(wbRatio(f.enviados, f.sesiones))}</td></tr>`).join('')}</tbody></table></div>` : `<div class="ag-empty">Sin datos.</div>`);
+  const S = d.segmentos || {};
+  const quienes = `<div class="ag-sec-h wb-grupo"><h2>Quiénes y de dónde</h2><span class="hint">dispositivo, país, origen y links con UTM</span></div>
+    <div class="wb-grid wb-grid-tablas">
+      ${segTabla('Origen', S.origen)}${segTabla('UTM source', S.utm_source)}${segTabla('UTM campaign', S.utm_campaign)}
+      ${segTabla('Dispositivo', S.dispositivo)}${segTabla('País', S.pais)}${segTabla('Rama (pasajes)', S.rama)}
+    </div>`;
+
+  const hora = d.por_hora || [], semana = d.por_dia_semana || [];
+  const horario = `<div class="ag-sec-h wb-grupo"><h2>Cuándo lo llenan</h2><span class="hint">hora de Perú</span></div>
+    <div class="wb-grid">
+      ${card('Por hora', 'abrieron · el verde son los que enviaron', fmBarrasHora(hora))}
+      ${card('Por día de la semana', 'abrieron · enviaron', wbBarras(semana.map(x => ({ ...x, clave: FM_DIAS_SEM[x.dia] })), x => `${x.clave} · ${num(x.enviados)} enviados`, x => x.sesiones))}
+    </div>`;
+
+  const val = v => v == null || v === '' ? '<span class="wb-no">—</span>' : esc(String(v));
+  const enviosHtml = `<div class="ag-sec-h wb-grupo"><h2>Envíos</h2><span class="hint">todo lo que dejó cada persona · tocar una fila abre el lead · "Descargar envíos" baja todas las columnas</span></div>
+    ${envios.length ? `<div class="cv-tblwrap fm-envios"><table><thead><tr>
+      <th>Cuándo</th><th>Nombre</th><th>Contacto</th><th>País</th><th>Personas</th><th>Destinos</th><th>Fecha viaje</th><th>Días</th><th>Pasajes</th><th>Presupuesto</th><th>Score</th><th>Origen</th><th>ManyChat</th><th>Disp.</th><th>Tiempo</th><th>Notas</th>
+    </tr></thead><tbody>${envios.map(e => `<tr data-lead="${e.id}">
+      <td>${wbFecha(e.creado_en)}</td><td><b style="color:var(--ink)">${val(e.nombre)}</b></td>
+      <td>${val(e.whatsapp)}<div class="cv-emb-etq">${val(e.email)}</div></td>
+      <td>${val(e.pais || e.residencia)}</td><td>${val(e.personas)}${e.edades_menores ? `<div class="cv-emb-etq">menores: ${esc(e.edades_menores)}</div>` : ''}</td>
+      <td style="white-space:normal;min-width:160px">${val(e.destinos)}</td><td>${val(e.fecha_viaje || (e.llegada ? e.llegada + (e.salida ? ' → ' + e.salida : '') : ''))}</td>
+      <td>${val(e.dias)}</td><td>${val(e.pasajes)}</td><td>${val(e.presupuesto_pp)}</td>
+      <td>${e.score ? `<b>${esc(String(e.score))}</b>/10` : '<span class="wb-no">—</span>'}</td>
+      <td>${val(e.utm_source || e.origen)}${e.utm_campaign ? `<div class="cv-emb-etq">${esc(e.utm_campaign)}</div>` : ''}</td>
+      <td class="wb-cod">${val(e.manychat_id)}</td><td>${val(e.dispositivo)}</td><td>${minutos(e.t_total_ms)}</td>
+      <td style="white-space:normal;min-width:220px">${val(e.notas)}</td>
+    </tr>`).join('')}</tbody></table></div>` : `<div class="wb-panel"><div class="pf2-empty">Nadie envió el formulario en este período.</div></div>`}`;
+
+  const abs = d.abandonos || [];
+  const abandonosHtml = `<div class="ag-sec-h" style="margin-top:var(--s5)"><h2>Sesiones que no enviaron</h2><span class="hint">las últimas 60 · hasta qué paso llegaron</span></div>
+    ${abs.length ? `<div class="cv-tblwrap fm-envios"><table><thead><tr><th>Cuándo</th><th>Formulario</th><th>Llegó a</th><th>Avance</th><th>Disp.</th><th>País</th><th>Origen</th><th>ManyChat</th><th>Errores</th><th>Tiempo</th></tr></thead><tbody>
+      ${abs.map(s => `<tr><td>${wbFecha(s.primer_evento)}</td><td>${val(s.formulario)}</td><td>${s.ultimo_paso ? esc(fmPasoLbl(s.ultimo_paso)) : '<span class="wb-no">solo abrió</span>'}</td>
+        <td>${s.pasos_total ? `${num(s.max_indice)} de ${num(s.pasos_total)}` : num(s.max_indice)}</td><td>${val(s.dispositivo)}</td><td>${val(s.pais)}</td><td>${val(s.utm_source || s.origen)}</td>
+        <td class="wb-cod">${val(s.manychat_id)}</td><td>${num(s.errores)}</td><td>${minutos(s.t_total_ms)}</td></tr>`).join('')}
+    </tbody></table></div>` : `<div class="wb-panel"><div class="pf2-empty">Ninguna.</div></div>`}`;
+
+  host.innerHTML = tools + cards + embudo + porDia + respuestas + abandono + quienes + horario + enviosHtml + abandonosHtml;
+  fmWire(host);
+}
+
+function fmBarrasHora(filas){
+  if(!filas.length) return `<div class="ag-empty">Sin datos.</div>`;
+  const porHora = Object.fromEntries(filas.map(f => [f.hora, f]));
+  const max = Math.max(...filas.map(f => f.sesiones), 1);
+  return `<div class="fm-horas">${Array.from({ length:24 }, (_, h) => {
+    const f = porHora[h] || { sesiones:0, enviados:0 };
+    return `<div class="col" title="${h}:00 · ${num(f.sesiones)} abrieron · ${num(f.enviados)} enviaron">
+      <i class="env" style="height:${(f.enviados / max * 100).toFixed(1)}%"></i>
+      <i style="height:${((f.sesiones - f.enviados) / max * 100).toFixed(1)}%"></i>
+      <span>${h % 3 === 0 ? h : ''}</span></div>`;
+  }).join('')}</div>`;
+}
+
+function fmWire(host){
+  host.querySelectorAll('#fm-periodo button').forEach(b => b.addEventListener('click', () => { fmPeriodo = b.dataset.v; cargarFormulario(); }));
+  host.querySelectorAll('#fm-form button').forEach(b => b.addEventListener('click', () => { fmForm = b.dataset.v; cargarFormulario(); }));
+  const csv = el('fm-csv'); if(csv) csv.addEventListener('click', fmCsv);
+  host.querySelectorAll('tr[data-lead]').forEach(tr => tr.addEventListener('click', () => { irA('leads'); abrirDrawer(Number(tr.dataset.lead)); }));
+}
 
 async function wbManychatRevisar(){
   const box = el('wb-mc');
