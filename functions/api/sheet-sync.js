@@ -5,7 +5,7 @@
 //
 //   registro  { tipo, setter?: 'Setter 1', eventos: [{ evento, fecha, momento, id_suscriptor, nombre, pieza?, setter? }] }
 //     Sheet nuevo "Luna Llena | Setting" (apps-script-sheet/Setting.gs): una
-//     sola hoja Registro, el setter va por fila y RECORRIDO trae la Pieza.
+//     sola hoja Registro, el setter va por fila y PIEZA (o DIAS) trae la Pieza.
 //     Conversaciones = personas con DIAS en el día; formularios enviados =
 //     FORMULARIO; completados = CONSULTA (se recalculan solos en metricas_dia).
 //
@@ -58,7 +58,7 @@ async function registro(env, body) {
     if (!id && !ig && !nombreRaw) return descartados.push({ i, motivo: 'sin ID Suscriptor ni Nombre' });
     const pieza = texto(e.pieza, 120) || null;
     const setter = texto(e.setter, 40) || setterLote || 'ManyChat';
-    // La pieza entra en la clave: dos RECORRIDO en el mismo segundo con piezas
+    // La pieza entra en la clave: dos PIEZA en el mismo segundo con piezas
     // distintas son dos filas, no un duplicado.
     validos.push({ ev, fecha, momento, id, ig, nombreRaw, pieza, setter,
       clave: [setter, momento, ev, id || ig || nombreRaw, pieza || ''].join('|') });

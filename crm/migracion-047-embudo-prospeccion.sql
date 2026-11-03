@@ -4,7 +4,8 @@
 --
 -- El Sheet nuevo "Luna Llena | Setting" (apps-script-sheet/Setting.gs) manda
 -- una fila por cada automatización de ManyChat: DIAS, RECORRIDO, PITCH,
--- FORMULARIO, CONSULTA. Las filas RECORRIDO (y DIAS, si la conversación entró
+-- FORMULARIO, CONSULTA (etapas) y PIEZA (contenido; ver functions/_lib/sheet-sync.js).
+-- Las filas PIEZA (y DIAS, si la conversación entró
 -- por una pieza) traen la etiqueta de la pieza en `pieza`. Con eso el CRM arma,
 -- por persona y en orden de `momento`:
 --   apertura  = la primera pieza

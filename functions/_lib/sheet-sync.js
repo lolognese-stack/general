@@ -6,12 +6,15 @@ const RE_IG = /^[a-z0-9._]{1,30}$/;
 
 // Etapas de prospección de Luna Llena, en orden (cada automatización de
 // ManyChat escribe la suya en el Sheet): DIAS ("¿cuántos días?", abre la
-// conversación) -> RECORRIDO (cada pieza que consume; trae la columna Pieza)
+// conversación) -> RECORRIDO (se le comparte el link de un recorrido nuestro)
 // -> PITCH (pitch del formulario) -> FORMULARIO (formulario enviado) ->
 // CONSULTA (formulario completado / confirmación).
+// PIEZA no es una etapa: es cada interacción con una pieza de contenido
+// (palabra clave de un reel, respuesta a una historia), con su etiqueta en la
+// columna Pieza. De ahí salen apertura, nutrición y gatillo.
 // INBOUND y FUP quedan del modelo anterior.
 export const ETAPAS = ['DIAS', 'RECORRIDO', 'PITCH', 'FORMULARIO', 'CONSULTA'];
-export const EVENTOS = [...ETAPAS, 'INBOUND', 'FUP'];
+export const EVENTOS = [...ETAPAS, 'PIEZA', 'INBOUND', 'FUP'];
 // Nombres viejos del Sheet anterior (modelo con llamadas).
 const RENOMBRES = { CALENDARIO: 'FORMULARIO', CALL: 'CONSULTA', FUPS: 'FUP', 'DÍAS': 'DIAS' };
 

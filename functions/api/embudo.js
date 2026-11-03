@@ -8,8 +8,11 @@
 // llegaron a cada etapa, en cualquier fecha posterior. Así el embudo no se
 // infla con gente que entró antes del período.
 //
-// Recorrido, por persona y en orden de momento:
-//   apertura  = la primera pieza que aparece (DIAS o RECORRIDO con Pieza)
+// Recorrido de contenido, por persona y en orden de momento. Las piezas salen
+// de las filas PIEZA (cada interacción con una pieza) y de DIAS cuando trae
+// Pieza (la conversación entró por una pieza). RECORRIDO es una etapa (el
+// link del recorrido que se comparte), no una pieza.
+//   apertura  = la primera pieza que aparece
 //   gatillo   = la última pieza antes del primer FORMULARIO (si llegó)
 //   nutrición = las piezas entre la apertura y el gatillo
 // Ventas: las del lead unido por manychat_id, con estado vendido; `ventas_x`
@@ -42,7 +45,7 @@ export async function onRequestGet({ request, env }) {
      )
      SELECT c.persona, c.entrada, e.evento, e.momento, e.fecha, e.pieza, e.manychat_id
        FROM cohorte c JOIN sheet_eventos e ON ${PERSONA.replace(/manychat_id|ig_username|nombre_raw/g, (m) => 'e.' + m)} = c.persona
-      WHERE e.evento IN (${etapasSql})
+      WHERE e.evento IN (${etapasSql}, 'PIEZA')
       ORDER BY c.persona, e.momento`
   ).bind(desde, hasta).all();
 
@@ -94,16 +97,19 @@ export async function onRequestGet({ request, env }) {
     const tiene = new Set(ev.map((e) => e.evento));
     ETAPAS.forEach((e) => { if (tiene.has(e)) llegaron[e]++; });
 
-    const t0 = new Date(ev[0].momento).getTime();
+    // La entrada es la primera etapa (una PIEZA puede venir antes de DIAS).
+    const e0 = ev.find((e) => e.evento !== 'PIEZA') || ev[0];
+    const t0 = new Date(e0.momento).getTime();
     const primero = (nombre) => ev.find((e) => e.evento === nombre);
     const fForm = primero('FORMULARIO'), fCons = primero('CONSULTA');
     if (fForm) dias.formulario.push((new Date(fForm.momento) - t0) / 86400000);
     if (fCons) dias.consulta.push((new Date(fCons.momento) - t0) / 86400000);
 
     // Piezas en orden, sin repetir la misma seguida
+    const esPieza = (e) => e.pieza && (e.evento === 'PIEZA' || e.evento === 'DIAS');
     const hastaGatillo = fForm ? ev.filter((e) => e.momento <= fForm.momento) : ev;
-    const todas = ev.filter((e) => e.pieza).map((e) => e.pieza);
-    const antes = hastaGatillo.filter((e) => e.pieza).map((e) => e.pieza);
+    const todas = ev.filter(esPieza).map((e) => e.pieza);
+    const antes = hastaGatillo.filter(esPieza).map((e) => e.pieza);
     const v = p.manychat_id ? ventasPorId.get(String(p.manychat_id)) : null;
     const vendio = !!v, vendioX = !!v && (v.max_c || 0) >= TICKET_X_USD * 100;
     if (vendio) conVenta++;
@@ -121,7 +127,7 @@ export async function onRequestGet({ request, env }) {
     if (gatillo && norm(gatillo) !== norm(apertura)) suma(gatillo, 'gatillos');
     else if (gatillo) fila(gatillo).gatillos++;
 
-    recorridos.push({ persona: p.persona, manychat_id: p.manychat_id, entrada: ev[0].fecha,
+    recorridos.push({ persona: p.persona, manychat_id: p.manychat_id, entrada: e0.fecha,
       apertura, nutricion, gatillo, etapa: ETAPAS.filter((e) => tiene.has(e)).pop(),
       venta_usd: v ? Math.round((v.total_c || 0) / 100) : null });
   }

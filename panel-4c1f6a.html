@@ -9310,11 +9310,11 @@ function cvRenderLineChart(keys, grp){
 }
 
 /* ---- Embudo de prospección y recorrido (GET /api/embudo) ---- */
-// Sale del Sheet "Luna Llena | Setting": DIAS -> RECORRIDO -> PITCH ->
+// Sale del Sheet "Luna Llena | Setting": DIAS -> RECORRIDO (link) -> PITCH ->
 // FORMULARIO -> CONSULTA. Cohorte = quienes entraron en el rango.
 const CV_ETAPAS = {
   DIAS:       'Abrieron conversación',
-  RECORRIDO:  'Consumieron una pieza',
+  RECORRIDO:  'Recibieron el recorrido',
   PITCH:      'Recibieron el pitch',
   FORMULARIO: 'Formulario enviado',
   CONSULTA:   'Consulta (formulario completado)',
@@ -9367,7 +9367,7 @@ function cvRenderEmbudo(){
       <span>de la entrada al formulario: <b>${dec1(d.dias_mediana.formulario)} días</b> (mediana)</span>
       <span>a la consulta: <b>${dec1(d.dias_mediana.consulta)} días</b></span>
       <span>con venta: <b>${num(d.con_venta)}</b> · de ≥ USD ${num(d.ticket_x_usd)}: <b>${num(d.con_venta_x)}</b></span>
-      ${d.sin_pieza ? `<span class="cv-emb-warn">${num(d.sin_pieza)} sin ninguna pieza registrada: falta la columna Pieza en sus filas</span>` : ''}
+      ${d.sin_pieza ? `<span class="cv-emb-warn">${num(d.sin_pieza)} sin ninguna pieza registrada: faltan sus filas PIEZA (o la Pieza en DIAS)</span>` : ''}
     </div></div>`;
 
   const ps = d.piezas || [];
@@ -9378,7 +9378,7 @@ function cvRenderEmbudo(){
       <td>${num(p.aperturas)}</td><td>${num(p.nutricion)}</td><td>${num(p.gatillos)}</td>
       <td>${num(p.formularios)}</td><td>${num(p.consultas)}</td><td>${num(p.ventas)}</td><td class="pct">${num(p.ventas_x)}</td></tr>`).join('')}
     </tbody></table></div>`
-    : `<div class="wb-panel"><div class="pf2-empty">Ninguna pieza registrada todavía. Las automatizaciones de RECORRIDO tienen que escribir la etiqueta de la pieza en la columna Pieza.</div></div>`;
+    : `<div class="wb-panel"><div class="pf2-empty">Ninguna pieza registrada todavía. Cada automatización de contenido (palabra clave de un reel, respuesta a una historia) tiene que escribir una fila PIEZA con la etiqueta en la columna Pieza.</div></div>`;
 }
 
 function renderConversacion(){

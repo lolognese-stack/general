@@ -10,18 +10,24 @@
  *
  *   Marca temporal | Evento | ID Suscriptor | Usuario IG | Pieza | Setter
  *
- *   Evento: DIAS · RECORRIDO · PITCH · FORMULARIO · CONSULTA
+ *   Evento: DIAS · RECORRIDO · PITCH · FORMULARIO · CONSULTA · PIEZA
+ *     Etapas del embudo, en orden:
  *     DIAS        automatización "Cuántos días" (abre la conversación)
- *     RECORRIDO   cada automatización de pieza (en Pieza va su etiqueta)
+ *     RECORRIDO   se le comparte el link de un recorrido nuestro
  *     PITCH       pitch del formulario
  *     FORMULARIO  formulario enviado
  *     CONSULTA    confirmación: formulario completado
+ *     Contenido (no es una etapa):
+ *     PIEZA       cada automatización de contenido: palabra clave de un reel,
+ *                 respuesta a una historia... En Pieza va su etiqueta.
  *   ID Suscriptor: {{contact id}} de ManyChat. Es la llave que une todo.
  *   Usuario IG:    {{ig username}} (opcional, sirve si falta el ID).
  *   Pieza:         la etiqueta de la pieza, escrita igual que en el
- *                  Planificador del CRM. Obligatoria en RECORRIDO. En DIAS,
- *                  si la conversación entró por una pieza, ponerla también:
- *                  esa es la pieza de apertura.
+ *                  Planificador del CRM. Obligatoria en PIEZA. En DIAS, si
+ *                  la conversación entró por una pieza, ponerla también: esa
+ *                  es la pieza de apertura. Con todas las PIEZA en orden, el
+ *                  CRM arma apertura, nutrición y gatillo (la última antes
+ *                  del FORMULARIO).
  *   Setter:        opcional ("ManyChat" si va vacío).
  *   Marca temporal: la fecha y hora de ManyChat. Si llega vacía, el script
  *                  la completa con la hora en que lee la fila (hasta 5 min
@@ -43,7 +49,7 @@ var CONFIG = {
   CRM_URL: 'https://crm-plantilla.pages.dev',
   HOJA: 'Registro',
   ENCABEZADOS: ['Marca temporal', 'Evento', 'ID Suscriptor', 'Usuario IG', 'Pieza', 'Setter'],
-  EVENTOS: ['DIAS', 'RECORRIDO', 'PITCH', 'FORMULARIO', 'CONSULTA'],
+  EVENTOS: ['DIAS', 'RECORRIDO', 'PITCH', 'FORMULARIO', 'CONSULTA', 'PIEZA'],
   LOTE: 40,                // filas por pedido (el CRM acepta hasta 50)
   MAX_MS: 4.5 * 60 * 1000  // cortar antes del límite de 6 min de Apps Script
 };
