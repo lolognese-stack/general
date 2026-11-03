@@ -1,5 +1,5 @@
 import { checkToken } from '../../_lib/auth.js';
-import { CAMPOS, errorDeScore } from '../leads.js';
+import { CAMPOS, errorDeScore, normalizarIg } from '../leads.js';
 
 
 function json(data, status = 200) {
@@ -14,6 +14,7 @@ export async function onRequestPatch({ request, env, params }) {
   const body = await request.json();
   const errScore = errorDeScore(body);
   if (errScore) return json({ error: errScore }, 400);
+  normalizarIg(body);
 
   const fields = Object.keys(body).filter((k) => CAMPOS.includes(k));
   if (fields.length === 0) return json({ error: 'nada para actualizar' }, 400);
@@ -31,7 +32,8 @@ export async function onRequestPatch({ request, env, params }) {
   }
 
   const setClause = fields.map((f) => `${f} = ?`).join(', ') + ', actualizado_en = ?';
-  const values = fields.map((f) => (body[f] === '' ? null : body[f]));
+  // nombre es NOT NULL: vacío queda '' (un lead puede tener solo su usuario de Instagram).
+  const values = fields.map((f) => (body[f] === '' && f !== 'nombre' ? null : body[f]));
   values.push(now, params.id);
 
   await env.DB.prepare(`UPDATE leads SET ${setClause} WHERE id = ?`)

@@ -16,7 +16,15 @@ export const CAMPOS = [
   'codigo_web',
   // score de calificación, lo calcula el formulario (migración 035)
   'score', 'score_detalle',
+  // Instagram y ManyChat, aparte del nombre (migraciones 032 y 042): el Sheet
+  // de setting trae el usuario, no el nombre de la persona.
+  'ig_username', 'manychat_id',
 ];
+
+// "@Juan.Perez " -> "juan.perez". Vacío queda vacío.
+export function normalizarIg(body) {
+  if (typeof body.ig_username === 'string') body.ig_username = body.ig_username.trim().replace(/^@+/, '').toLowerCase();
+}
 
 // score: entero 1..10 (null o '' = sin score). Devuelve un mensaje de error
 // o null si está bien. Se usa en el alta y en el PATCH.
@@ -46,14 +54,17 @@ export async function onRequestGet({ request, env }) {
 export async function onRequestPost({ request, env }) {
   if (!checkToken(request, env)) return json({ error: 'unauthorized' }, 401);
   const body = await request.json();
-  if (!body.nombre) return json({ error: 'nombre requerido' }, 400);
+  normalizarIg(body);
+  // Alcanza con el nombre o con el usuario de Instagram.
+  if (!body.nombre && !body.ig_username) return json({ error: 'nombre o usuario de Instagram requerido' }, 400);
+  if (!body.nombre) body.nombre = '';
   const errScore = errorDeScore(body);
   if (errScore) return json({ error: errScore }, 400);
 
   const now = new Date().toISOString();
   const datos = { ...body, etapa: body.etapa || 'lead_nuevo' };
 
-  const cols = CAMPOS.filter((c) => datos[c] !== undefined && datos[c] !== '');
+  const cols = CAMPOS.filter((c) => datos[c] !== undefined && (datos[c] !== '' || c === 'nombre'));
   const sql = `INSERT INTO leads (${cols.join(', ')}, creado_en, actualizado_en)
                VALUES (${cols.map(() => '?').join(', ')}, ?, ?)`;
 

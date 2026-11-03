@@ -17,7 +17,7 @@
 import { rolDe, json } from '../_lib/auth.js';
 
 const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/;
-const FORMULARIOS = new Set(['personalizado', 'paquete']);
+const FORMULARIOS = new Set(['cotizar-web', 'personalizado', 'paquete']);
 // Perú: UTC-5 todo el año (sin horario de verano).
 const TZ = '-5 hours';
 
@@ -54,6 +54,53 @@ function medianaSql(selectValor, from, whereSql, particion = []) {
     SELECT ${outer ? outer + ', ' : ''}AVG(v) AS mediana
       FROM d WHERE rn IN ((n + 1) / 2, (n + 2) / 2)
      ${outer ? 'GROUP BY ' + outer : ''}`;
+}
+
+// Agrega los leads del formulario nuevo: [{clave, n}] por cada respuesta.
+function resumenWeb(filas) {
+  const cuenta = () => new Map();
+  const suma = (m, k) => { if (k === null || k === undefined || k === '') k = '—'; m.set(String(k), (m.get(String(k)) || 0) + 1); };
+  const lista = (m, orden) => { const a = [...m].map(([clave, n]) => ({ clave, n })); return orden ? a.sort(orden) : a.sort((x, y) => y.n - x.n); };
+  const M = { tipo: cuenta(), presupuesto: cuenta(), score: cuenta(), pasajes: cuenta(), mes: cuenta(), personas: cuenta(),
+    ninos: cuenta(), dias: cuenta(), destinos: cuenta(), primer_destino: cuenta(), pais: cuenta(), origen: cuenta(), por_dia: new Map() };
+  const RANGO = { lt500: '1 · Menos de US$ 500', '500-1000': '2 · US$ 500 – 1.000', '1000-1500': '3 · US$ 1.000 – 1.500', '1500-2000': '4 · US$ 1.500 – 2.000', '2000-3000': '5 · US$ 2.000 – 3.000', gt3000: '6 · Más de US$ 3.000' };
+  const balde = (d) => !d ? null : d <= 3 ? '1-3' : d <= 5 ? '4-5' : d <= 7 ? '6-7' : d <= 10 ? '8-10' : d <= 14 ? '11-14' : '15+';
+  let completos = 0, parciales = 0, wa = 0, scoreSum = 0, scoreN = 0; const durs = [];
+  for (const f of filas) {
+    let m; try { m = JSON.parse(f.meta_json); } catch { continue; }
+    const completo = m.completo !== false && !m.parcial;
+    completo ? completos++ : parciales++;
+    if (f.wa) wa++;
+    const dia = String(f.creado_en).slice(0, 10);
+    const pd = M.por_dia.get(dia) || { fecha: dia, sesiones: 0, consultaron: 0 };
+    pd.sesiones++; if (completo) pd.consultaron++; M.por_dia.set(dia, pd);
+    suma(M.tipo, m.tipo === 'itinerario' ? 'Ya tiene itinerario' : 'Pide ayuda para armarlo');
+    suma(M.presupuesto, m.tiene_presupuesto ? (RANGO[m.presupuesto_rango] || 'Tiene, sin rango') : '0 · Todavía no lo tiene');
+    if (m.score) { suma(M.score, m.score.categoria === 'caliente' ? 'Caliente' : m.score.categoria === 'tibio' ? 'Tibio' : 'Frío'); scoreSum += +m.score.score10 || 0; scoreN++; }
+    suma(M.pasajes, m.pasajes === 'comprados' ? 'Ya los compró' : m.pasajes === 'pendientes' ? 'Todavía no' : null);
+    suma(M.mes, m.fecha_llegada ? String(m.fecha_llegada).slice(0, 7) : m.mes_aproximado);
+    const pers = (+m.adultos || 0) + (+m.ninos || 0);
+    suma(M.personas, pers ? (pers >= 6 ? '6+' : String(pers)) : null);
+    suma(M.ninos, +m.ninos > 0 ? 'Con niños' : 'Solo adultos');
+    suma(M.dias, balde(+m.dias_total || +m.dias_min || 0));
+    (m.destinos || []).forEach((d) => suma(M.destinos, d));
+    if ((m.destinos || [])[0]) suma(M.primer_destino, m.destinos[0]);
+    suma(M.pais, f.pais);
+    suma(M.origen, m.utm_source || m.origen || 'directo');
+    if (m.duracion_segundos) durs.push(+m.duracion_segundos);
+  }
+  durs.sort((a, b) => a - b);
+  const porClave = (a, b) => String(a.clave).localeCompare(String(b.clave), 'es', { numeric: true });
+  return {
+    contactos: filas.length, completos, parciales, click_whatsapp: wa,
+    score_promedio: scoreN ? scoreSum / scoreN : null,
+    duracion_mediana_s: durs.length ? (durs.length % 2 ? durs[(durs.length - 1) / 2] : (durs[durs.length / 2 - 1] + durs[durs.length / 2]) / 2) : null,
+    tipo: lista(M.tipo), presupuesto: lista(M.presupuesto, porClave).map((x) => ({ ...x, clave: x.clave.replace(/^\d · /, '') })),
+    score: lista(M.score), pasajes: lista(M.pasajes), mes: lista(M.mes, porClave), personas: lista(M.personas, porClave),
+    ninos: lista(M.ninos), dias: lista(M.dias, porClave), destinos: lista(M.destinos).slice(0, 20),
+    primer_destino: lista(M.primer_destino).slice(0, 10), pais: lista(M.pais).slice(0, 12), origen: lista(M.origen).slice(0, 12),
+    por_dia: [...M.por_dia.values()].sort((a, b) => a.fecha.localeCompare(b.fecha)),
+  };
 }
 
 const SEGMENTOS = ['formulario', 'rama', 'dispositivo', 'pais', 'origen', 'utm_source', 'utm_campaign'];
@@ -136,7 +183,7 @@ export async function onRequestGet({ request, env }) {
          FROM ${R} AND e.paso = 'personas' GROUP BY clave ORDER BY n DESC`),
     q(`SELECT CASE WHEN d <= 3 THEN '1-3' WHEN d <= 5 THEN '4-5' WHEN d <= 7 THEN '6-7' WHEN d <= 10 THEN '8-10' WHEN d <= 14 THEN '11-14' ELSE '15+' END AS clave,
               COUNT(*) AS n
-         FROM (SELECT CAST(json_extract(e.datos_json, '$.dias') AS INTEGER) AS d FROM ${R} AND e.paso = 'dias')
+         FROM (SELECT CAST(json_extract(e.datos_json, '$.dias') AS INTEGER) AS d FROM ${R} AND e.paso = 'dias') WHERE d IS NOT NULL
         GROUP BY clave ORDER BY MIN(d)`),
     q(`SELECT j.value AS clave, COUNT(*) AS n
          FROM ${E}, json_each(json_extract(e.datos_json, '$.destinos')) AS j
@@ -174,6 +221,19 @@ export async function onRequestGet({ request, env }) {
        FROM ${S}${f.sql} AND s.enviado_en IS NULL
       ORDER BY s.primer_evento DESC LIMIT 60`).all();
 
+  // Formulario nuevo de la web (/cotizar/): cada lead trae en meta_json todo
+  // lo que respondió (functions/api/cotizar-web.js). Acá se agrega.
+  const rango = [];
+  const desdeQ = url.searchParams.get('desde'), hastaQ = url.searchParams.get('hasta');
+  let wsql = `WHERE json_valid(l.meta_json) AND json_extract(l.meta_json, '$.formulario') = 'cotizar-web'`;
+  if (RE_FECHA.test(desdeQ || '')) { wsql += ' AND l.creado_en >= ?'; rango.push(desdeQ + 'T05:00:00.000Z'); }
+  if (RE_FECHA.test(hastaQ || '')) { const d = new Date(hastaQ + 'T05:00:00.000Z'); d.setUTCDate(d.getUTCDate() + 1); wsql += ' AND l.creado_en < ?'; rango.push(d.toISOString()); }
+  const { results: webLeads } = await env.DB.prepare(
+    `SELECT l.id, l.creado_en, l.pais, l.etapa, l.meta_json,
+            (SELECT count(*) FROM eventos e WHERE e.lead_id = l.id AND e.etapa_hasta = 'click_whatsapp') AS wa
+       FROM leads l ${wsql} ORDER BY l.creado_en`).bind(...rango).all();
+  const web = resumenWeb(webLeads);
+
   const medianasPorPaso = {};
   for (const r of medianasPaso.results) medianasPorPaso[`${r.formulario}/${r.paso}`] = r.mediana;
   const segmentosPorCol = {};
@@ -197,6 +257,7 @@ export async function onRequestGet({ request, env }) {
       destinos: destinos.results, otros_destinos: otros.results, meses: meses.results,
       paquetes: paquetes.results, dominios: dominios.results,
     },
+    web,
     envios: envios.results.map((e) => {
       let meta = null;
       try { meta = e.meta_json ? JSON.parse(e.meta_json) : null; } catch { meta = null; }

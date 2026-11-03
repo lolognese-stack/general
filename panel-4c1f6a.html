@@ -1309,6 +1309,10 @@ tr:hover .pz-link-edit,.pz-link-edit:focus-visible{opacity:1}
 .cvx-tip-row b{margin-left:auto;padding-left:var(--s3);color:var(--ink);font-variant-numeric:tabular-nums}
 .cv-toolbar-top{align-items:center;margin-bottom:var(--s4)}
 .ib-tabs-wrap{margin-bottom:var(--s4)}
+.ig-input{display:flex;align-items:center;border:1px solid var(--line);border-radius:var(--radius-sm,8px);background:var(--surface);overflow:hidden}
+.ig-input span{padding:0 2px 0 10px;color:var(--ink-3);font-weight:600}
+.ig-input input{border:none !important;box-shadow:none !important;padding-left:2px;flex:1;min-width:0;background:transparent}
+.card-ig{display:block;font-size:11px;color:var(--ink-3);font-weight:500}
 .ib-tabs-wrap .tally{margin-left:4px;color:var(--danger)}
 .cv-emb-ev{font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--ink-3);margin-left:4px}
 .cv-emb-pie{display:flex;flex-wrap:wrap;gap:6px var(--s4);margin-top:var(--s2);padding-top:var(--s3);border-top:1px solid var(--line);font-size:12px;color:var(--ink-3)}
@@ -2211,7 +2215,10 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 
     <fieldset class="fieldset">
       <legend>Contacto</legend>
-      <div class="field"><label for="f-nombre">Nombre</label><input id="f-nombre"></div>
+      <div class="grid2">
+        <div class="field"><label for="f-nombre">Nombre</label><input id="f-nombre" autocomplete="off"></div>
+        <div class="field"><label for="f-ig_username">Usuario de Instagram</label><div class="ig-input"><span aria-hidden="true">@</span><input id="f-ig_username" autocomplete="off" spellcheck="false" placeholder="usuario"></div></div>
+      </div>
       <div class="grid2">
         <div class="field"><label for="f-pais">País</label><input id="f-pais"></div>
         <div class="field"><label for="f-personas">Personas</label><input id="f-personas" type="number" min="1" inputmode="numeric"></div>
@@ -2586,8 +2593,15 @@ const CALIFICACIONES = [
   { key:null,        label:'Sin calificar', color:'var(--line)' },
 ];
 
+// Nombre para mostrar: el nombre real; si no hay (leads que entran por el
+// Sheet de setting), el usuario de Instagram.
+function leadNombre(l){
+  const n = (l.nombre || '').trim();
+  return n || (l.ig_username ? '@' + l.ig_username : 'Sin nombre');
+}
+
 const CAMPOS_FORM = [
-  'nombre','pais','whatsapp','email','destinos','fecha_viaje','etapa',
+  'nombre','ig_username','pais','whatsapp','email','destinos','fecha_viaje','etapa',
   'propuesta_url','precio','notas','pasajes','llegada','salida',
   'setter','closer','fuente','estrategia','medio_agenda','angulo','etiqueta_manychat','codigo_web',
   'residencia','presupuesto_pp','edades_menores','categoria_hotel','ocupacion',
@@ -3124,7 +3138,7 @@ function ldRenderDias(lista){
       <div class="ld-dia-head"><span>${nombre}</span><span>${d.getDate()}</span></div>
       <div class="ld-dia-n">${items.length}<small>${items.length === 1 ? 'consulta' : 'consultas'}</small></div>
       <div class="ld-dia-body">${items.map(l => `<button type="button" class="ld-lead" data-id="${l.id}"${l.calificado ? ` data-cal="${l.calificado}"` : ''}>
-        <span class="ld-lead-n">${esc((l.nombre || '').trim() || 'Sin nombre')}</span>
+        <span class="ld-lead-n">${esc(leadNombre(l))}</span>
         ${l.destinos ? `<span class="ld-lead-d">${esc(l.destinos)}</span>` : ''}
       </button>`).join('')}</div>
     </div>`;
@@ -3452,7 +3466,7 @@ function cardHtml(l){
   return `
     <article class="card" draggable="true" data-id="${l.id}"${l.calificado ? ` data-cal="${l.calificado}"` : ''} tabindex="0" role="button">
       <div class="card-top">
-        <span class="card-name">${esc((l.nombre || '').trim())}</span>
+        <span class="card-name">${esc(leadNombre(l))}${(l.nombre || '').trim() && l.ig_username ? `<span class="card-ig">@${esc(l.ig_username)}</span>` : ''}</span>
         ${pax ? `<span class="card-pax">${pax}</span>` : ''}
       </div>
       ${l.destinos ? `<p class="card-dest">${esc(l.destinos)}</p>` : ''}
@@ -3668,7 +3682,7 @@ function renderAgendas(){
       <thead><tr><th>Nombre</th><th>Ángulo</th><th>Etiqueta</th><th>Medio</th><th>Fuente</th><th>Calificado</th><th>Etapa</th><th>Alta</th></tr></thead>
       <tbody>${filas.length ? filas.map(l => `
         <tr data-id="${l.id}" data-clickable>
-          <td class="strong">${esc((l.nombre||'').trim())}</td>
+          <td class="strong">${esc(leadNombre(l))}</td>
           <td>${angPickerHtml(l.angulo, { modo:'nombre', campo:'angulo' })}</td>
           <td><select class="pz-cell" data-f="etiqueta_manychat">${agOptsEtiqueta(l.etiqueta_manychat)}</select></td>
           <td><select class="pz-cell" data-f="medio_agenda">${pzOptsPlano(MEDIOS, l.medio_agenda)}</select></td>
@@ -5504,7 +5518,7 @@ function gsBuscar(q){
 
   tomar('lead', 'Leads',
     leads.filter(l => gsCoincide([l.nombre, l.destinos, l.pais, l.email, l.whatsapp, l.fuente, l.etiqueta_manychat], t)),
-    l => ({ titulo: (l.nombre || '').trim() || 'Sin nombre', sub: [l.destinos, l.pais, etapaLabel(l.etapa)].filter(Boolean).join(' · ') }));
+    l => ({ titulo: leadNombre(l), sub: [l.destinos, l.pais, etapaLabel(l.etapa)].filter(Boolean).join(' · ') }));
 
   tomar('pieza', 'Piezas',
     piezas.filter(p => gsCoincide([p.tema, p.hook, p.descripcion, p.cta, p.etiqueta_manychat, p.angulo_nombre], t)),
@@ -6414,7 +6428,7 @@ function vtPintarLeadRes(){
   const q = (el('vt-lead-q').value || '').trim().toLowerCase();
   const res = (q ? leads.filter(l => [l.nombre, l.email, l.whatsapp, l.destinos].some(x => (x || '').toString().toLowerCase().includes(q)))
     : leads.slice().sort((a, b) => String(b.actualizado_en).localeCompare(String(a.actualizado_en)))).slice(0, 6);
-  box.innerHTML = res.map(l => `<button type="button" class="vt-mini" data-vt-lead="${l.id}"><span>${esc((l.nombre || '').trim() || 'Sin nombre')}${l.destinos ? ' · ' + esc(l.destinos) : ''}</span><small>${esc((ETAPAS.find(e => e.key === l.etapa) || { label:'' }).label)}</small></button>`).join('')
+  box.innerHTML = res.map(l => `<button type="button" class="vt-mini" data-vt-lead="${l.id}"><span>${esc(leadNombre(l))}${l.destinos ? ' · ' + esc(l.destinos) : ''}</span><small>${esc((ETAPAS.find(e => e.key === l.etapa) || { label:'' }).label)}</small></button>`).join('')
     || `<p class="vt-motivo">Ningún lead coincide.</p>`;
   box.querySelectorAll('[data-vt-lead]').forEach(b => b.addEventListener('click', () => vtElegirLead(Number(b.dataset.vtLead))));
 }
@@ -9559,7 +9573,7 @@ function abrirDrawer(id){
   const l = id ? leads.find(x => x.id === id) : null;
 
   poblarAtribucion(l);
-  el('drawer-title').textContent = l ? (l.nombre || 'Lead').trim() : 'Nuevo lead';
+  el('drawer-title').textContent = l ? leadNombre(l) : 'Nuevo lead';
   el('f-id').value = l ? l.id : '';
 
   CAMPOS_FORM.forEach(f => {
@@ -9648,8 +9662,10 @@ async function guardar(){
     }
   }
 
-  if(!body.nombre.trim()){
+  body.ig_username = (body.ig_username || '').replace(/^@+/, '').toLowerCase();
+  if(!body.nombre.trim() && !body.ig_username){
     el('f-nombre').focus();
+    toast('Falta el nombre o el usuario de Instagram.', { tipo:'error' });
     btn.disabled = false;
     return;
   }
@@ -11261,9 +11277,11 @@ el('reload-btn').addEventListener('click', () => { if(seccion === 'formulario') 
 let fmCargado = false, fmCargando = false, fmData = null;
 let fmPeriodo = '30', fmForm = '';
 const FM_PASOS = {
-  pasajes:'¿Ya tiene pasajes?', destinos:'Destinos', dias:'Días', fechaAprox:'Fecha aproximada',
+  itinerario:'¿Ya tiene itinerario?', armar:'Armar el itinerario (con itinerario)', duracion:'Duración (sin itinerario)', fecha:'Fecha',
+  presupuestoRango:'Rango de presupuesto',
+  pasajes:'¿Ya tiene pasajes?', destinos:'Destinos (sin itinerario)', dias:'Días (con itinerario)', fechaAprox:'Fecha aproximada',
   fechaExacta:'Fechas exactas', personas:'Personas', paquete:'Paquete', nombre:'Nombre', email:'Email',
-  whatsapp:'WhatsApp', notas:'Notas', presupuesto:'Presupuesto', aereos:'Aéreos',
+  whatsapp:'WhatsApp', notas:'Notas', presupuesto:'¿Tiene presupuesto?', aereos:'Aéreos',
 };
 const FM_DIAS_SEM = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 
@@ -11322,15 +11340,17 @@ function renderFormulario(){
       ${[['7','7 días'],['30','30 días'],['90','90 días'],['todo','Todo']].map(([v,t]) => `<button data-v="${v}" aria-current="${String(fmPeriodo === v)}">${t}</button>`).join('')}
     </div>
     <div class="cv-vswitch" id="fm-form" role="group" aria-label="Formulario">
-      ${[['','Los dos'],['personalizado','Personalizado'],['paquete','Paquete']].map(([v,t]) => `<button data-v="${v}" aria-current="${String(fmForm === v)}">${t}</button>`).join('')}
+      ${[['','Todos'],['cotizar-web','Web (/cotizar)'],['personalizado','Anterior']].map(([v,t]) => `<button data-v="${v}" aria-current="${String(fmForm === v)}">${t}</button>`).join('')}
     </div>
     <button type="button" class="btn btn-ghost btn-sm" id="fm-csv">Descargar envíos (CSV)</button>
     ${fresh}
   </div>
-  <div class="pf2-rangoinfo">${rango.desde ? `${fechaCorta(rango.desde)} – ${fechaCorta(rango.hasta)}` : 'toda la historia'} · formulario de viaje (luna-llena-viaje.pages.dev) · sin sesiones de prueba · las curvas van por día</div>`;
+  <div class="pf2-rangoinfo">${rango.desde ? `${fechaCorta(rango.desde)} – ${fechaCorta(rango.hasta)}` : 'toda la historia'} · formulario de la web (lunallenatravel.vercel.app/cotizar) · sin sesiones de prueba · las curvas van por día</div>`;
 
+  const webHtml = fmWebHtml(d.web);
   if(!r.sesiones){
-    host.innerHTML = tools + `<div class="wb-panel"><div class="pf2-empty">Nadie abrió el formulario en este período.</div></div>`;
+    host.innerHTML = tools + webHtml + `<div class="ag-sec-h wb-grupo"><h2>Paso a paso</h2></div>
+      <div class="wb-panel"><div class="pf2-empty">Todavía no llegan los pasos del formulario. Cuando el formulario de la web mande cada paso a /api/evento-form, acá aparecen: cuántos ven cada pregunta, cuántos la completan, dónde se van, tiempos y errores.</div></div>`;
     fmWire(host); return;
   }
 
@@ -11370,18 +11390,22 @@ function renderFormulario(){
   const card = (titulo, sub, cuerpo) => `<div class="cv-card"><h3>${titulo}</h3><div class="csub">${sub}</div>${cuerpo}</div>`;
   const barras = (filas, lbl, clase) => wbBarras(filas || [], x => lbl ? lbl(x) : String(x.clave ?? '—'), x => +x.n || 0, clase);
   const R = d.respuestas || {};
-  const respuestas = `<div class="ag-sec-h wb-grupo"><h2>Qué responden</h2><span class="hint">de cada paso completado, incluso de quienes después no envían</span></div>
-    <div class="wb-grid">
-      ${card('Destinos', 'los que marcan', barras(R.destinos))}
-      ${card('Días de viaje', 'agrupados', barras(R.dias))}
-      ${card('Cuándo viajan', 'mes elegido', barras(R.meses))}
-      ${card('Personas', 'adultos + niños', barras(R.personas, x => `${x.clave} ${+x.clave === 1 ? 'persona' : 'personas'}`))}
-      ${card('Con niños', 'según el paso Personas', barras(R.ninos, null, 'ok'))}
-      ${card('¿Ya tiene pasajes?', 'rama del formulario', barras(R.pasajes, x => x.clave === true || x.clave === 1 || x.clave === 'si' ? 'Sí' : x.clave === false || x.clave === 0 || x.clave === 'no' ? 'No' : String(x.clave ?? '—')))}
-      ${R.otros_destinos && R.otros_destinos.length ? card('Otros destinos', 'texto libre', barras(R.otros_destinos)) : ''}
-      ${R.paquetes && R.paquetes.length ? card('Paquetes', 'en el formulario de paquete', barras(R.paquetes)) : ''}
-      ${R.dominios && R.dominios.length ? card('Email', 'dominio', barras(R.dominios)) : ''}
-    </div>`;
+  // Respuestas por paso: las manda el formulario en cada paso completado
+  // (incluso de quienes después no envían). Solo se muestran las que tienen datos.
+  const conDatos = (filas) => (filas || []).filter(x => x.clave !== null && x.clave !== undefined).length;
+  const tarjetasResp = [
+    conDatos(R.destinos) && card('Destinos', 'los que marcan', barras(R.destinos)),
+    conDatos(R.dias) && card('Días de viaje', 'agrupados', barras(R.dias)),
+    conDatos(R.meses) && card('Cuándo viajan', 'mes elegido', barras(R.meses)),
+    conDatos(R.personas) && card('Personas', 'adultos + niños', barras(R.personas, x => `${x.clave} ${+x.clave === 1 ? 'persona' : 'personas'}`)),
+    conDatos(R.ninos) && card('Con niños', 'según el paso Personas', barras(R.ninos, null, 'ok')),
+    conDatos(R.pasajes) && card('¿Ya tiene pasajes?', 'del paso Pasajes', barras(R.pasajes, x => x.clave === true || x.clave === 1 || x.clave === 'si' || x.clave === 'comprados' ? 'Sí' : x.clave === false || x.clave === 0 || x.clave === 'no' || x.clave === 'pendientes' ? 'No' : String(x.clave ?? '—'))),
+    conDatos(R.otros_destinos) && card('Otros destinos', 'texto libre', barras(R.otros_destinos)),
+    conDatos(R.paquetes) && card('Paquetes', 'en el formulario de paquete', barras(R.paquetes)),
+    conDatos(R.dominios) && card('Email', 'dominio', barras(R.dominios)),
+  ].filter(Boolean);
+  const respuestas = tarjetasResp.length ? `<div class="ag-sec-h wb-grupo"><h2>Qué responden en cada paso</h2><span class="hint">incluso de quienes después no envían</span></div>
+    <div class="wb-grid">${tarjetasResp.join('')}</div>` : '';
 
   const ab = d.abandono_por_paso || [];
   const abandono = `<div class="ag-sec-h wb-grupo"><h2>Dónde se van</h2><span class="hint">último paso de quienes no enviaron</span></div>
@@ -11429,8 +11453,38 @@ function renderFormulario(){
         <td class="wb-cod">${val(s.manychat_id)}</td><td>${num(s.errores)}</td><td>${minutos(s.t_total_ms)}</td></tr>`).join('')}
     </tbody></table></div>` : `<div class="wb-panel"><div class="pf2-empty">Ninguna.</div></div>`}`;
 
-  host.innerHTML = tools + cards + embudo + porDia + respuestas + abandono + quienes + horario + enviosHtml + abandonosHtml;
+  host.innerHTML = tools + webHtml + `<div class="ag-sec-h wb-grupo"><h2>Paso a paso</h2><span class="hint">todas las sesiones, envíen o no</span></div>` + cards + embudo + porDia + respuestas + abandono + quienes + horario + enviosHtml + abandonosHtml;
   fmWire(host);
+}
+
+// Formulario nuevo de la web: lo que dejó cada persona (sale de cada lead).
+function fmWebHtml(w){
+  if(!w || !w.contactos) return `<div class="wb-panel"><div class="pf2-empty">Nadie dejó sus datos en el formulario de la web en este período.</div></div>`;
+  const card = (titulo, sub, filas, lbl, clase) => `<div class="cv-card"><h3>${titulo}</h3><div class="csub">${sub}</div>${wbBarras(filas || [], x => lbl ? lbl(x) : String(x.clave), x => +x.n || 0, clase)}</div>`;
+  const dec1 = v => v == null ? '—' : v.toLocaleString('es-AR', { maximumFractionDigits:1 });
+  const dur = s => s == null ? '—' : s < 60 ? Math.round(s) + ' s' : dec1(s / 60) + ' min';
+  const serie = (w.por_dia || []);
+  return `<div class="pf2-grid">
+      ${pfTarjeta('Dejaron sus datos', num(w.contactos), 'nombre y WhatsApp: el lead ya está en el CRM', serie.map(x => x.sesiones), 'var(--cv-c2)')}
+      ${pfTarjeta('Terminaron', num(w.completos), `<b>${pct(wbRatio(w.completos, w.contactos))}</b> · ${num(w.parciales)} se fueron después del WhatsApp`, serie.map(x => x.consultaron), 'var(--si)')}
+      ${pfTarjeta('Escribieron por WhatsApp', num(w.click_whatsapp), `<b>${pct(wbRatio(w.click_whatsapp, w.completos))}</b> de los que terminaron tocaron el botón final`, [], 'var(--cv-c1)')}
+      ${pfTarjeta('Score promedio', w.score_promedio == null ? '—' : dec1(w.score_promedio) + '/10', `tiempo para completarlo: <b>${dur(w.duracion_mediana_s)}</b> (mediana)`, [], 'var(--glacier)')}
+    </div>
+    <div class="ag-sec-h wb-grupo"><h2>Qué dejaron en el formulario</h2><span class="hint">de cada lead del formulario de la web, en el período</span></div>
+    <div class="wb-grid">
+      ${card('Calidad (score)', 'según el score del formulario', w.score, null, 'ok')}
+      ${card('Presupuesto por persona', 'sin vuelos internacionales', w.presupuesto)}
+      ${card('Itinerario', 'si ya sabe qué quiere o pide ayuda', w.tipo)}
+      ${card('Destinos', 'todos los que marcaron', w.destinos)}
+      ${card('Primer destino', 'por dónde arranca el viaje', w.primer_destino)}
+      ${card('Días de viaje', 'agrupados', w.dias)}
+      ${card('Cuándo viajan', 'mes de llegada', w.mes)}
+      ${card('Personas', 'adultos + niños', w.personas, x => `${x.clave} ${x.clave === '1' ? 'persona' : 'personas'}`)}
+      ${card('Con niños', 'según el paso Personas', w.ninos, null, 'ok')}
+      ${card('Pasajes', '¿ya compró los vuelos?', w.pasajes)}
+      ${card('País', 'detectado por la web', w.pais)}
+      ${card('Origen', 'UTM o de dónde llegó', w.origen)}
+    </div>`;
 }
 
 function fmBarrasHora(filas){

@@ -132,7 +132,9 @@ async function registro(env, body) {
       stmts.push(db.prepare(
         `INSERT INTO leads (nombre, manychat_id, ig_username, setter, fuente, etapa, fecha_agenda, fecha_alta, creado_en, actualizado_en)
          VALUES (?, ?, ?, ?, 'Instagram', 'lead_nuevo', ?, ?, ?, ?)`
-      ).bind(p.ig || 'Suscriptor ' + p.id, p.id, p.ig, p.setter, p.fechaCall, ahora, ahora, ahora));
+      // El nombre queda vacío: el Sheet trae el usuario de Instagram, que va a
+      // ig_username. El nombre real se completa a mano o desde el formulario.
+      ).bind('', p.id, p.ig, p.setter, p.fechaCall, ahora, ahora, ahora));
       stmts.push(db.prepare(
         `INSERT INTO eventos (lead_id, etapa_desde, etapa_hasta, quien, creado_en)
          VALUES ((SELECT last_insert_rowid()), NULL, 'lead_nuevo', 'sheet', ?)`
