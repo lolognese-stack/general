@@ -1675,6 +1675,24 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 .wb-paso.crm:first-of-type,.wb-paso:not(.crm) + .wb-paso.crm{margin-top:6px;padding-top:12px;border-top:1px dashed var(--line)}
 .wb-curva svg{display:block;width:100%;height:190px}
 .fm-mini .pf2-card{padding-bottom:var(--s4)}
+.ri-ticket{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-3)}
+.ri-ticket input{width:84px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit}
+.ri-doc{padding:var(--s5) clamp(var(--s4),4vw,var(--s6));line-height:1.6;font-size:14px;color:var(--ink-2)}
+.ri-doc h2{font-size:22px;color:var(--ink);margin:0 0 var(--s2);letter-spacing:-.01em}
+.ri-doc h3{font-size:16.5px;color:var(--ink);margin:var(--s5) 0 var(--s2);padding-top:var(--s3);border-top:1px solid var(--line)}
+.ri-doc h4,.ri-doc h5{font-size:14px;color:var(--ink);margin:var(--s4) 0 var(--s1)}
+.ri-doc p{margin:0 0 var(--s3)}
+.ri-doc ul,.ri-doc ol{margin:0 0 var(--s3);padding-left:1.3em}
+.ri-doc li{margin:3px 0}
+.ri-doc b{color:var(--ink)}
+.ri-doc code{font-size:12.5px;background:var(--surface-sunk);padding:1px 5px;border-radius:5px}
+.ri-doc blockquote{margin:0 0 var(--s3);padding:8px 12px;border-left:3px solid var(--glacier);background:var(--surface-2);border-radius:0 8px 8px 0;color:var(--ink-2)}
+.ri-tabla{margin:0 0 var(--s4);overflow-x:auto}
+.ri-tabla td,.ri-tabla th{white-space:normal;overflow:visible;text-overflow:clip;max-width:none}
+.ri-doc li.ri-sub{margin-left:1.4em;list-style:circle}
+.ri-cursor{color:var(--ink-3);font-size:12px;animation:ri-parpadeo 1.2s infinite}
+@keyframes ri-parpadeo{50%{opacity:.35}}
+@media (prefers-reduced-motion: reduce){.ri-cursor{animation:none}}
 .fm-mini .pf2-val{font-size:22px}
 .fm-envios{overflow-x:auto}
 .fm-envios tbody tr[data-lead]{cursor:pointer}
@@ -2018,6 +2036,10 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>
         <span>Performance</span>
       </button>
+      <button data-seccion="reporte">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>
+        <span>Reporte</span>
+      </button>
       <button data-seccion="web">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
         <span>Web</span>
@@ -2075,6 +2097,7 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 
     <section class="view" id="view-web" hidden></section>
     <section class="view" id="view-formulario" hidden></section>
+    <section class="view" id="view-reporte" hidden></section>
 
     <div class="ag-sec-h ib-tabs-wrap" id="ib-tabs" hidden>
       <div class="cv-vswitch" role="tablist" aria-label="Inbox">
@@ -3175,6 +3198,7 @@ function render(){
   else if(seccion === 'performance') renderPerformance();
   else if(seccion === 'web') renderWeb();
   else if(seccion === 'formulario') renderFormulario();
+  else if(seccion === 'reporte') renderReporte();
   else if(seccion === 'inbox' && ibActivo) renderInbox();
   else if(seccion === 'setter' && ibActivo) renderSetter();
 }
@@ -3243,14 +3267,15 @@ function irA(nuevaSeccion){
   el('view-ventas').hidden        = seccion !== 'ventas';
   el('view-web').hidden           = seccion !== 'web';
   el('view-formulario').hidden    = seccion !== 'formulario';
+  el('view-reporte').hidden       = seccion !== 'reporte';
   el('view-inbox').hidden         = seccion !== 'inbox';
   el('view-setter').hidden        = seccion !== 'setter';
   if(seccion !== 'objetivos') document.body.classList.remove('ob-weekly');
   el('kpis').hidden               = seccion !== 'leads' && seccion !== 'ventas';
   el('subtabs').hidden            = seccion !== 'leads';
   el('vt-subtabs').hidden         = seccion !== 'ventas';
-  el('search-wrap').hidden        = seccion === 'conversacion' || seccion === 'performance' || seccion === 'objetivos' || seccion === 'web' || seccion === 'formulario' || seccion === 'inbox' || seccion === 'setter';
-  el('new-btn').hidden            = seccion === 'conversacion' || seccion === 'performance' || seccion === 'planificador' || seccion === 'historias' || seccion === 'objetivos' || seccion === 'web' || seccion === 'formulario' || seccion === 'inbox' || seccion === 'setter';
+  el('search-wrap').hidden        = seccion === 'conversacion' || seccion === 'performance' || seccion === 'objetivos' || seccion === 'web' || seccion === 'formulario' || seccion === 'reporte' || seccion === 'inbox' || seccion === 'setter';
+  el('new-btn').hidden            = seccion === 'conversacion' || seccion === 'performance' || seccion === 'planificador' || seccion === 'historias' || seccion === 'objetivos' || seccion === 'web' || seccion === 'formulario' || seccion === 'reporte' || seccion === 'inbox' || seccion === 'setter';
 
   el('new-btn-txt').textContent   = seccion === 'ventas' ? 'Nueva venta' : 'Nuevo lead';
 
@@ -3265,6 +3290,7 @@ function irA(nuevaSeccion){
   if(seccion === 'objetivos') cargarObjetivos();
   if(seccion === 'web'){ el('view-title').textContent = 'Web'; if(!wbCargado) cargarWeb(); }
   if(seccion === 'formulario'){ el('view-title').textContent = 'Formulario'; if(!fmCargado) cargarFormulario(); }
+  if(seccion === 'reporte'){ el('view-title').textContent = 'Reporte'; if(!riLista) cargarReportes(); else renderReporte(); }
   if(seccion === 'setter'){
     el('view-title').textContent = 'Setter IA';
     if(ibActivo){ if(!stDatos) cargarSetter(); else renderSetter(); }
@@ -3356,7 +3382,7 @@ function parseHash(){
     }
     return;
   }
-  const m = location.hash.match(/^#\/(leads|agendas|conversacion|planificador|historias|performance|objetivos|web|formulario|inbox|setter)(?:\/(pipeline|calificacion|tabla|cuenta|contenido|ranking|acumulado|detalle|calendario|leads|resumen|config|semana|weekly|agentes|analiticas|recursos|conocimiento|aprobar|simulador|salud|ajustes))?/);
+  const m = location.hash.match(/^#\/(leads|agendas|conversacion|planificador|historias|performance|objetivos|web|formulario|reporte|inbox|setter)(?:\/(pipeline|calificacion|tabla|cuenta|contenido|ranking|acumulado|detalle|calendario|leads|resumen|config|semana|weekly|agentes|analiticas|recursos|conocimiento|aprobar|simulador|salud|ajustes))?/);
   if(!m) return;
   if(m[1] === 'leads' && m[2]){
     vista = m[2];
@@ -11485,6 +11511,180 @@ function fmWebHtml(w){
       ${card('País', 'detectado por la web', w.pais)}
       ${card('Origen', 'UTM o de dónde llegó', w.origen)}
     </div>`;
+}
+
+/* ---------------- Reporte de inteligencia de contenido ---------------- */
+// /api/reporte. Junta setting (Sheet), compradores ≥ X con su recorrido y la
+// voz del comprador (formulario, Radar, WhatsApp) y Claude arma el informe con
+// el prompt del "Reporte Total" adaptado a ventas sin llamadas.
+let riLista = null, riPeriodo = '30', riDesde = '', riHasta = '', riTicket = 800;
+let riInsumos = null, riActual = null, riGenerando = false, riTextoVivo = '';
+
+function riRango(){
+  const hoy = pzFmtFecha(new Date());
+  if(riPeriodo === 'rango' && riDesde && riHasta) return { desde: riDesde, hasta: riHasta };
+  const d = new Date(); d.setDate(d.getDate() - (Number(riPeriodo) || 30) + 1);
+  return { desde: pzFmtFecha(d), hasta: hoy };
+}
+
+async function cargarReportes(){
+  try{ riLista = await api('/api/reporte'); }catch(e){ riLista = []; }
+  if(seccion === 'reporte') renderReporte();
+}
+
+async function riRevisar(){
+  const r = riRango();
+  riInsumos = 'cargando'; renderReporte();
+  try{ riInsumos = await api(`/api/reporte?insumos=1&desde=${r.desde}&hasta=${r.hasta}&ticket=${riTicket}`); }
+  catch(e){ riInsumos = null; toast('No se pudieron armar los datos: ' + e.message, { tipo:'error' }); }
+  renderReporte();
+}
+
+async function riGenerar(){
+  if(riGenerando) return;
+  const r = riRango();
+  riGenerando = true; riTextoVivo = ''; riActual = null; renderReporte();
+  try{
+    const res = await fetch('/api/reporte', { method:'POST', headers:{ 'content-type':'application/json', 'x-crm-token': getToken() },
+      body: JSON.stringify({ desde:r.desde, hasta:r.hasta, ticket:riTicket }) });
+    if(!res.ok){ const j = await res.json().catch(() => ({})); throw new Error(j.error || ('HTTP ' + res.status)); }
+    const id = Number(res.headers.get('x-reporte-id'));
+    const lector = res.body.getReader(), dec = new TextDecoder();
+    let ultimo = 0;
+    for(;;){
+      const { value, done } = await lector.read();
+      if(done) break;
+      riTextoVivo += dec.decode(value, { stream:true });
+      if(Date.now() - ultimo > 400){ ultimo = Date.now(); riPintarVivo(); }
+    }
+    riGenerando = false;
+    await cargarReportes();
+    if(id) await riAbrir(id);
+  }catch(e){
+    riGenerando = false;
+    toast('No se pudo generar el reporte: ' + e.message, { tipo:'error', ms:9000 });
+    renderReporte();
+  }
+}
+
+async function riAbrir(id){
+  try{ riActual = await api('/api/reporte?id=' + id); }catch(e){ toast('No se pudo abrir el reporte.', { tipo:'error' }); }
+  renderReporte();
+  const caja = el('ri-doc'); if(caja) caja.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+function riDescargar(){
+  if(!riActual || !riActual.texto) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([riActual.texto], { type:'text/markdown;charset=utf-8' }));
+  a.download = `reporte-contenido-${riActual.desde}-${riActual.hasta}.md`;
+  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+// Markdown mínimo y seguro (escapa todo antes): títulos, listas, tablas,
+// citas, negrita, cursiva y código en línea. Es lo que usa el prompt.
+function riMd(md){
+  const enLinea = s => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/(^|[\s(])_([^_]+)_(?=[\s).,;:]|$)/g, '$1<i>$2</i>').replace(/(^|[\s(])\*([^*]+)\*(?=[\s).,;:]|$)/g, '$1<i>$2</i>');
+  const lineas = String(md || '').replace(/\r/g, '').split('\n');
+  let html = '', i = 0;
+  while(i < lineas.length){
+    const l = lineas[i];
+    if(/^\s*$/.test(l)){ i++; continue; }
+    let m;
+    if((m = l.match(/^(#{1,4})\s+(.*)$/))){ const n = Math.min(m[1].length + 1, 5); html += `<h${n}>${enLinea(m[2])}</h${n}>`; i++; continue; }
+    if(/^\s*\|/.test(l)){
+      const filas = [];
+      while(i < lineas.length && /^\s*\|/.test(lineas[i])){ filas.push(lineas[i]); i++; }
+      const celdas = f => f.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+      const esSep = f => /^[\s|:-]+$/.test(f) && f.includes('-');
+      const sep = filas.findIndex(esSep);
+      const cab = sep === 1 ? celdas(filas[0]) : null;
+      const datos = filas.filter((f, k) => !esSep(f) && !(cab && k === 0));
+      html += `<div class="cv-tblwrap ri-tabla"><table>${cab ? `<thead><tr>${cab.map(c => `<th>${enLinea(c)}</th>`).join('')}</tr></thead>` : ''}<tbody>${datos.map(f => `<tr>${celdas(f).map(c => `<td>${enLinea(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+      continue;
+    }
+    if(/^\s*>/.test(l)){
+      const bloque = [];
+      while(i < lineas.length && /^\s*>/.test(lineas[i])){ bloque.push(lineas[i].replace(/^\s*>\s?/, '')); i++; }
+      html += `<blockquote>${bloque.map(enLinea).join('<br>')}</blockquote>`; continue;
+    }
+    if(/^\s*([-*]|\d+\.)\s+/.test(l)){
+      const ord = /^\s*\d+\./.test(l), items = [];
+      while(i < lineas.length && /^\s*([-*]|\d+\.)\s+/.test(lineas[i])){
+        items.push({ sub: /^\s{2,}/.test(lineas[i]), t: lineas[i].replace(/^\s*([-*]|\d+\.)\s+/, '') }); i++;
+      }
+      html += `<${ord ? 'ol' : 'ul'}>${items.map(x => `<li${x.sub ? ' class="ri-sub"' : ''}>${enLinea(x.t)}</li>`).join('')}</${ord ? 'ol' : 'ul'}>`; continue;
+    }
+    const parr = [];
+    while(i < lineas.length && !/^\s*$/.test(lineas[i]) && !/^(#{1,4}\s|\s*\||\s*>|\s*([-*]|\d+\.)\s+)/.test(lineas[i])){ parr.push(lineas[i]); i++; }
+    html += `<p>${parr.map(enLinea).join('<br>')}</p>`;
+  }
+  return html;
+}
+
+function riPintarVivo(){
+  const caja = el('ri-doc-cuerpo');
+  if(caja) caja.innerHTML = riMd(riTextoVivo) + '<p class="ri-cursor">Escribiendo…</p>';
+}
+
+function renderReporte(){
+  const host = el('view-reporte');
+  const r = riRango();
+  const tools = `<div class="ag-sec-h cv-toolbar-top">
+    <div class="cv-vswitch" id="ri-periodo" role="group" aria-label="Período">
+      ${[['30','Último mes'],['90','3 meses'],['rango','Rango']].map(([v,t]) => `<button data-v="${v}" aria-current="${String(riPeriodo === v)}">${t}</button>`).join('')}
+    </div>
+    ${riPeriodo === 'rango' ? `<div class="pz-toolbar-left pf2-per"><input type="date" id="ri-desde" value="${esc(riDesde || r.desde)}" aria-label="Desde"><span class="sep">→</span><input type="date" id="ri-hasta" value="${esc(riHasta || r.hasta)}" aria-label="Hasta"></div>` : ''}
+    <label class="ri-ticket">Ticket objetivo USD <input type="number" id="ri-ticket" min="50" step="50" value="${riTicket}"></label>
+    <button type="button" class="btn btn-ghost btn-sm" id="ri-revisar">Revisar datos</button>
+    <button type="button" class="btn btn-primary btn-sm" id="ri-generar" ${riGenerando ? 'disabled' : ''}>${riGenerando ? 'Generando…' : 'Generar reporte'}</button>
+  </div>
+  <div class="pf2-rangoinfo">${fechaCorta(r.desde)} – ${fechaCorta(r.hasta)} · compradores de USD ${num(riTicket)} o más · setting + recorrido de contenido + voz del comprador (sin llamadas) · lo escribe Claude Opus 5.5, tarda 1 a 3 minutos</div>`;
+
+  let insumos = '';
+  if(riInsumos === 'cargando') insumos = `<div class="wb-panel"><div class="pf2-empty">Armando los datos…</div></div>`;
+  else if(riInsumos){
+    const s = riInsumos.resumen || {}, e = riInsumos.capa_a_setting?.embudo || {};
+    insumos = `<div class="ag-sec-h"><h2>Datos que va a leer el reporte</h2><span class="hint">revisa los warnings antes de generar</span></div>
+      <div class="pf2-grid fm-mini">
+        <div class="pf2-card"><div class="pf2-lbl">Compradores ≥ USD ${num(riTicket)}</div><div class="pf2-val">${num(s.compradores_objetivo)}</div><div class="pf2-sub">capa B · ${num(s.ventas_menores)} ventas menores de contraste</div></div>
+        <div class="pf2-card"><div class="pf2-lbl">Con pieza de entrada</div><div class="pf2-val">${num((s.compradores_objetivo || 0) - (s.sin_entrada || 0))}</div><div class="pf2-sub">el dato que más manda</div></div>
+        <div class="pf2-card"><div class="pf2-lbl">Con voz registrada</div><div class="pf2-val">${num(s.con_voz)}</div><div class="pf2-sub">formulario, Radar o WhatsApp (capa C)</div></div>
+        <div class="pf2-card"><div class="pf2-lbl">Personas en el embudo</div><div class="pf2-val">${num(e.personas)}</div><div class="pf2-sub">capa A · ${num((riInsumos.capa_a_setting?.contenido_por_pieza || []).length)} piezas con recorrido</div></div>
+      </div>
+      ${(riInsumos.warnings || []).length ? `<div class="wb-alertas">${riInsumos.warnings.map(w => `<div class="wb-alerta" data-n="media">${esc(w)}</div>`).join('')}</div>` : ''}`;
+  }
+
+  const lista = riLista || [];
+  let doc = '';
+  if(riGenerando){
+    doc = `<div class="ag-sec-h"><h2>Reporte en curso</h2><span class="hint">se va escribiendo · no cierres esta pestaña</span></div>
+      <div class="wb-panel ri-doc" id="ri-doc"><div id="ri-doc-cuerpo"></div></div>`;
+  } else if(riActual){
+    doc = `<div class="ag-sec-h"><h2>Reporte del ${fechaCorta(riActual.desde)} al ${fechaCorta(riActual.hasta)}</h2>
+        <span class="hint">${esc(riActual.modelo || '')} · ${wbFecha(riActual.creado_en)} · <button type="button" class="btn btn-ghost btn-sm" id="ri-md">Descargar .md</button></span></div>
+      <div class="wb-panel ri-doc" id="ri-doc">${riActual.texto ? riMd(riActual.texto) : `<div class="pf2-empty">${esc(riActual.error || 'Sin texto.')}</div>`}</div>`;
+  }
+
+  const historial = `<div class="ag-sec-h wb-grupo"><h2>Reportes anteriores</h2><span class="hint">clic para abrir</span></div>
+    ${lista.length ? `<div class="cv-tblwrap"><table><thead><tr><th>Generado</th><th>Período</th><th>Ticket</th><th>Compradores ≥ X</th><th>Sin entrada</th><th>Estado</th></tr></thead><tbody>
+      ${lista.map(x => `<tr data-ri="${x.id}" class="cv-exp"><td>${wbFecha(x.creado_en)}</td><td>${fechaCorta(x.desde)} – ${fechaCorta(x.hasta)}</td><td>USD ${num(x.ticket_usd)}</td>
+        <td>${num(x.resumen?.compradores_objetivo)}</td><td>${num(x.resumen?.sin_entrada)}</td>
+        <td>${x.estado === 'listo' ? '<span class="wb-ok">listo</span>' : x.estado === 'error' ? `<span style="color:var(--danger)" title="${esc(x.error || '')}">error</span>` : 'generando…'}</td></tr>`).join('')}
+    </tbody></table></div>` : `<div class="wb-panel"><div class="pf2-empty">Todavía no hay reportes. Revisa los datos y genera el primero.</div></div>`}`;
+
+  host.innerHTML = tools + insumos + doc + historial;
+  if(riGenerando) riPintarVivo();
+
+  host.querySelectorAll('#ri-periodo button').forEach(b => b.addEventListener('click', () => { riPeriodo = b.dataset.v; riInsumos = null; renderReporte(); }));
+  const d1 = el('ri-desde'), d2 = el('ri-hasta');
+  if(d1) d1.addEventListener('change', e => { riDesde = e.target.value; riInsumos = null; });
+  if(d2) d2.addEventListener('change', e => { riHasta = e.target.value; riInsumos = null; });
+  el('ri-ticket').addEventListener('change', e => { riTicket = Math.max(50, Number(e.target.value) || 800); riInsumos = null; renderReporte(); });
+  el('ri-revisar').addEventListener('click', riRevisar);
+  el('ri-generar').addEventListener('click', riGenerar);
+  const md = el('ri-md'); if(md) md.addEventListener('click', riDescargar);
+  host.querySelectorAll('tr[data-ri]').forEach(tr => tr.addEventListener('click', () => riAbrir(Number(tr.dataset.ri))));
 }
 
 function fmBarrasHora(filas){

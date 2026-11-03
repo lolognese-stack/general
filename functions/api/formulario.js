@@ -57,7 +57,7 @@ function medianaSql(selectValor, from, whereSql, particion = []) {
 }
 
 // Agrega los leads del formulario nuevo: [{clave, n}] por cada respuesta.
-function resumenWeb(filas) {
+export function resumenWeb(filas) {
   const cuenta = () => new Map();
   const suma = (m, k) => { if (k === null || k === undefined || k === '') k = '—'; m.set(String(k), (m.get(String(k)) || 0) + 1); };
   const lista = (m, orden) => { const a = [...m].map(([clave, n]) => ({ clave, n })); return orden ? a.sort(orden) : a.sort((x, y) => y.n - x.n); };
