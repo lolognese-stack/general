@@ -1,0 +1,71 @@
+/* Botón del ideador en la barra de Instagram. Todo con prefijo crm-ext para
+   no chocar con las clases de Instagram. --crm-acento sale del CRM conectado
+   y --crm-ext-icono es el color de los íconos de la barra. */
+
+.crm-ext-btn {
+  all: unset;
+  box-sizing: border-box;
+  flex: none;
+  align-self: center;
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin: 0 6px 0 2px;
+  border: 1.5px solid color-mix(in srgb, var(--crm-acento, #C8102E) 70%, transparent);
+  border-radius: 7px;
+  color: var(--crm-ext-icono, currentColor);
+  background: transparent;
+  cursor: pointer;
+  transition: background-color .15s, border-color .15s, transform .1s;
+}
+.crm-ext-btn.crm-ext-vertical { margin: 0 0 10px; }
+
+.crm-ext-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.crm-ext-btn .crm-ext-relleno { stroke: none; fill: none; }
+
+.crm-ext-btn:hover { background: color-mix(in srgb, var(--crm-acento, #C8102E) 12%, transparent); }
+.crm-ext-btn:active { transform: scale(.92); }
+.crm-ext-btn:focus-visible { outline: 2px solid var(--crm-acento, #C8102E); outline-offset: 2px; }
+
+/* Ya guardado: relleno con el acento del CRM. */
+.crm-ext-btn.crm-ext-guardado {
+  border-color: var(--crm-acento, #C8102E);
+  background: var(--crm-acento, #C8102E);
+  color: #fff;
+}
+.crm-ext-btn.crm-ext-guardado .crm-ext-relleno { fill: currentColor; }
+.crm-ext-btn.crm-ext-guardado:hover { background: color-mix(in srgb, var(--crm-acento, #C8102E) 85%, black); }
+
+/* Panel a la derecha con el formulario (popup.html?embebido=1). */
+#crm-ext-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 2147483647;
+  width: 380px;
+  max-width: 100vw;
+  height: 100vh;
+  background: #fff;
+  border-left: 1px solid rgba(0, 0, 0, .12);
+  box-shadow: -8px 0 28px rgba(0, 0, 0, .18);
+  animation: crm-ext-entrar .18s ease-out;
+}
+#crm-ext-panel iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+@keyframes crm-ext-entrar {
+  from { transform: translateX(24px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}

@@ -1,0 +1,19 @@
+name = "crm-plantilla"
+pages_build_output_dir = "."
+compatibility_date = "2024-09-23"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "crm-plantilla"
+database_id = "3bc152cd-ac4c-4043-baf7-9c84b68fa945"
+
+# Workers AI: Whisper para transcribir reels del Ideador (/api/transcribir-idea).
+[ai]
+binding = "AI"
+
+# Setter de IA de WhatsApp (solo Luna Llena): el panel manda mensajes y baja
+# notas de voz por el Worker setter-worker/. nuevo-cliente.py reescribe este
+# archivo sin este bloque.
+[[services]]
+binding = "SETTER"
+service = "setter-worker"

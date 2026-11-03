@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ideador · Conexión</title>
+  <link rel="stylesheet" href="popup.css">
+  <style>
+    body { width: auto; max-width: 480px; margin: 40px auto; padding: 0 16px; }
+    h1 { font-size: 17px; margin: 0 0 16px; }
+    dl { display: grid; grid-template-columns: 90px 1fr; gap: 8px 12px; margin: 0 0 18px; }
+    dt { color: var(--apagado); font-size: 12px; }
+    dd { margin: 0; overflow-wrap: anywhere; }
+    .muestra { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; margin-right: 6px; border: 1px solid var(--linea); }
+    .secundario {
+      padding: 8px 12px; border: 1px solid var(--linea); border-radius: 6px;
+      background: var(--fondo); color: var(--crm-tinta); font: inherit; cursor: pointer;
+    }
+    .secundario:hover { background: var(--suave); }
+  </style>
+</head>
+<body>
+  <h1>Conexión con el CRM</h1>
+
+  <div id="conectada" hidden>
+    <dl>
+      <dt>CRM</dt><dd id="nombre"></dd>
+      <dt>Dirección</dt><dd id="direccion"></dd>
+      <dt>Colores</dt><dd id="colores"></dd>
+    </dl>
+    <button type="button" id="desconectar" class="secundario">Desconectar</button>
+  </div>
+
+  <div id="desconectada" hidden>
+    <p><strong>Sin conectar.</strong></p>
+    <p class="nota">Abrí el panel del CRM del cliente (la dirección que termina en <code>/panel-…</code>) con la sesión iniciada. La extensión se conecta sola a ese CRM.</p>
+  </div>
+
+  <script src="comun.js"></script>
+  <script src="opciones.js"></script>
+</body>
+</html>

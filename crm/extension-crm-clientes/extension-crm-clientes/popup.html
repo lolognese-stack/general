@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Guardar en el Ideador</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="cab">
+    <div class="cab-titulo">
+      <svg class="marca" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.4.3.6.8.6 1.3V16h6v-.9c0-.5.2-1 .6-1.3A6 6 0 0 0 12 3Z"/></svg>
+      <span>Ideador</span>
+    </div>
+    <button type="button" id="cerrar" class="icono" aria-label="Cerrar" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+  </header>
+
+  <p id="conexion" class="conexion"></p>
+  <p id="aviso" class="aviso" hidden></p>
+
+  <div id="sin-conexion" class="vacio" hidden>
+    <p>Abrí el panel del CRM para conectar la extensión.</p>
+    <p class="nota">Con abrir una vez el panel del cliente alcanza: la extensión toma la conexión sola.</p>
+  </div>
+
+  <form id="form" hidden>
+    <label class="campo">
+      <span>Link del post</span>
+      <input id="url" type="url" placeholder="https://www.instagram.com/p/…" autocomplete="off" required>
+    </label>
+
+    <div id="vista" class="vista" hidden>
+      <img id="vista-img" alt="">
+      <div class="vista-datos">
+        <strong id="vista-creador"></strong>
+        <span id="vista-metricas"></span>
+        <p id="vista-caption"></p>
+      </div>
+    </div>
+    <p id="ya-guardada" class="ya" hidden>Ya está en el ideador. Al guardar se actualiza.</p>
+
+    <div class="fila">
+      <label class="campo">
+        <span>Formato</span>
+        <select id="formato"><option value="">Elegí…</option></select>
+      </label>
+      <div class="estrellas" data-campo="formato_score" role="group" aria-label="Puntaje del formato"></div>
+    </div>
+
+    <div class="fila">
+      <label class="campo">
+        <span>Ángulo</span>
+        <select id="angulo"><option value="">Elegí…</option></select>
+      </label>
+      <div class="estrellas" data-campo="angulo_score" role="group" aria-label="Puntaje del ángulo"></div>
+    </div>
+
+    <div id="nuevo-angulo" class="nuevo" hidden>
+      <div class="fila">
+        <label class="campo">
+          <span>Nuevo ángulo</span>
+          <input id="nuevo-nombre" type="text" maxlength="120" placeholder="Ej: Errores comunes" autocomplete="off">
+        </label>
+        <label class="campo campo-cat">
+          <span>Categoría</span>
+          <select id="nuevo-categoria"></select>
+        </label>
+      </div>
+      <p id="nuevo-estado" class="nuevo-estado" role="status"></p>
+      <div class="nuevo-acciones">
+        <button type="button" id="nuevo-cancelar" class="secundario">Cancelar</button>
+        <button type="button" id="nuevo-agregar" class="secundario fuerte">Agregar ángulo</button>
+      </div>
+    </div>
+
+    <label class="campo">
+      <span>Aplicación</span>
+      <textarea id="aplicacion" rows="3" placeholder="¿Cómo lo usaríamos?"></textarea>
+    </label>
+
+    <label class="campo campo-chico">
+      <span>Views</span>
+      <input id="views" type="number" min="0" inputmode="numeric" placeholder="Opcional">
+    </label>
+
+    <button id="guardar" type="submit" class="primario">Guardar</button>
+    <p id="estado" class="estado" role="status"></p>
+  </form>
+
+  <footer class="pie"><a href="opciones.html" target="_blank" id="link-opciones">Conexión</a></footer>
+
+  <script src="comun.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

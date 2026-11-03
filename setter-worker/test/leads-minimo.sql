@@ -1,0 +1,26 @@
+-- Subconjunto de `leads` de producción (crm/schema.sql + migraciones 004, 005, 035, 037).
+CREATE TABLE IF NOT EXISTS leads (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nombre TEXT NOT NULL,
+  pais TEXT,
+  whatsapp TEXT,
+  email TEXT,
+  etapa TEXT NOT NULL DEFAULT 'lead_nuevo',
+  notas TEXT,
+  setter TEXT,
+  fuente TEXT,
+  calificado TEXT,
+  closer TEXT,
+  destinos TEXT,
+  fecha_viaje TEXT,
+  personas INTEGER,
+  presupuesto_pp TEXT,
+  residencia TEXT,
+  edades_menores TEXT,
+  categoria_hotel TEXT,
+  ocasion TEXT,
+  score INTEGER,
+  codigo_web TEXT,
+  creado_en TEXT NOT NULL,
+  actualizado_en TEXT NOT NULL
+);

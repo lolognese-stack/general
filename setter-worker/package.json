@@ -1,0 +1,17 @@
+{
+  "name": "setter-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev -c wrangler.local.toml --persist-to ../.wrangler/state",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.4.10",
+    "vitest": "^4.1.0",
+    "wrangler": "^4.155.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.3.0"
+  }
+}

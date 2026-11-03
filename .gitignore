@@ -1,0 +1,20 @@
+# SO / editores
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+.vscode/
+.idea/
+
+# temporales
+*.log
+*.tmp
+*~
+
+# Cloudflare / secretos locales — nunca al repo
+.dev.vars
+.wrangler/
+
+# Salida generada por scripts/ig_import.mjs -- regenerable desde data/raw/,
+# no hace falta versionarla.
+data/raw/out/

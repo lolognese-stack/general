@@ -1,0 +1,11 @@
+name = "luna-ig-sync"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "crm-plantilla"
+database_id = "3bc152cd-ac4c-4043-baf7-9c84b68fa945"
+
+[triggers]
+crons = ["0 8 * * *"]   # 08:00 UTC = 05:00 ART

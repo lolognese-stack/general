@@ -1,0 +1,109 @@
+{
+  "_comentario": "Defaults del programa de 90 días (10 semanas). Personalizar un cliente nuevo = editar este archivo. Los valores acordados en la kick-off (fechas, seguidores) se cargan desde el panel de admin y pisan estos defaults en la tabla `programa`. conv_pub y conv_dia se derivan solos: conversaciones necesarias = consultas / pct_conv; conv_pub = eso / piezas; conv_dia = eso / 7. Solo se escriben a mano cuando falta consultas o pct_conv.",
+  "duracion_dias": 90,
+  "objetivo_total_consultas": 400,
+  "seguidores_minimo": 10000,
+  "seguidores_incremento": 7000,
+  "semana_objetivo_seguidores": 4,
+  "umbrales": {
+    "superado": 1.2,
+    "cumplido": 1.0,
+    "cerca": 0.8
+  },
+  "textos": {
+    "objetivo_programa": "400 consultas en 90 días con contenido orgánico en Instagram."
+  },
+  "curva": [
+    {
+      "semana": 1,
+      "consultas": null,
+      "piezas": 21,
+      "visitas_video": null,
+      "conv_pub": null,
+      "conv_dia": null,
+      "pct_conv": null
+    },
+    {
+      "semana": 2,
+      "consultas": 7,
+      "piezas": 21,
+      "visitas_video": 1000,
+      "conv_pub": null,
+      "conv_dia": null,
+      "pct_conv": null
+    },
+    {
+      "semana": 3,
+      "consultas": 14,
+      "piezas": 21,
+      "visitas_video": null,
+      "conv_pub": 20,
+      "conv_dia": null,
+      "pct_conv": null
+    },
+    {
+      "semana": 4,
+      "consultas": 35,
+      "piezas": 21,
+      "visitas_video": null,
+      "conv_pub": null,
+      "conv_dia": null,
+      "pct_conv": 0.05,
+      "seguidores": true
+    },
+    {
+      "semana": 5,
+      "consultas": 57,
+      "piezas": 28,
+      "visitas_video": null,
+      "conv_pub": null,
+      "conv_dia": null,
+      "pct_conv": 0.05
+    },
+    {
+      "semana": 6,
+      "consultas": 57,
+      "piezas": 28,
+      "visitas_video": null,
+      "conv_pub": null,
+      "conv_dia": null,
+      "pct_conv": 0.05
+    },
+    {
+      "semana": 7,
+      "consultas": 57,
+      "piezas": 28,
+      "visitas_video": null,
+      "conv_pub": null,
+      "conv_dia": null,
+      "pct_conv": 0.05
+    },
+    {
+      "semana": 8,
+      "consultas": 57,
+      "piezas": 28,
+      "visitas_video": null,
+      "conv_pub": null,
+      "conv_dia": null,
+      "pct_conv": 0.05
+    },
+    {
+      "semana": 9,
+      "consultas": 58,
+      "piezas": 28,
+      "visitas_video": null,
+      "conv_pub": null,
+      "conv_dia": null,
+      "pct_conv": 0.05
+    },
+    {
+      "semana": 10,
+      "consultas": 58,
+      "piezas": 28,
+      "visitas_video": null,
+      "conv_pub": null,
+      "conv_dia": null,
+      "pct_conv": 0.05
+    }
+  ]
+}

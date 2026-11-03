@@ -1,0 +1,48 @@
+# setter-worker: webhook de WhatsApp, cola por conversación (Durable Object)
+# y tareas programadas del setter de IA de Luna Llena.
+# Plan: ../PLAN-setter-luna-llena.md · Relevamiento: ../SETTER-RELEVAMIENTO.md
+#
+# Secrets (wrangler secret put <NOMBRE>; en local van en .dev.vars, ver
+# .dev.vars.example):
+#   META_APP_SECRET, META_VERIFY_TOKEN, META_ACCESS_TOKEN, META_PHONE_NUMBER_ID,
+#   SETTER_INTERNAL_SECRET, ANTHROPIC_API_KEY (Fase 3)
+#
+# Local, con la misma D1 que el panel:  npm run dev  (--persist-to ../.wrangler/state)
+
+name = "setter-worker"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "crm-plantilla"
+database_id = "3bc152cd-ac4c-4043-baf7-9c84b68fa945"
+
+[[durable_objects.bindings]]
+name = "CONVERSACION"
+class_name = "Conversacion"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Conversacion"]
+
+[triggers]
+crons = ["*/15 * * * *"]
+
+# Whisper de Workers AI para las notas de voz de los leads.
+[ai]
+binding = "AI"
+
+[vars]
+# Versión de la Graph API de Meta. Subirla cuando Meta la deprecie.
+META_GRAPH_VERSION = "v24.0"
+# Link al chat en el mail de aviso de derivación.
+CRM_URL = "https://crm-plantilla.pages.dev"
+# Del sábado 20:00 al lunes 08:00 (hora de Argentina) la IA se presenta como
+# "<nombre>, la asistente virtual de <marca>" y avisa que el lunes sigue una persona.
+# Vacío = sin modo fin de semana. SETTER_FINDE_ZONA cambia la zona horaria.
+SETTER_FINDE_MARCA = "Luna Llena"
+SETTER_FINDE_NOMBRE = "Sofía"
+# Primera semana con el número real: de 9 a 21 (Argentina) contesta el equipo
+# y la IA no responde; de 21 a 9 atiende Sofía. Vacío = la IA contesta las 24 h.
+SETTER_SOLO_NOCHE = "1"

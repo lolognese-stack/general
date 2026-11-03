@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "Ideador · CRM de clientes",
+  "version": "1.0.0",
+  "description": "Guarda referencias de Instagram en el Ideador del CRM del cliente. Se conecta sola al abrir el panel del CRM.",
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": ["https://*.pages.dev/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Guardar en el Ideador"
+  },
+  "options_page": "opciones.html",
+  "content_scripts": [
+    {
+      "matches": ["https://*.pages.dev/panel-*"],
+      "js": ["comun.js", "conectar.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.instagram.com/*"],
+      "js": ["comun.js", "instagram.js"],
+      "css": ["instagram.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["popup.html", "popup.css", "popup.js", "comun.js"],
+      "matches": ["https://www.instagram.com/*"]
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

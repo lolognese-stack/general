@@ -1,0 +1,32 @@
+# Copiar a .dev.vars (que no va al repo) y completar. En producción van con
+# `wrangler secret put <NOMBRE>`.
+
+# App de Meta for Developers > Configuración > Básica > Clave secreta de la app.
+# Firma los webhooks (X-Hub-Signature-256).
+META_APP_SECRET=
+# Texto cualquiera; el mismo que se pone en Meta al configurar la URL del webhook.
+META_VERIFY_TOKEN=
+# Token de acceso del usuario del sistema (o el temporal del número de prueba).
+META_ACCESS_TOKEN=
+# WhatsApp > Configuración de la API > Identificador del número de teléfono.
+META_PHONE_NUMBER_ID=
+# Compartido con Pages (crm-plantilla) para que el panel mande por el Worker.
+SETTER_INTERNAL_SECRET=
+# console.anthropic.com > API Keys. Responde a los leads (claude-sonnet-5-5).
+ANTHROPIC_API_KEY=
+# Opcional: mail a la asesora cuando la IA deriva (Resend). Si faltan, solo suena el Inbox.
+RESEND_API_KEY=
+AVISO_EMAIL=
+# Opcional, solo local: "instante" responde a los 2 s en vez de la demora humana.
+SETTER_DEMORA=
+
+# Canal Kapso (número real en coexistencia). Con KAPSO_API_KEY el setter usa
+# Kapso en vez de la Cloud API de Meta; META_PHONE_NUMBER_ID pasa a ser el id
+# del número en Kapso. La API key se crea en Kapso › Settings › API keys.
+KAPSO_API_KEY=
+# El mismo secret_key con el que se dio de alta el webhook (kind "meta") en Kapso.
+KAPSO_WEBHOOK_SECRET=
+
+# Modo prueba: números separados por coma. Si está cargado, el setter ignora
+# por completo a cualquier otro número (ni lo guarda ni le contesta).
+SOLO_NUMEROS=
