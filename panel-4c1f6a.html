@@ -1282,37 +1282,32 @@ tr:hover .pz-link-edit,.pz-link-edit:focus-visible{opacity:1}
 :root{--cv-c1:#7656D6;--cv-c2:#1D74C4;--cv-c3:var(--si)}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--cv-c1:#B79CF5;--cv-c2:#6CB8FF}}
 :root[data-theme="dark"]{--cv-c1:#B79CF5;--cv-c2:#6CB8FF}
-.cvx{--cv-c1:#B79CF5;--cv-c2:#6CB8FF;--cv-c3:#4FD1A5;
-  background:linear-gradient(180deg,#122230 0%,#0E1B27 100%);border:1px solid #1D3040;border-radius:16px;
-  padding:var(--s5) var(--s5) var(--s4);margin-bottom:var(--s4);color:#C9D8E4;box-shadow:var(--shadow-lift)}
-.cvx-head{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--s4) var(--s5);flex-wrap:wrap;margin-bottom:var(--s4)}
-.cvx-stats{display:flex;gap:var(--s3) var(--s6);flex-wrap:wrap}
-.cvx-stat{display:flex;flex-direction:column;gap:4px;min-width:0}
-.cvx-lbl{display:flex;align-items:center;gap:7px;font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#8CA3B5}
-.cvx-lbl i,.cvx-legend i{width:9px;height:9px;border-radius:3px;background:var(--c);flex:none}
-.cvx-stat b{font-size:clamp(28px,3.4vw,40px);font-weight:800;line-height:1;letter-spacing:-.03em;color:var(--c);font-variant-numeric:tabular-nums}
-.cvx-legend{display:flex;gap:6px var(--s4);flex-wrap:wrap;padding-top:4px}
-.cvx-legend button{display:flex;align-items:center;gap:7px;border:none;background:none;padding:3px 2px;font:inherit;font-size:12.5px;color:#C9D8E4;cursor:pointer;border-radius:6px}
-.cvx-legend button:hover{color:#fff}
-.cvx-legend button[aria-pressed="false"]{color:#5F7587;text-decoration:line-through}
+/* Gráfico de Conversación: tarjeta clara, la misma piel que las de Performance. */
+.cvx{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:var(--s4) var(--s4) var(--s3);margin-bottom:var(--s4);box-shadow:var(--shadow)}
+.cvx-legend i{width:9px;height:9px;border-radius:3px;background:var(--c);flex:none}
+.cvx-legend{display:flex;gap:6px var(--s4);flex-wrap:wrap;margin-bottom:var(--s3)}
+.cvx-legend button{display:flex;align-items:center;gap:7px;border:none;background:none;padding:3px 2px;font:inherit;font-size:12.5px;color:var(--ink-2);cursor:pointer;border-radius:6px}
+.cvx-legend button:hover{color:var(--ink)}
+.cvx-legend button:focus-visible{outline:2px solid var(--glacier);outline-offset:2px}
+.cvx-legend button[aria-pressed="false"]{color:var(--ink-3);text-decoration:line-through}
 .cvx-legend button[aria-pressed="false"] i{background:transparent;box-shadow:inset 0 0 0 1.5px var(--c);opacity:.6}
 .cvx-scroll{overflow-x:auto;overflow-y:hidden}
 .cvx-plot{position:relative}
 .cvx #cv-linechart{display:block;overflow:visible}
-.cvx-grid{stroke:#1D3040;stroke-width:1}
-.cvx-line{fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
-.cvx-hv-line{stroke:#47627A;stroke-width:1;stroke-dasharray:3 3}
-.cvx-hv-dot{stroke:#0E1B27;stroke-width:2}
-.cvx .cv-chart-x span{font-size:11px;color:#8CA3B5;padding-top:8px}
-.cvx .cv-empty{color:#8CA3B5}
-.cvx-note{margin:var(--s3) 0 0;font-size:12px;color:#8CA3B5}
-.cvx-note b{color:#C9D8E4;font-weight:700}
-.cvx-tip{position:absolute;top:6px;z-index:3;pointer-events:none;min-width:190px;background:#0A141D;border:1px solid #284257;border-radius:10px;padding:9px 11px;box-shadow:0 10px 28px -8px rgba(0,0,0,.6);font-size:12px}
+.cvx-grid{stroke:var(--line);stroke-width:1}
+.cvx-line{fill:none;stroke-width:2.25;stroke-linecap:round;stroke-linejoin:round}
+.cvx-hv-line{stroke:var(--ink-3);stroke-width:1;stroke-dasharray:3 3}
+.cvx-hv-dot{stroke:var(--surface);stroke-width:2}
+.cvx .cv-chart-x span{font-size:11px;color:var(--ink-3);padding-top:8px}
+.cvx .cv-empty{color:var(--ink-3)}
+.cvx-tip{position:absolute;top:6px;z-index:3;pointer-events:none;min-width:190px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 11px;box-shadow:var(--shadow-lift);font-size:12px}
 .cvx-tip[hidden]{display:none}
-.cvx-tip-h{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#8CA3B5;margin-bottom:6px}
-.cvx-tip-row{display:flex;align-items:center;gap:7px;padding:2px 0;color:#C9D8E4}
+.cvx-tip-h{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+.cvx-tip-row{display:flex;align-items:center;gap:7px;padding:2px 0;color:var(--ink-2)}
 .cvx-tip-row i{width:8px;height:8px;border-radius:3px;flex:none}
-.cvx-tip-row b{margin-left:auto;padding-left:var(--s3);color:#fff;font-variant-numeric:tabular-nums}
+.cvx-tip-row b{margin-left:auto;padding-left:var(--s3);color:var(--ink);font-variant-numeric:tabular-nums}
+.cv-toolbar-top{align-items:center;margin-bottom:var(--s4)}
 .cv-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:var(--s3);margin-bottom:var(--s5)}
 .cv-kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:var(--s4);box-shadow:var(--shadow);display:flex;align-items:center;gap:var(--s3)}
 .cv-kpi .ring{position:relative;width:52px;height:52px;flex:none}
@@ -1638,6 +1633,47 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 /* ================= Web (analítica de la web de Luna Llena) ================= */
 #view-web{--cv-s2:var(--glacier);--cv-s3:var(--si)}
 .wb-tools{display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap;margin-bottom:var(--s4)}
+/* Web con la estructura de Performance: el título de cada bloque va afuera,
+   al estilo .ag-sec-h, y la tabla misma es la tarjeta. */
+#view-web > .cv-card{background:none;border:none;box-shadow:none;padding:0;border-radius:0;
+  display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:var(--s2);margin-bottom:var(--s5)}
+#view-web > .cv-card > h3{font-size:15px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--ink);margin:0}
+#view-web > .cv-card > .csub{font-size:11.5px;color:var(--ink-3);margin:0 0 var(--s1)}
+#view-web > .cv-card.wb-sin-titulo > .csub{flex-basis:100%}
+#view-web > .cv-card > :not(h3):not(.csub){flex-basis:100%;min-width:0}
+#view-web > .cv-card > .ag-empty,#view-web > .cv-card > .wb-mc{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:var(--s4)}
+#view-web > .cv-card > .ag-empty{text-align:center;color:var(--ink-3);font-size:13px}
+#view-web .wb-grid .cv-card h3{font-size:13.5px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--ink)}
+.wb-grid.wb-grid-tablas{grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr))}
+/* Dentro de una tarjeta de la grilla, la tabla no es otra tarjeta: va al ras. */
+.wb-grid .cv-card .cv-tblwrap{border:none;border-top:1px solid var(--line);border-radius:0;box-shadow:none;
+  margin:0 calc(var(--s5) * -1) calc(var(--s5) * -1);overflow-x:auto}
+.wb-grid .cv-card{overflow:hidden}
+.wb-grupo{margin-top:var(--s6);padding-top:var(--s4);border-top:1px solid var(--line)}
+.wb-grupo h2{font-size:17px;letter-spacing:-.01em}
+.wb-panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:var(--s4);margin-bottom:var(--s4)}
+.wb-embudo2{display:flex;flex-direction:column;gap:10px}
+.wb-paso{display:grid;grid-template-columns:minmax(150px,1.3fr) 4fr 64px minmax(150px,1.2fr);align-items:center;gap:var(--s3);font-size:12.5px}
+.wb-paso .lbl{color:var(--ink-2);font-weight:600}
+.wb-paso .bar{height:12px;border-radius:4px;background:var(--surface-sunk);overflow:hidden}
+.wb-paso .bar i{display:block;height:100%;border-radius:4px;background:var(--cv-c2);opacity:.75}
+.wb-paso.crm .bar i{background:var(--si);opacity:1}
+.wb-paso.crm .lbl{color:var(--ink)}
+.wb-paso b{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;text-align:right;color:var(--ink)}
+.wb-paso .pct{font-size:11.5px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.wb-paso.crm:first-of-type,.wb-paso:not(.crm) + .wb-paso.crm{margin-top:6px;padding-top:12px;border-top:1px dashed var(--line)}
+.wb-curva svg{display:block;width:100%;height:190px}
+.wb-curva-x{position:relative;height:18px;margin-top:6px}
+.wb-curva-x span{position:absolute;transform:translateX(-50%);font-size:11px;color:var(--ink-3);white-space:nowrap}
+.wb-curva-x span:first-child{transform:none}
+.wb-curva-x span:last-child{transform:translateX(-100%)}
+.wb-leyenda i{display:inline-block;width:9px;height:9px;border-radius:3px;margin:0 5px 0 8px;vertical-align:-1px}
+.wb-leyenda i:first-child{margin-left:0}
+@media (max-width:720px){
+  .wb-paso{grid-template-columns:1fr auto;row-gap:4px}
+  .wb-paso .bar{grid-column:1 / -1;grid-row:2}
+  .wb-paso .pct{grid-column:1 / -1}
+}
 .wb-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:var(--s3);margin-bottom:var(--s4)}
 .wb-grid .cv-card{margin:0}
 #view-web > .cv-card{margin-bottom:var(--s4)}
@@ -2021,32 +2057,29 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
     <section class="view" id="view-agendas" hidden></section>
 
     <section class="view" id="view-conversacion" hidden>
-      <div style="display:flex;gap:var(--s3);align-items:flex-end;margin-bottom:var(--s4);flex-wrap:wrap">
-        <div class="field" style="margin:0;min-width:190px"><label for="cv-flt-semana">Semana</label><select id="cv-flt-semana"><option value="">Todas</option></select></div>
-        <div class="field" style="margin:0;min-width:150px"><label for="cv-flt-dia">Día</label><input type="date" id="cv-flt-dia"></div>
-        <button type="button" class="btn btn-ghost" id="cv-flt-todo-btn">Todo</button>
-      </div>
-      <div class="ag-sec-h">
-        <h2>Evolución</h2>
-        <div class="cv-vswitch" id="cv-vswitch">
+      <div class="ag-sec-h cv-toolbar-top">
+        <div class="cv-vswitch" id="cv-vswitch" role="group" aria-label="Agrupar por">
           <button data-v="dia">Diario</button>
           <button data-v="semana" aria-current="true">Semanal</button>
           <button data-v="mes">Mensual</button>
           <button data-v="total">Total</button>
         </div>
+        <div class="pz-toolbar-left pf2-per">
+          <select id="cv-flt-semana" aria-label="Filtrar por semana"><option value="">Todas las semanas</option></select>
+          <input type="date" id="cv-flt-dia" aria-label="Filtrar por día">
+          <button type="button" class="btn btn-ghost btn-sm" id="cv-flt-todo-btn">Ver todo</button>
+        </div>
+        <span class="pf2-fresh" id="cv-fresh"></span>
       </div>
+      <div class="pf2-rangoinfo" id="cv-rangoinfo"></div>
+      <div class="pf2-grid" id="cv-cards"></div>
+
+      <div class="ag-sec-h"><h2>Evolución comparada</h2><span class="hint">cada línea usa su propia escala: se compara la forma, no la altura · clic en la leyenda para ocultar una serie</span></div>
       <div class="cvx">
-        <div class="cvx-head">
-          <div class="cvx-stats">
-            <div class="cvx-stat" style="--c:var(--cv-c1)"><span class="cvx-lbl"><i></i>Conversaciones</span><b id="cv-s-conv">0</b></div>
-            <div class="cvx-stat" style="--c:var(--cv-c2)"><span class="cvx-lbl"><i></i>Formularios enviados</span><b id="cv-s-env">0</b></div>
-            <div class="cvx-stat" style="--c:var(--cv-c3)"><span class="cvx-lbl"><i></i>Formularios completados</span><b id="cv-s-comp">0</b></div>
-          </div>
-          <div class="cvx-legend" id="cv-legend" role="group" aria-label="Series del gráfico">
-            <button type="button" data-s="conversaciones" aria-pressed="true" style="--c:var(--cv-c1)"><i></i>Conversaciones</button>
-            <button type="button" data-s="enviados" aria-pressed="true" style="--c:var(--cv-c2)"><i></i>Formularios enviados</button>
-            <button type="button" data-s="completados" aria-pressed="true" style="--c:var(--cv-c3)"><i></i>Formularios completados</button>
-          </div>
+        <div class="cvx-legend" id="cv-legend" role="group" aria-label="Series del gráfico">
+          <button type="button" data-s="conversaciones" aria-pressed="true" style="--c:var(--cv-c1)"><i></i>Conversaciones</button>
+          <button type="button" data-s="enviados" aria-pressed="true" style="--c:var(--cv-c2)"><i></i>Formularios enviados</button>
+          <button type="button" data-s="completados" aria-pressed="true" style="--c:var(--cv-c3)"><i></i>Formularios completados</button>
         </div>
         <div class="cvx-scroll" id="cv-chart-wrap">
           <div class="cvx-plot">
@@ -2055,32 +2088,16 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
             <div class="cv-chart-x" id="cv-chart-x"></div>
           </div>
         </div>
-        <p class="cvx-note"><b id="cv-chart-title">Por semana</b> · Cada línea usa su propia escala: conversaciones vive en los cientos y completados en las decenas. Se compara la forma, no la altura.</p>
       </div>
 
-      <div class="cv-kpis">
-        <div class="cv-kpi">
-          <div class="ring"><svg viewBox="0 0 64 64"><circle class="bgc" cx="32" cy="32" r="27"/><circle class="fgc" id="cv-ring-e" cx="32" cy="32" r="27" stroke-dasharray="169.6" stroke-dashoffset="169.6" style="stroke:var(--cv-c2)"/></svg><b id="cv-rv-e" style="color:var(--cv-c2)">—</b></div>
-          <div><div class="lbl">Enviado × mensaje</div><div class="sub">formularios enviados sobre conversaciones</div></div>
-        </div>
-        <div class="cv-kpi">
-          <div class="ring"><svg viewBox="0 0 64 64"><circle class="bgc" cx="32" cy="32" r="27"/><circle class="fgc" id="cv-ring-a" cx="32" cy="32" r="27" stroke-dasharray="169.6" stroke-dashoffset="169.6" style="stroke:var(--cv-c3)"/></svg><b id="cv-rv-a" style="color:var(--cv-c3)">—</b></div>
-          <div><div class="lbl">Completado × mensaje</div><div class="sub">formularios completados sobre conversaciones</div></div>
-        </div>
-        <div class="cv-kpi">
-          <div class="ring"><svg viewBox="0 0 64 64"><circle class="bgc" cx="32" cy="32" r="27"/><circle class="fgc" id="cv-ring-b" cx="32" cy="32" r="27" stroke-dasharray="169.6" stroke-dashoffset="169.6" style="stroke:var(--cv-c3)"/></svg><b id="cv-rv-b" style="color:var(--cv-c3)">—</b></div>
-          <div><div class="lbl">Completado × enviado</div><div class="sub">formularios completados sobre enviados</div></div>
-        </div>
-        <div class="cv-kpi">
-          <div class="num" id="cv-rv-c" style="color:var(--cv-c1)">—</div>
-          <div><div class="lbl">Conversación × formulario enviado</div><div class="sub">conversaciones por cada envío — razón, no %</div></div>
-        </div>
-      </div>
+      <div class="ag-sec-h" style="margin-top:var(--s5)"><h2>Tasas</h2><span class="hint">la curva es la tasa de cada período · el número grande es el total del rango</span></div>
+      <div class="pf2-grid" id="cv-tasas"></div>
+
+      <div class="ag-sec-h" style="margin-top:var(--s5)"><h2 id="cv-chart-title">Por semana</h2><span class="hint" id="cv-exp-hint"></span></div>
       <div class="cv-tblwrap"><table>
         <thead><tr id="cv-thead-row"></tr></thead>
         <tbody id="cv-tb-periodos"></tbody>
       </table></div>
-      <div class="cv-note" id="cv-exp-hint"></div>
 
       <div class="ag-sec-h" style="margin-top:var(--s5)">
         <h2>Carga diaria</h2>
@@ -9168,7 +9185,10 @@ function cvRenderLineChart(keys, grp){
   const W = Math.floor(colW * keys.length);
   const cx = i => colW*(i+0.5);
 
-  let html = `<defs><linearGradient id="cv-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".30"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>`;
+  // El degradé toma el color de la primera serie visible: con currentColor
+  // dentro de <defs> heredaba el gris del svg y no el de la línea.
+  const colorArea = (CV_SERIES.find(s => !cvOcultas.has(s.campo)) || CV_SERIES[0]).color;
+  let html = `<defs><linearGradient id="cv-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${colorArea}" stop-opacity=".22"/><stop offset="1" stop-color="${colorArea}" stop-opacity="0"/></linearGradient></defs>`;
   for(let g = 0; g <= 4; g++){
     const y = (top + (base-top)*g/4).toFixed(1);
     html += `<line class="cvx-grid" x1="0" x2="${W}" y1="${y}" y2="${y}"/>`;
@@ -9186,7 +9206,7 @@ function cvRenderLineChart(keys, grp){
       // El relleno va solo bajo la primera serie visible: con tres áreas
       // encimadas el fondo se ensucia y se pierde la forma de cada línea.
       if(!areaHecha){
-        html += `<path d="${d} L${pts[pts.length-1][0].toFixed(1)},${base} L${pts[0][0].toFixed(1)},${base} Z" fill="url(#cv-area)" style="color:${s.color}"/>`;
+        html += `<path d="${d} L${pts[pts.length-1][0].toFixed(1)},${base} L${pts[0][0].toFixed(1)},${base} Z" fill="url(#cv-area)"/>`;
         areaHecha = true;
       }
       html += `<path class="cvx-line" d="${d}" stroke="${s.color}"/>`;
@@ -9217,7 +9237,7 @@ function cvRenderLineChart(keys, grp){
 }
 
 function renderConversacion(){
-  el('cv-flt-semana').innerHTML = `<option value="">Todas</option>` + pzVentanaSemanas(convFiltro.modo==='semana' ? convFiltro.valor : '', convDias).map(o =>
+  el('cv-flt-semana').innerHTML = `<option value="">Todas las semanas</option>` + pzVentanaSemanas(convFiltro.modo==='semana' ? convFiltro.valor : '', convDias).map(o =>
     `<option value="${o.value}" ${convFiltro.modo==='semana' && o.value===convFiltro.valor?'selected':''}>${esc(o.label)}</option>`).join('');
   el('cv-flt-dia').value = convFiltro.modo === 'dia' ? convFiltro.valor : '';
 
@@ -9226,25 +9246,9 @@ function renderConversacion(){
   const env  = dias.reduce((s,x) => s + (+x.enviados||0), 0);
   const comp = dias.reduce((s,x) => s + (+x.completados||0), 0);
 
-  el('cv-s-conv').textContent = num(conv);
-  el('cv-s-env').textContent  = num(env);
-  el('cv-s-comp').textContent = num(comp);
-
-  // Los porcentajes son todos sobre Conversaciones (o sobre enviados, donde
-  // lo dice el rótulo): no se encadenan etapa a etapa, así los números de
-  // arriba y los de abajo no se contradicen.
   const rEnv  = conv ? env/conv  : NaN;
   const rComp = conv ? comp/conv : NaN;
   const rConvEnv = env ? conv/env : NaN;   // razón, no %: puede superar 1
-  const setRing = (id, txt, val, r) => {
-    el(txt).textContent = pct(val);
-    const C = 2*Math.PI*r, p = isFinite(val) ? Math.min(val,1) : 0;
-    el(id).style.strokeDashoffset = C*(1-p);
-  };
-  setRing('cv-ring-e', 'cv-rv-e', rEnv, 27);
-  setRing('cv-ring-a', 'cv-rv-a', rComp, 27);
-  setRing('cv-ring-b', 'cv-rv-b', env ? comp/env : NaN, 27);
-  el('cv-rv-c').textContent = ratio(rConvEnv);
 
   el('cv-rango-hint').textContent = dias.length + ' días cargados' + (convFiltro.modo !== 'todo' ? ' · filtrado' : '');
 
@@ -9259,7 +9263,61 @@ function renderConversacion(){
   });
   const keys = Object.keys(grp).sort();
   const TITULOS = { dia:'Por día', semana:'Por semana', mes:'Por mes', total:'Total del rango' };
+  const UNIDAD = { dia:'día', semana:'semana', mes:'mes', total:'período' };
   el('cv-chart-title').textContent = TITULOS[convVista];
+
+  // Mismo lenguaje que Performance: tarjeta con el total del rango y, abajo,
+  // la curva por período (la agrupación elegida arriba). Los porcentajes son
+  // todos sobre Conversaciones o sobre enviados, como dice cada rótulo: no se
+  // encadenan etapa a etapa, así arriba y abajo no se contradicen.
+  const serie = campo => keys.map(k => grp[k][campo]);
+  // ×1000: pfCurvaHtml usa un rango mínimo de 1, y una tasa de 0,15 a 0,18
+  // quedaba como una raya plana. La forma de la curva no cambia.
+  const tasa = (n, d) => keys.map(k => grp[k][d] ? 1000 * grp[k][n] / grp[k][d] : 0);
+  const UNIDAD_EN_CURSO = { semana:'la última semana', mes:'el último mes', dia:'' };
+  const ultimaKey = keys[keys.length-1];
+  const enCurso = ultimaKey && convVista !== 'total' && convVista !== 'dia' && cvPeriodKey(pzFmtFecha(new Date())) === ultimaKey;
+  const fechas = dias.map(d => d.fecha).sort();
+  const promDia = dias.length ? conv / dias.length : 0;
+  const dec1 = v => v.toLocaleString('es-AR', { maximumFractionDigits:1 });
+
+  el('cv-rangoinfo').textContent = dias.length
+    ? `${dias.length} ${dias.length === 1 ? 'día cargado' : 'días cargados'} · ${fechaCorta(fechas[0])} – ${fechaCorta(fechas[fechas.length-1])}`
+      + ` · las curvas agrupan por ${UNIDAD[convVista]}` + (enCurso ? ` · ${UNIDAD_EN_CURSO[convVista]} va en curso, por eso cae al final` : '') + (convFiltro.modo !== 'todo' ? ' · filtrado' : '')
+    : 'Sin días cargados en este rango.';
+
+  el('cv-cards').innerHTML = !dias.length
+    ? `<div class="pf2-empty">Sin datos en este rango. Carga un día abajo o elige "Ver todo".</div>`
+    : [
+      pfTarjeta('Conversaciones', num(conv),
+        `prom. <b>${dec1(promDia)}</b> por día`, serie('conversaciones'), 'var(--cv-c1)'),
+      pfTarjeta('Formularios enviados', num(env),
+        `<b>${pct(rEnv)}</b> de las conversaciones`, serie('enviados'), 'var(--cv-c2)'),
+      pfTarjeta('Formularios completados', num(comp),
+        `<b>${pct(env ? comp/env : NaN)}</b> de los enviados`, serie('completados'), 'var(--cv-c3)'),
+      pfTarjeta('Completado × mensaje', pct(rComp),
+        `de cada 100 conversaciones, <b>${isFinite(rComp) ? dec1(rComp*100) : '—'}</b> completan`, tasa('completados','conversaciones'), 'var(--glacier)'),
+    ].join('');
+
+  el('cv-tasas').innerHTML = !dias.length ? '' : [
+    pfTarjeta('Enviado × mensaje', pct(rEnv),
+      'formularios enviados sobre conversaciones', tasa('enviados','conversaciones'), 'var(--cv-c2)'),
+    pfTarjeta('Completado × enviado', pct(env ? comp/env : NaN),
+      'formularios completados sobre enviados', tasa('completados','enviados'), 'var(--cv-c3)'),
+    pfTarjeta('Conversaciones × envío', ratio(rConvEnv),
+      'conversaciones por cada formulario enviado · razón, no %', tasa('conversaciones','enviados'), 'var(--cv-c1)'),
+  ].join('');
+
+  // Frescura: el último día cargado. Si pasaron más de 2 días, se marca como
+  // en Performance, así se nota cuando se dejó de cargar.
+  const ultimo = convDias.map(d => d.fecha).sort().pop();
+  const fr = el('cv-fresh');
+  if(!ultimo){ fr.innerHTML = ''; }
+  else {
+    const hace = Math.round((new Date(pzFmtFecha(new Date()) + 'T12:00:00') - new Date(ultimo + 'T12:00:00')) / 86400000);
+    fr.className = 'pf2-fresh' + (hace > 2 ? ' viejo' : '');
+    fr.innerHTML = `<i></i>último día cargado: ${hace <= 0 ? 'hoy' : hace === 1 ? 'ayer' : fechaCorta(ultimo) + ` (hace ${hace} d)`}`;
+  }
 
   cvRenderLineChart(keys, grp);
   el('cv-legend').querySelectorAll('button[data-s]').forEach(b => b.setAttribute('aria-pressed', String(!cvOcultas.has(b.dataset.s))));
@@ -10812,35 +10870,100 @@ function wbTablaSegmento(titulo, sub, filas){
     <div class="cv-tblwrap"><table><thead><tr><th></th><th>Visitas</th><th>Cons.</th><th>Tasa</th><th>Leads</th><th>Ventas</th><th>Monto</th></tr></thead><tbody>${cuerpo}</tbody></table></div></div>`;
 }
 
+// Curva diaria de visitas y consultas, con el mismo trazo suave que las
+// tarjetas de Performance. Cada día tiene una franja con <title>: el tooltip
+// nativo da el número exacto sin JavaScript extra.
+function wbCurvaDiaria(dias){
+  const W = 1000, H = 190, PT = 12, PB = 4;
+  const mx = Math.max(...dias.map(x => +x.sesiones || 0), 1);
+  const paso = dias.length > 1 ? W / (dias.length - 1) : 0;
+  const xi = i => dias.length > 1 ? i * paso : W / 2;
+  const y = v => H - PB - ((+v || 0) / mx) * (H - PT - PB);
+  const pv = dias.map((x, i) => [xi(i), y(x.sesiones)]);
+  const pc = dias.map((x, i) => [xi(i), y(x.consultaron)]);
+  const dv = pfPathSuave(pv), dc = pfPathSuave(pc);
+  const id = 'wb-grad-' + (++pfGradN);
+  const area = (dd, pts) => pts.length > 1 ? `${dd}L${pts[pts.length-1][0]},${H}L${pts[0][0]},${H}Z` : '';
+  let grid = '';
+  for(let g = 1; g <= 3; g++){ const yy = (PT + (H - PT - PB) * g / 4).toFixed(1); grid += `<line x1="0" x2="${W}" y1="${yy}" y2="${yy}" stroke="var(--line)" stroke-width="1" vector-effect="non-scaling-stroke"/>`; }
+  const franja = dias.length > 1 ? paso : W;
+  const hits = dias.map((x, i) => `<rect x="${Math.max(0, xi(i) - franja/2)}" y="0" width="${franja}" height="${H}" fill="transparent"><title>${x.fecha.slice(8,10)}/${x.fecha.slice(5,7)}: ${num(x.sesiones)} visitas · ${num(x.consultaron)} consultaron (${pct(wbRatio(x.consultaron, x.sesiones))})</title></rect>`).join('');
+  const cada = Math.max(1, Math.ceil(dias.length / 8));
+  const etiquetas = dias.map((x, i) => (i % cada === 0 && dias.length - 1 - i >= cada * 0.6) || i === dias.length - 1
+    ? `<span style="left:${(dias.length > 1 ? i / (dias.length - 1) : .5) * 100}%">${x.fecha.slice(8,10)}/${x.fecha.slice(5,7)}</span>` : '').join('');
+  return `<div class="wb-curva">
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Visitas y consultas por día">
+      <defs>
+        <linearGradient id="${id}-v" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--cv-c2)" stop-opacity=".22"/><stop offset="100%" stop-color="var(--cv-c2)" stop-opacity="0"/></linearGradient>
+        <linearGradient id="${id}-c" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--si)" stop-opacity=".28"/><stop offset="100%" stop-color="var(--si)" stop-opacity="0"/></linearGradient>
+      </defs>
+      ${grid}
+      <path d="${area(dv, pv)}" fill="url(#${id}-v)"/>
+      <path d="${dv}" fill="none" stroke="var(--cv-c2)" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+      <path d="${area(dc, pc)}" fill="url(#${id}-c)"/>
+      <path d="${dc}" fill="none" stroke="var(--si)" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+      ${hits}
+    </svg>
+    <div class="wb-curva-x">${etiquetas}</div>
+  </div>`;
+}
+
 function renderWeb(){
   const host = el('view-web');
   if(!wbData){ if(!host.innerHTML) host.innerHTML = `<div class="ag-empty">Cargando…</div>`; return; }
   const d = wbData, r = d.resumen || {}, a = (d.anterior && d.anterior.resumen) || {};
   const S = d.segmentos || {};
 
-  const tools = `<div class="wb-tools">
-    <div class="cv-vswitch" id="wb-periodo">
+  const dias = d.por_dia || [];
+  const rec = d.recientes || [];
+
+  // Misma estructura que Performance: controles arriba, una línea gris con el
+  // rango, y tarjetas con el total del período y su curva día a día.
+  const ultimaVisita = rec.length ? new Date(rec[0].primer_evento) : null;
+  const horasVisita = ultimaVisita ? (Date.now() - ultimaVisita.getTime()) / 3600000 : null;
+  const fresh = ultimaVisita
+    ? `<span class="pf2-fresh${horasVisita > 48 ? ' viejo' : ''}" title="${esc(wbFecha(rec[0].primer_evento))}"><i></i>última visita ${horasVisita < 1 ? 'hace minutos' : horasVisita < 24 ? `hace ${Math.round(horasVisita)} h` : `hace ${Math.round(horasVisita/24)} d`}</span>`
+    : '';
+  const tools = `<div class="ag-sec-h cv-toolbar-top">
+    <div class="cv-vswitch" id="wb-periodo" role="group" aria-label="Período">
       ${[['7','7 días'],['14','14 días'],['30','30 días'],['90','90 días']].map(([v, t]) => `<button data-v="${v}" aria-current="${String(wbPeriodo === v)}">${t}</button>`).join('')}
     </div>
-    <span class="hint">${d.desde} al ${d.hasta} · comparado con ${d.anterior.desde} al ${d.anterior.hasta} · sin las visitas del equipo (?interno=1)</span>
-  </div>`;
+    ${fresh}
+  </div>
+  <div class="pf2-rangoinfo">${fechaCorta(d.desde)} – ${fechaCorta(d.hasta)} · comparado con ${fechaCorta(d.anterior.desde)} – ${fechaCorta(d.anterior.hasta)} · sin las visitas del equipo (?interno=1)${dias.length > 21 ? ` · las curvas de las tarjetas agrupan de a ${Math.ceil(dias.length / 12)} días` : ' · las curvas van por día'}</div>`;
 
   const alertas = (d.alertas || []).length
     ? `<div class="wb-alertas">${d.alertas.map(x => `<div class="wb-alerta" data-n="${x.nivel}">${esc(x.texto)}</div>`).join('')}</div>` : '';
 
-  const kpi = (valor, lbl, sub, color) => `<div class="cv-kpi"><div class="num" ${color ? `style="color:${color}"` : ''}>${valor}</div><div><div class="lbl">${lbl}</div><div class="sub">${sub}</div></div></div>`;
-  const kpis = `<div class="cv-kpis">
-    ${kpi(num(r.sesiones), 'Visitas', `${num(r.visitantes)} personas · ${num(r.visitantes_nuevos)} nuevas ${wbDelta(r.sesiones, a.sesiones)}`)}
-    ${kpi(num(r.consultaron), 'Consultas', `cotizaron o tocaron WhatsApp ${wbDelta(r.consultaron, a.consultaron)}`, 'var(--si)')}
-    ${kpi(pct(wbTasa(r)), 'Tasa de consulta', `la métrica a mover · antes ${pct(wbTasa(a))} ${wbDelta(wbTasa(r), wbTasa(a))}`, 'var(--si)')}
-    ${kpi(num(r.leads), 'Cotizaciones', `desde las fichas · ${num(r.ses_whatsapp)} visitas tocaron WhatsApp ${wbDelta(r.leads, a.leads)}`)}
-    ${kpi(num(r.leads_crm), 'Leads en el CRM', `con código de una visita · ${num(r.avanzaron)} trabajados ${wbDelta(r.leads_crm, a.leads_crm)}`)}
-    ${kpi(num(r.ventas), 'Ventas', `de visitas del período, con seña cobrada ${wbDelta(r.ventas, a.ventas)}`, 'var(--si)')}
+  // Con más de 21 días las curvas de las tarjetas agrupan en tramos de varios
+  // días (como Performance, que agrupa por semana): 30 puntos diarios con
+  // números chicos son ruido. El gráfico Por día de abajo sigue día a día.
+  const tramoDias = dias.length > 21 ? Math.ceil(dias.length / 12) : 1;
+  const tramos = [];
+  for(let i = 0; i < dias.length; i += tramoDias){
+    const t = { sesiones:0, consultaron:0, leads:0 };
+    dias.slice(i, i + tramoDias).forEach(x => { t.sesiones += +x.sesiones || 0; t.consultaron += +x.consultaron || 0; t.leads += +x.leads || 0; });
+    tramos.push(t);
+  }
+  const serieDia = campo => tramos.map(x => x[campo]);
+  const kpis = `<div class="pf2-grid">
+    ${pfTarjeta('Visitas', num(r.sesiones),
+      `<b>${num(r.visitantes)}</b> personas · ${num(r.visitantes_nuevos)} nuevas${wbDelta(r.sesiones, a.sesiones)}`,
+      serieDia('sesiones'), 'var(--cv-c2)')}
+    ${pfTarjeta('Consultas', num(r.consultaron),
+      `cotizaron o tocaron WhatsApp${wbDelta(r.consultaron, a.consultaron)}`,
+      serieDia('consultaron'), 'var(--si)')}
+    ${pfTarjeta('Tasa de consulta', pct(wbTasa(r)),
+      `la métrica a mover · antes <b>${pct(wbTasa(a))}</b>${wbDelta(wbTasa(r), wbTasa(a))}`,
+      tramos.map(x => x.sesiones ? 1000 * x.consultaron / x.sesiones : 0), 'var(--glacier)')}
+    ${pfTarjeta('Cotizaciones', num(r.leads),
+      `desde las fichas · <b>${num(r.ses_whatsapp)}</b> tocaron WhatsApp${wbDelta(r.leads, a.leads)}`,
+      serieDia('leads'), 'var(--cv-c1)')}
   </div>`;
 
   const cal = d.calientes || [];
   const senalHtml = s => `<span class="wb-senal${s === 'en la web ahora' ? ' vivo' : s.startsWith('abrió') ? ' abandono' : ''}">${esc(s)}</span>`;
-  const calCard = `<div class="cv-card"><h3>Para escribir hoy</h3><div class="csub">personas identificadas (link de ManyChat o lead con código) con señales de compra en los últimos 14 días · sin ganados ni perdidos · tocar una fila con lead lo abre</div>
+  const calCard = `<div class="cv-card wb-sin-titulo"><div class="csub">personas identificadas (link de ManyChat o lead con código) con señales de compra en los últimos 14 días · sin ganados ni perdidos · tocar una fila con lead lo abre</div>
     ${cal.length ? `<div class="cv-tblwrap"><table><thead><tr><th>Quién</th><th>Señales</th><th>Último paquete</th><th>Visitas</th><th>Última</th></tr></thead><tbody>
       ${cal.map(x => `<tr${x.lead_id ? ` data-lead="${x.lead_id}"` : ''}>
         <td>${x.nombre ? esc(x.nombre) : `<span class="wb-no">sin lead</span>`}${x.manychat_id ? `<div class="wb-no" style="font-size:11px">ManyChat ${esc(x.manychat_id)}</div>` : ''}${x.navegadores > 1 ? `<div class="wb-no" style="font-size:11px">${x.navegadores} navegadores (¿link reenviado?)</div>` : ''}</td>
@@ -10856,28 +10979,35 @@ function renderWeb(){
          <button class="btn btn-ghost" type="button" id="wb-mc-ver">Revisar tags y campos</button>`
       : `<span class="wb-no">Sin conectar: falta cargar la API key de ManyChat (secret MANYCHAT_TOKEN del proyecto crm-plantilla).</span>`}</div></div>`;
 
-  const paso = (n, txt, base, crm) => `<div${crm ? ' class="crm"' : ''}><b>${num(n)}</b><span>${txt}${base ? ' · ' + pct(wbRatio(n, base)) : ''}</span></div>`;
-  const embudo = `<div class="cv-card"><h3>Embudo: de la visita a la venta</h3><div class="csub">gris: la web · verde: lo que pasó en el CRM con esas visitas (por el código LL-…)</div>
-    <div class="wb-embudo">
-      ${paso(r.sesiones, 'entraron')}
-      ${paso(r.vieron_paquete, 'vieron un tour o paquete', r.sesiones)}
-      ${paso(r.scroll_75, 'bajaron al 75% de una página', r.sesiones)}
-      ${paso(r.consultaron, 'consultaron', r.sesiones)}
-      ${paso(r.leads_crm, 'quedaron como lead', r.consultaron, true)}
-      ${paso(r.avanzaron, 'la agencia los trabajó', r.leads_crm, true)}
-      ${paso(r.ventas, 'compraron', r.leads_crm, true)}
-    </div></div>`;
+  // Embudo en barras horizontales: el largo es sobre las visitas, el % es
+  // sobre el paso de referencia que dice cada fila.
+  const maxE = Math.max(+r.sesiones || 0, 1);
+  const paso = (n, txt, base, deQue, crm, delta) => {
+    const w = (+n || 0) / maxE * 100;
+    return `<div class="wb-paso${crm ? ' crm' : ''}">
+      <span class="lbl">${txt}</span>
+      <div class="bar"><i style="width:${n ? Math.max(w, 1.2).toFixed(1) : 0}%"></i></div>
+      <b>${num(n)}</b>
+      <span class="pct">${base !== undefined ? `${pct(wbRatio(n, base))} ${deQue}` : ''}${delta || ''}</span>
+    </div>`;
+  };
+  const embudo = `<div class="ag-sec-h"><h2>Embudo: de la visita a la venta</h2><span class="hint">gris: la web · verde: lo que pasó en el CRM con esas visitas (por el código LL-…)</span></div>
+    <div class="wb-panel wb-embudo2">
+      ${paso(r.sesiones, 'Entraron')}
+      ${paso(r.vieron_paquete, 'Vieron un tour o paquete', r.sesiones, 'de las visitas')}
+      ${paso(r.scroll_75, 'Bajaron al 75% de una página', r.sesiones, 'de las visitas')}
+      ${paso(r.consultaron, 'Consultaron', r.sesiones, 'de las visitas')}
+      ${paso(r.leads_crm, 'Quedaron como lead', r.consultaron, 'de las consultas', true, wbDelta(r.leads_crm, a.leads_crm))}
+      ${paso(r.avanzaron, 'La agencia los trabajó', r.leads_crm, 'de los leads', true)}
+      ${paso(r.ventas, 'Compraron', r.leads_crm, 'de los leads', true, wbDelta(r.ventas, a.ventas))}
+    </div>`;
 
-  const dias = d.por_dia || [];
-  const maxDia = Math.max(...dias.map(x => x.sesiones), 1);
-  const porDia = `<div class="cv-card"><h3>Por día</h3><div class="csub">claro: visitas · verde: consultaron</div>
-    ${dias.length ? `<div class="wb-linea-wrap"><div class="wb-linea">${dias.map(x => `<div class="col" title="${x.fecha}: ${num(x.sesiones)} visitas, ${num(x.consultaron)} consultaron">
-        <i class="env" style="height:${Math.round(x.consultaron / maxDia * 100)}%"></i>
-        <i style="height:${Math.round((x.sesiones - x.consultaron) / maxDia * 100)}%"></i>
-        <span>${x.fecha.slice(5).replace('-', '/')}</span></div>`).join('')}</div></div>` : `<div class="ag-empty">Sin visitas todavía.</div>`}</div>`;
+  const porDia = `<div class="ag-sec-h" style="margin-top:var(--s5)"><h2>Por día</h2>
+      <span class="hint wb-leyenda"><i style="background:var(--cv-c2)"></i>visitas <i style="background:var(--si)"></i>consultaron · pasa el mouse para ver cada día</span></div>
+    <div class="wb-panel">${dias.length ? wbCurvaDiaria(dias) : `<div class="pf2-empty">Sin visitas todavía.</div>`}</div>`;
 
   const sub = 'visitas · consultas · tasa · leads del CRM · ventas · monto (USD)';
-  const origen = `<div class="wb-grid">
+  const origen = `<div class="wb-grid wb-grid-tablas">
     ${wbTablaSegmento('Red / canal', 'utm_source o de dónde llegó · ' + sub, S.canal || [])}
     ${wbTablaSegmento('Post o palabra clave', 'utm_content del link · ' + sub, S.contenido || [])}
     ${wbTablaSegmento('Campaña', 'utm_campaign · ' + sub, S.campana || [])}
@@ -10919,7 +11049,7 @@ function renderWeb(){
   const salidasCard = `<div class="cv-card"><h3>Se van a…</h3><div class="csub">links a otros sitios (Instagram, TripAdvisor…)</div>
     ${wbBarras(d.salidas || [], x => x.clave, x => x.n)}</div>`;
 
-  const quienes = `<div class="wb-grid">
+  const quienes = `<div class="wb-grid wb-grid-tablas">
     ${wbTablaSegmento('Por dónde entran', 'primera página · ' + sub, S.landing || [])}
     ${wbTablaSegmento('Dispositivo', sub, S.dispositivo || [])}
     ${wbTablaSegmento('País', 'por zona horaria · ' + sub, S.pais || [])}
@@ -10944,7 +11074,6 @@ function renderWeb(){
       ${crm.leads.map(x => `<tr><td>${esc(x.fuente)}</td><td>${esc(x.origen)}</td><td>${num(x.n)}</td><td>${num(x.sin_contactar)}</td></tr>`).join('')}
     </tbody></table></div>` : `<div class="ag-empty">Sin leads en el período.</div>`}</div>`;
 
-  const rec = d.recientes || [];
   const recCard = `<div class="cv-card"><h3>Visitas recientes</h3><div class="csub">las últimas 60 del período</div>
     ${rec.length ? `<div class="cv-tblwrap" style="overflow-x:auto"><table><thead><tr>
       <th>Cuándo</th><th>Código</th><th>Canal</th><th>Post</th><th>Disp.</th><th>País</th><th>Entró por</th><th>Pág.</th><th>Fichas</th><th>Scroll</th><th>Tiempo</th><th>WA</th><th>Cotizó</th>
@@ -10958,14 +11087,16 @@ function renderWeb(){
     </tr>`).join('')}
     </tbody></table></div>` : `<div class="ag-empty">Sin visitas en el período.</div>`}</div>`;
 
-  host.innerHTML = tools + alertas + kpis + calCard + embudo + porDia
-    + `<div class="ag-sec-h"><h2>De dónde vienen las ventas</h2><span class="hint">red, post y campaña de los links con UTM</span></div>${origen}`
-    + `<div class="ag-sec-h"><h2>Qué compran</h2><span class="hint">cada ficha de la web, de la visita a la venta</span></div>${paqCard}`
-    + `<div class="ag-sec-h"><h2>Cotizaciones y WhatsApp</h2><span class="hint">cruzados con el CRM por el código LL-…</span></div>${leadsCard}${refsCard}`
-    + `<div class="ag-sec-h"><h2>Qué hacen en la web</h2><span class="hint">páginas y botones</span></div>${paginasCard}<div class="wb-grid">${waCard}${ctaCard}${salidasCard}</div>`
-    + `<div class="ag-sec-h"><h2>Quiénes</h2></div>${quienes}`
-    + `<div class="ag-sec-h"><h2>Salud técnica</h2></div><div class="wb-grid">${vitCard}${ejCard}</div>`
-    + `<div class="ag-sec-h"><h2>Todo el CRM</h2></div>${crmCard}${mcCard}`
+  const grupo = (titulo, hint) => `<div class="ag-sec-h wb-grupo"><h2>${titulo}</h2>${hint ? `<span class="hint">${hint}</span>` : ''}</div>`;
+  host.innerHTML = tools + alertas + kpis + embudo + porDia
+    + grupo('Para escribir hoy', '') + calCard
+    + grupo('De dónde vienen las ventas', 'red, post y campaña de los links con UTM') + origen
+    + grupo('Qué compran', 'cada ficha de la web, de la visita a la venta') + paqCard
+    + grupo('Cotizaciones y WhatsApp', 'cruzados con el CRM por el código LL-…') + leadsCard + refsCard
+    + grupo('Qué hacen en la web', 'páginas y botones') + paginasCard + `<div class="wb-grid">${waCard}${ctaCard}${salidasCard}</div>`
+    + grupo('Quiénes', '') + quienes
+    + grupo('Salud técnica', '') + `<div class="wb-grid">${vitCard}${ejCard}</div>`
+    + grupo('Todo el CRM', '') + crmCard + mcCard
     + recCard;
 
   host.querySelectorAll('#wb-periodo button').forEach(b => b.addEventListener('click', () => { wbPeriodo = b.dataset.v; cargarWeb(); }));
