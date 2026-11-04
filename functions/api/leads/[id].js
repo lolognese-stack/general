@@ -64,6 +64,7 @@ export async function onRequestDelete({ request, env, params }) {
   const hijos = [
     ['cotizacion_items', 'cotizacion_id IN (SELECT id FROM cotizaciones WHERE lead_id = ?)', 'cotizaciones'],
     ['cotizaciones', 'lead_id = ?'],
+    ['cotizador_cotizaciones', 'lead_id = ?'],
     ['wa_mensajes', 'conversacion_id IN (SELECT id FROM wa_conversaciones WHERE lead_id = ?)', 'wa_conversaciones'],
     ['wa_analisis', 'conversacion_id IN (SELECT id FROM wa_conversaciones WHERE lead_id = ?)', 'wa_conversaciones'],
     ['wa_conversaciones', 'lead_id = ?'],
