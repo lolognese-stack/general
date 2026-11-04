@@ -1807,6 +1807,10 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 .cz-estado{display:inline-block;font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:6px;background:var(--surface-sunk);color:var(--ink-2)}
 .cz-estado[data-ok="1"]{background:var(--si-bg);color:var(--si)}
 .cz-estado[data-ok="0"]{background:var(--danger-bg);color:var(--danger)}
+.cz-dl{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:7px 16px;margin:0;font-size:13px}
+.cz-dl dt{color:var(--ink-3);font-weight:600;font-size:12px}
+.cz-dl dd{margin:0;color:var(--ink)}
+.cz-faltan{margin-top:var(--s3);padding-top:var(--s3);border-top:1px solid var(--line-soft);font-size:12.5px;color:var(--danger)}
 .cz-tot{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
 .cz-tot .pf2-val{font-size:22px}
 .cz-panel-tabla{padding:0;overflow:hidden}
@@ -11721,6 +11725,10 @@ let czCatalogo = null;      // productos de la web: [{id, nombre, categoria, dur
 let czCargandoCat = false;
 let czRes = null;           // última respuesta del cotizador
 let czCotizando = false;
+let czModo = 'manual';      // 'manual' (formulario) | 'chat' (pegar el mensaje del cliente)
+try{ if(localStorage.getItem('cz_modo') === 'chat') czModo = 'chat'; }catch(e){}
+// Conversación de "Pegar chat": solo en memoria (tiene nombre e intereses del cliente).
+let czChat = { estado:null, mensajes:0, res:null, borrador:'' };
 const CZ_VACIO = () => ({ nombre:'', idioma:'es', whatsapp:'', fecha:'', dias:'', llegada:'',
   viajeros:[{ tipo:'adulto', edad:'', nacionalidad:'', estudiante:false }], items:[] });
 let czForm = CZ_VACIO();
@@ -11774,7 +11782,34 @@ function renderCotizador(forzar){
   if(!czCatalogo){ if(!el('cz-root')) host.innerHTML = `<div class="ag-empty">Cargando el catálogo de la web…</div>`; return; }
   if(el('cz-root') && !forzar) return;   // el polling no repinta: borraría lo que se está escribiendo
   const f = czForm;
-  host.innerHTML = `<div id="cz-root">
+  const modos = `<div class="ag-sec-h cv-toolbar-top">
+    <div class="cv-vswitch" id="cz-modo" role="group" aria-label="Cómo cotizar">
+      ${[['manual','Armar a mano'],['chat','Pegar chat']].map(([v, t]) => `<button type="button" data-v="${v}" aria-current="${String(czModo === v)}">${t}</button>`).join('')}
+    </div>
+    <span class="hint">${czModo === 'chat' ? 'la IA lee el mensaje; los precios los sigue calculando el cotizador' : 'productos del catálogo de la web'}</span>
+  </div>`;
+  if(czModo === 'chat'){
+    host.innerHTML = modos + `<div id="cz-root">
+      <div>
+        <div class="ag-sec-h"><h2>Mensaje del cliente</h2><span class="hint">${czChat.mensajes ? `conversación en curso · ${czChat.mensajes} mensaje${czChat.mensajes === 1 ? '' : 's'}` : 'WhatsApp, Instagram, mail o el formulario de la web'}</span></div>
+        <div class="wb-panel">
+          <textarea class="cz-msg" id="cz-chat-txt" placeholder="Pegá acá lo que escribió el cliente. Ej.: Hola! Somos 2 argentinos, llegamos a Cusco el 10 de marzo y queremos hacer Machu Picchu y algo de montaña. Soy Ana" maxlength="4000">${esc(czChat.borrador || '')}</textarea>
+          <div class="cz-acciones">
+            <button type="button" class="btn btn-primary" id="cz-chat-btn">${czChat.mensajes ? 'Sumar a la conversación' : 'Interpretar'}</button>
+            ${czChat.mensajes ? `<button type="button" class="btn btn-ghost" data-acc="chat-nuevo">Cliente nuevo</button>` : ''}
+            <span class="cz-err" id="cz-err" role="alert"></span>
+          </div>
+          <div class="cz-pie">Si el cliente contesta, pegá su respuesta y tocá <b>Sumar a la conversación</b>: el cotizador junta todo lo que ya sabe. No pegues pasaportes ni fechas de nacimiento (igual se tapan antes de la IA).</div>
+        </div>
+      </div>
+      <div id="cz-res" aria-live="polite"></div>
+    </div>`;
+    czPintarResultado();
+    czEventosChat();
+    czEventosModo();
+    return;
+  }
+  host.innerHTML = modos + `<div id="cz-root">
     <div>
     <div class="ag-sec-h"><h2>Armar cotización</h2><span class="hint">catálogo de la web · el precio lo calcula el cotizador, acá no se edita</span></div>
     <div class="wb-panel" id="cz-form">
@@ -11822,6 +11857,126 @@ function renderCotizador(forzar){
   czPintarItems();
   czPintarResultado();
   czEventos();
+  czEventosModo();
+}
+
+function czEventosModo(){
+  el('cz-modo').addEventListener('click', e => {
+    const b = e.target.closest('button[data-v]');
+    if(!b || b.dataset.v === czModo) return;
+    if(czModo === 'chat' && el('cz-chat-txt')) czChat.borrador = el('cz-chat-txt').value;
+    czModo = b.dataset.v;
+    try{ localStorage.setItem('cz_modo', czModo); }catch(e){}
+    renderCotizador(true);
+  });
+}
+
+/* ---- Pegar chat: /api/cotizador/turno (asesor del cotizador, sin estado: el estado vive acá) ---- */
+
+function czEventosChat(){
+  el('cz-chat-txt').addEventListener('input', e => { czChat.borrador = e.target.value; });
+  el('cz-chat-txt').addEventListener('keydown', e => { if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)) czInterpretar(); });
+  el('cz-root').addEventListener('click', e => {
+    if(e.target.id === 'cz-chat-btn') return czInterpretar();
+    const b = e.target.closest('[data-acc]');
+    if(!b) return;
+    if(b.dataset.acc === 'copiar') czCopiar();
+    if(b.dataset.acc === 'chat-nuevo'){ if(!confirm('¿Empezar con otro cliente? Se borra lo que entendió de esta conversación.')) return; czChat = { estado:null, mensajes:0, res:null, borrador:'' }; renderCotizador(true); }
+    if(b.dataset.acc === 'chat-form') czChatAlFormulario();
+  });
+}
+
+async function czInterpretar(){
+  if(czCotizando) return;
+  const txt = el('cz-chat-txt').value.trim();
+  el('cz-err').textContent = txt ? '' : 'Pegá el mensaje del cliente.';
+  if(!txt) return;
+  czCotizando = true;
+  const btn = el('cz-chat-btn');
+  btn.disabled = true; btn.textContent = 'Leyendo el mensaje…';
+  try{
+    const r = await api('/api/cotizador/turno', { method:'POST', body: JSON.stringify({ mensaje: txt, estado: czChat.estado }) });
+    r._cuando = new Date().toISOString();
+    czChat = { estado: r.estado || czChat.estado, mensajes: czChat.mensajes + 1, res: r, borrador:'' };
+    renderCotizador(true);
+    if(window.matchMedia('(max-width:1100px)').matches) el('cz-res').scrollIntoView({ behavior:'smooth', block:'start' });
+  }catch(e){
+    if(e.message !== 'unauthorized' && el('cz-err')) el('cz-err').textContent = e.message;
+  }finally{
+    czCotizando = false;
+    const b2 = el('cz-chat-btn');
+    if(b2){ b2.disabled = false; b2.textContent = czChat.mensajes ? 'Sumar a la conversación' : 'Interpretar'; }
+  }
+}
+
+const CZ_FALTA = { nacionalidad:'Nacionalidad', fecha:'Fecha del viaje', viajeros:'Cuántos viajan', edades_menores:'Edad de los menores', que_hacer:'Qué quieren hacer',
+  producto:'Cuál de los productos', variante:'Variante', unidades:'Cantidad de vehículos', estudiantes:'Si son estudiantes', nombre:'Nombre' };
+
+function czEntendidoHtml(r){
+  const s = (r.estado && r.estado.solicitud) || {};
+  const e = r.entendido || {};
+  const nac = s.nacionalidades || [];
+  const nacTxt = !nac.length ? '' : new Set(nac).size === 1 ? nac[0] : nac.join(', ');
+  const prods = (s.productos || []).map(p => { const x = czProd(p.id); return (x ? x.nombre : p.id) + (p.tarifa ? ` (${p.tarifa})` : '') + (p.propuesto ? ' · propuesto' : ''); });
+  const aclarar = (s.por_aclarar || []).map(a => `"${a.mencion}": ${a.opciones.map(id => (czProd(id) || {}).nombre || id).join(' o ')}`);
+  const filas = [
+    ['Nombre', s.nombre], ['Idioma', { es:'Español', en:'Inglés', pt:'Portugués' }[s.idioma] || s.idioma],
+    ['Nacionalidad', nacTxt], ['Adultos', s.adultos], ['Menores', (s.edades_menores || []).length ? s.edades_menores.map(x => x + ' años').join(', ') : (s.menores || '')],
+    ['Estudiantes', s.estudiantes], ['Fecha', s.fecha_viaje || (s.fecha_aproximada ? s.fecha_aproximada + ' (aproximada)' : '')],
+    ['Días', s.dias_disponibles], ['Llegada', s.hora_llegada], ['Productos', prods.join(' · ')],
+    ['Por aclarar', aclarar.join(' · ')], ['Intereses', (s.intereses || []).join(', ')],
+  ].filter(([, v]) => v !== null && v !== undefined && v !== '');
+  const faltan = (r.faltan || []).map(k => CZ_FALTA[k] || k);
+  return `<div class="ag-sec-h"><h2>Lo que entendió</h2><span class="hint">${e.propuesta_del_armador ? 'productos propuestos por la IA: revisalos' : 'revisalo antes de seguir'}</span></div>
+    <div class="wb-panel">
+      ${filas.length ? `<dl class="cz-dl">${filas.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>` : '<div class="pf2-empty">No sacó datos del viaje de este mensaje.</div>'}
+      ${faltan.length ? `<div class="cz-faltan"><b>Falta:</b> ${faltan.map(esc).join(' · ')}</div>` : ''}
+      <div class="cz-acciones" style="margin-top:var(--s3)"><button type="button" class="btn btn-ghost" data-acc="chat-form">Pasar al formulario para corregir</button></div>
+    </div>`;
+}
+
+function czPintarChat(){
+  const box = el('cz-res');
+  const r = czChat.res;
+  if(!r){
+    box.innerHTML = `<div class="ag-sec-h"><h2>Resultado</h2></div><div class="wb-panel"><div class="pf2-empty">Pegá el mensaje y tocá <b>Interpretar</b>.<br>Vas a ver qué entendió, qué falta preguntar (con la pregunta lista) o, si alcanza, la cotización.</div></div>`;
+    return;
+  }
+  const b = r.borrador || {};
+  let resto = '';
+  if(r.tipo === 'cotizacion') resto = czResultadoHtml(r);
+  else if(r.tipo === 'pregunta') resto = `<div class="ag-sec-h"><h2>Pregunta para el cliente</h2><span class="hint">una sola, en su idioma</span></div>
+    <div class="wb-panel">
+      <textarea class="cz-msg" id="cz-msg" readonly style="min-height:90px">${esc(b.texto || '')}</textarea>
+      <div class="cz-acciones" style="margin-top:var(--s3)"><button type="button" class="btn btn-primary" data-acc="copiar">Copiar pregunta</button></div>
+      <div class="cz-pie">Cuando conteste, pegá la respuesta a la izquierda y tocá Sumar a la conversación.</div>
+    </div>`;
+  else resto = `<div class="ag-sec-h"><h2>Lo toma un asesor</h2></div>
+    <div class="wb-panel">${[...(r.motivos_humano || []), ...(r.pendientes || [])].map(t => `<div class="cz-alerta" data-n="pend">${esc(t)}</div>`).join('') || '<div class="pf2-empty">No hay productos del catálogo para cotizar con lo que dijo. Armalo a mano o derivalo.</div>'}</div>`;
+  box.innerHTML = czEntendidoHtml(r) + resto;
+}
+
+// Lo que entendió la IA pasa al formulario manual, para corregirlo y cotizar desde ahí.
+function czChatAlFormulario(){
+  const r = czChat.res || {};
+  const s = (r.estado && r.estado.solicitud) || {};
+  const nac = s.nacionalidades || [];
+  const adultos = Math.max(1, Number(s.adultos) || 0);
+  const edades = s.edades_menores || [];
+  const nacDe = i => nac.length === 1 ? nac[0] : (nac[i] || '');
+  const viajeros = [];
+  for(let i = 0; i < adultos; i++) viajeros.push({ tipo:'adulto', edad:'', nacionalidad: nacDe(i), estudiante: i < (Number(s.estudiantes) || 0) });
+  edades.forEach((ed, k) => viajeros.push({ tipo:'menor', edad: String(ed), nacionalidad: nacDe(adultos + k), estudiante:false }));
+  const items = (s.productos || []).filter(p => czProd(p.id)).map(p => ({ id: p.id, ...(p.tarifa ? { tarifa: p.tarifa } : {}), ...(p.cantidad ? { cantidad: String(p.cantidad) } : {}) }));
+  czForm = { ...CZ_VACIO(), nombre: s.nombre || '', idioma: ['es','en','pt'].includes(s.idioma) ? s.idioma : 'es',
+    fecha: /^\d{4}-\d{2}-\d{2}$/.test(s.fecha_viaje || '') ? s.fecha_viaje : '', dias: s.dias_disponibles ? String(s.dias_disponibles) : '',
+    llegada: /^\d{2}:\d{2}$/.test(s.hora_llegada || '') ? s.hora_llegada : '', viajeros, items };
+  czRes = null;
+  czGuardar();
+  czModo = 'manual';
+  try{ localStorage.setItem('cz_modo', czModo); }catch(e){}
+  renderCotizador(true);
+  toast('Pasado al formulario: revisalo y tocá Cotizar');
 }
 
 function czPintarViajeros(){
@@ -11974,11 +12129,14 @@ async function czCotizar(){
 function czPintarResultado(){
   const box = el('cz-res');
   if(!box) return;
-  if(!czRes){
-    box.innerHTML = `<div class="ag-sec-h"><h2>Resultado</h2></div><div class="wb-panel"><div class="pf2-empty">Completá el pedido y tocá <b>Cotizar</b>.<br>Acá vas a ver el itinerario, el desglose con de dónde sale cada número, las alertas y el mensaje listo para mandar.</div></div>`;
-    return;
-  }
-  const r = czRes, c = r.cotizacion || {};
+  if(czModo === 'chat'){ czPintarChat(); return; }
+  box.innerHTML = czRes ? czResultadoHtml(czRes)
+    : `<div class="ag-sec-h"><h2>Resultado</h2></div><div class="wb-panel"><div class="pf2-empty">Completá el pedido y tocá <b>Cotizar</b>.<br>Acá vas a ver el itinerario, el desglose con de dónde sale cada número, las alertas y el mensaje listo para mandar.</div></div>`;
+}
+
+function czResultadoHtml(r){
+  const c = r.cotizacion || {};
+  const nViajeros = ((r.pedido && r.pedido.viajeros) || czForm.viajeros).length;
   const conTotal = CZ_CON_TOTAL.includes(c.estado) && c.total_usd;
   const alertas = [
     ...(r.pendientes || []).map(t => `<div class="cz-alerta" data-n="pend"><b>Pendiente:</b> ${esc(t)}</div>`),
@@ -12002,11 +12160,11 @@ function czPintarResultado(){
   const wa = (czForm.whatsapp || '').replace(/\D/g, '');
   const waUrl = `https://wa.me/${wa}?text=${encodeURIComponent(b.texto || '')}`;
   const v = c.versiones || {};
-  box.innerHTML = `
+  return `
     <div class="ag-sec-h"><h2>Resultado</h2><span class="cz-estado" data-ok="${conTotal ? 1 : 0}">${esc(CZ_ESTADO[c.estado] || c.estado || '')}</span></div>
     ${alertas.length ? `<div class="cz-alertas">${alertas.join('')}</div>` : ''}
     ${conTotal ? `<div class="pf2-grid cz-tot">
-        <div class="pf2-card"><div class="pf2-lbl">Total</div><div class="pf2-val">${czUsd(c.total_usd)}</div><div class="pf2-sub">${esc(czForm.viajeros.length)} viajero${czForm.viajeros.length === 1 ? '' : 's'}</div></div>
+        <div class="pf2-card"><div class="pf2-lbl">Total</div><div class="pf2-val">${czUsd(c.total_usd)}</div><div class="pf2-sub">${esc(nViajeros)} viajero${nViajeros === 1 ? '' : 's'}</div></div>
         <div class="pf2-card"><div class="pf2-lbl">Por persona</div><div class="pf2-val">${czUsd(c.por_persona_usd)}</div><div class="pf2-sub"></div></div>
         <div class="pf2-card"><div class="pf2-lbl">Adelanto 50%</div><div class="pf2-val">${czUsd(c.adelanto_usd)}</div><div class="pf2-sub">para reservar</div></div>
         <div class="pf2-card"><div class="pf2-lbl">Saldo</div><div class="pf2-val">${czUsd(c.saldo_usd)}</div><div class="pf2-sub">antes del viaje</div></div>
@@ -12024,7 +12182,7 @@ function czPintarResultado(){
         <a class="btn btn-ghost" href="${waUrl}" target="_blank" rel="noopener">${wa ? 'Abrir chat en WhatsApp' : 'Abrir en WhatsApp'}</a>
       </div>
       <div class="cz-pie">Revisalo antes de mandarlo: nada sale solo. Si cambiás algo del pedido, volvé a cotizar (los importes no se editan a mano).<br>
-        Cotizado ${new Date(r._cuando).toLocaleString('es-AR', { timeZone:'America/Lima', day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
+        Cotizado ${new Date(r._cuando || Date.now()).toLocaleString('es-AR', { timeZone:'America/Lima', day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
         · tipo de cambio ${esc(c.tipo_cambio || '—')} · ${esc([v.catalogo, v.entradas, v.reglas, v.tc].filter(Boolean).join(' · '))}</div>
     </div>`;
 }
