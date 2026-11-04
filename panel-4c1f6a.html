@@ -1823,6 +1823,9 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 .cz-dl dd{margin:0;color:var(--ink)}
 .cz-check{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-2);cursor:pointer}
 .cz-check span{color:var(--ink-3)}
+.cz-link-ok{margin-top:var(--s3);padding:10px 12px;border-radius:var(--radius-sm);background:var(--si-bg);font-size:12.5px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;line-height:1.45}
+.cz-link-ok a{color:var(--si);font-weight:600;word-break:break-all}
+.cz-link-ok span{color:var(--ink-3)}
 .cz-faltan{margin-top:var(--s3);padding-top:var(--s3);border-top:1px solid var(--line-soft);font-size:12.5px;color:var(--danger)}
 .cz-tot{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
 .cz-tot .pf2-val{font-size:22px}
@@ -12309,21 +12312,23 @@ function czResultadoHtml(r){
         Cotizado ${new Date(r._cuando || Date.now()).toLocaleString('es-AR', { timeZone:'America/Lima', day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
         · tipo de cambio ${esc(c.tipo_cambio || '—')} · ${esc([v.catalogo, v.entradas, v.reglas, v.tc].filter(Boolean).join(' · '))}</div>
     </div>
-    ${czGuardarHtml()}`;
+    ${czGuardarHtml(conTotal)}`;
 }
 
 /* ---- Guardar en lead (tabla cotizador_cotizaciones; el servidor recotiza antes de guardar) ---- */
 
 let czLeadSel = null;   // id del lead al que se va a guardar (viene de "Cotizar para este lead" o del buscador)
 
-function czGuardarHtml(){
+function czGuardarHtml(conTotal){
   const l = czLeadSel ? leads.find(x => x.id === czLeadSel) : null;
   return `<div class="ag-sec-h"><h2>Guardar en lead</h2><span class="hint">queda en la ficha del lead, con el pedido para recotizar</span></div>
     <div class="wb-panel" id="cz-guardar">
       <div class="cz-busca" style="margin-bottom:var(--s3)"><input id="cz-lead-q" placeholder="Buscar lead: nombre, @instagram o WhatsApp" autocomplete="off" aria-label="Buscar lead" value="${l ? esc(leadNombre(l)) : ''}">
         <div class="cz-sug" id="cz-lead-sug" hidden role="listbox"></div></div>
+      ${conTotal ? `<label class="cz-check" style="margin-bottom:6px"><input type="checkbox" id="cz-pagina" checked> Generar página de propuesta <span>(link en la web de Luna Llena, va dentro del mensaje)</span></label>` : ''}
       <label class="cz-check"><input type="checkbox" id="cz-enviada"> Ya se la mandé al cliente <span>(si estaba antes, pasa a Propuesta enviada)</span></label>
       <div class="cz-acciones"><button type="button" class="btn btn-primary" id="cz-guardar-btn">Guardar en lead</button><span class="cz-err" id="cz-g-err" role="alert"></span></div>
+      <div id="cz-g-ok"></div>
     </div>`;
 }
 
@@ -12374,6 +12379,7 @@ async function czGuardarEnLead(){
     idioma: chat ? (s.idioma || 'es') : czForm.idioma,
     dias_disponibles: chat ? s.dias_disponibles : (Number(czForm.dias) || null),
     nombres: (r.pedido.items || []).map(i => ({ id: i.id, nombre: (czProd(i.id) || {}).nombre || i.id })),
+    pagina: !!(el('cz-pagina') && el('cz-pagina').checked),
   };
   const btn = el('cz-guardar-btn');
   btn.disabled = true; btn.textContent = 'Guardando…'; err.textContent = '';
@@ -12381,6 +12387,18 @@ async function czGuardarEnLead(){
     const g = await api('/api/cotizador/guardar', { method:'POST', body: JSON.stringify(cuerpo) });
     const l = leads.find(x => x.id === czLeadSel);
     toast(`Guardada en ${l ? leadNombre(l) : 'el lead'}` + (g.cambio_etapa ? ' · pasó a Propuesta enviada' : ''));
+    if(g.link){
+      // El mensaje que hay que mandar ahora lleva el link de la página.
+      if(el('cz-msg') && g.mensaje) el('cz-msg').value = g.mensaje;
+      const wa = (czForm.whatsapp || '').replace(/\D/g, '');
+      const waBtn = el('cz-res').querySelector('a.btn[href^="https://wa.me/"]');
+      if(waBtn && g.mensaje) waBtn.href = `https://wa.me/${czModo === 'chat' ? '' : wa}?text=${encodeURIComponent(g.mensaje)}`;
+      el('cz-g-ok').innerHTML = `<div class="cz-link-ok"><b>Página lista:</b> <a href="${esc(g.link)}" target="_blank" rel="noopener">${esc(g.link)}</a>
+        <button type="button" class="btn btn-ghost btn-sm" id="cz-copiar-link">Copiar link</button><span>El mensaje de arriba ya lo incluye.</span></div>`;
+      el('cz-copiar-link').addEventListener('click', async () => { try{ await navigator.clipboard.writeText(g.link); toast('Link copiado'); }catch(e){} });
+    }else if(g.pagina_pedida){
+      el('cz-g-ok').innerHTML = `<div class="cz-link-ok"><span>Sin total no se genera página.</span></div>`;
+    }
     if(g.cambio_etapa || cuerpo.enviada) load();
   }catch(e){
     if(e.message !== 'unauthorized') err.textContent = e.message;
@@ -12403,7 +12421,7 @@ async function czBloqueLead(l){
   el('ld-cz-list').innerHTML = lista.length ? lista.map((c, i) => `
     <button type="button" class="vt-mini" data-cz-i="${i}" title="Abrir en el Cotizador para recotizar">
       <span>${esc(c.resumen || 'Cotización')} · ${esc(fechaCorta(c.fecha_viaje))}</span>
-      <small>${c.total_usd ? esc(czUsd(c.total_usd)) : esc(CZ_ESTADO[c.estado] || c.estado)}${c.enviada ? ' · enviada' : ''} · ${esc(fechaCorta(c.creado_en))}</small>
+      <small>${c.total_usd ? esc(czUsd(c.total_usd)) : esc(CZ_ESTADO[c.estado] || c.estado)}${c.enviada ? ' · enviada' : ''}${c.slug ? ' · con página' : ''} · ${esc(fechaCorta(c.creado_en))}</small>
     </button>`).join('') : `<p class="vt-motivo">Sin cotizaciones todavía.</p>`;
   el('ld-cz-list').querySelectorAll('[data-cz-i]').forEach(b => b.addEventListener('click', () => czAbrirGuardada(l, lista[Number(b.dataset.czI)])));
 }
