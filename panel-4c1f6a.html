@@ -1778,6 +1778,63 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 #view-web tr[data-lead]{cursor:pointer}
 #view-web tr[data-lead]:hover td{background:var(--surface-sunk)}
 
+/* ---------------- Cotizador (solo Luna Llena) ---------------- */
+#cz-root{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:var(--s4);align-items:start}
+@media (max-width:1100px){ #cz-root{grid-template-columns:minmax(0,1fr)} }
+@media (max-width:640px){
+  .cz-vj{grid-template-columns:22px minmax(0,1fr) minmax(0,1fr) 30px;padding-bottom:8px;border-bottom:1px solid var(--line-soft)}
+  .cz-vj input[data-k="nacionalidad"]{grid-column:2 / 4}
+  .cz-vj label.est{grid-column:2 / 4}
+}
+.cz-grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s3)}
+@media (max-width:640px){ .cz-grid3{grid-template-columns:1fr} }
+.cz-sec + .cz-sec{border-top:1px solid var(--line-soft);padding-top:var(--s4);margin-top:var(--s2)}
+.cz-sec-tit{font-size:12px;font-weight:700;color:var(--ink-2);margin:0 0 var(--s3);display:flex;align-items:center;gap:8px}
+.cz-sec-tit .spacer{flex:1}
+.cz-link{background:none;border:0;padding:0;color:var(--glacier);font-size:12px;font-weight:600;cursor:pointer}
+.cz-link:hover{text-decoration:underline}
+.cz-vj{display:grid;grid-template-columns:26px 110px 70px minmax(0,1fr) auto 30px;gap:8px;align-items:center;margin-bottom:8px}
+.cz-vj .n{font-size:11.5px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.cz-vj input,.cz-vj select,.cz-it select,.cz-it input,.cz-busca input{border:1px solid var(--line);border-radius:var(--radius-sm);padding:7px 9px;background:var(--surface-2);font-size:13px;min-height:36px;width:100%}
+.cz-vj label.est{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-2);white-space:nowrap}
+.cz-x{border:0;background:none;color:var(--ink-3);cursor:pointer;font-size:18px;line-height:1;width:30px;height:30px;border-radius:6px}
+.cz-x:hover{background:var(--surface-sunk);color:var(--danger)}
+.cz-busca{position:relative;margin-bottom:var(--s3)}
+.cz-sug{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:20;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:var(--shadow-lift);max-height:320px;overflow:auto}
+.cz-sug button{display:flex;width:100%;text-align:left;gap:10px;align-items:baseline;border:0;background:none;padding:9px 12px;cursor:pointer;font-size:13px;color:var(--ink)}
+.cz-sug button:hover,.cz-sug button[aria-selected="true"]{background:var(--surface-sunk)}
+.cz-sug .meta{margin-left:auto;font-size:11.5px;color:var(--ink-3);white-space:nowrap}
+.cz-it{border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px;display:grid;grid-template-columns:minmax(0,1fr) 30px;gap:6px 10px;align-items:start}
+.cz-it .nom{font-size:13px;font-weight:600}
+.cz-it .sub{font-size:11.5px;color:var(--ink-3);margin-top:2px}
+.cz-it .opc{grid-column:1 / -1;display:flex;gap:8px;flex-wrap:wrap}
+.cz-it .opc > *{flex:1 1 180px}
+.cz-acciones{display:flex;gap:var(--s2);align-items:center;margin-top:var(--s4)}
+.cz-err{color:var(--danger);font-size:12.5px}
+.cz-alertas{display:flex;flex-direction:column;gap:6px;margin-bottom:var(--s4)}
+.cz-alerta{border-left:3px solid var(--masomenos);background:var(--masomenos-bg);padding:8px 10px;border-radius:0 6px 6px 0;font-size:12.5px;line-height:1.45}
+.cz-alerta[data-n="pend"]{border-color:var(--danger);background:var(--danger-bg)}
+.cz-alerta b{font-weight:700}
+.cz-estado{display:inline-block;font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:6px;background:var(--surface-sunk);color:var(--ink-2)}
+.cz-estado[data-ok="1"]{background:var(--si-bg);color:var(--si)}
+.cz-estado[data-ok="0"]{background:var(--danger-bg);color:var(--danger)}
+.cz-tot{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.cz-tot .pf2-val{font-size:22px}
+.cz-panel-tabla{padding:0;overflow:hidden}
+.cz-panel-tabla .cv-tblwrap{border:none;box-shadow:none;border-radius:0;margin:0}
+.cz-dias{margin:0 0 var(--s4);padding:0;list-style:none;font-size:13px}
+.cz-dias li{padding:6px 0;border-bottom:1px solid var(--line-soft);display:flex;gap:10px}
+.cz-dias li b{min-width:64px;color:var(--ink-2)}
+.cz-tabla{width:100%;border-collapse:collapse;font-size:12px}
+.cz-tabla th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);font-weight:700;padding:6px 6px;border-bottom:1px solid var(--line)}
+.cz-tabla td{padding:7px 6px;border-bottom:1px solid var(--line-soft);vertical-align:top}
+.cz-tabla td.num,.cz-tabla th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cz-tabla tr[data-ok="0"] td{color:var(--danger)}
+.cz-msg{width:100%;min-height:220px;border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px 12px;background:var(--surface-2);font:13px/1.5 inherit;resize:vertical;white-space:pre-wrap}
+.cz-pie{font-size:11px;color:var(--ink-3);margin-top:var(--s3);line-height:1.5}
+.cz-vacio{padding:var(--s6) var(--s4);text-align:center;color:var(--ink-3);font-size:13px;line-height:1.6}
+
+
 /* ---------------- Inbox (setter de WhatsApp) ---------------- */
 .ib{display:grid;grid-template-columns:320px minmax(0,1fr) 290px;height:calc(100vh - 128px);min-height:460px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow);overflow:hidden}
 .ib-col{display:flex;flex-direction:column;min-height:0;min-width:0}
@@ -2009,6 +2066,10 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.4"/></svg>
         <span>Ventas</span>
       </button>
+      <button data-seccion="cotizador" id="nav-cotizador" hidden>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 11h2M12 11h2M16 11h0M8 15h2M12 15h2M8 18h2M12 18h4M16 14.5v3.5"/></svg>
+        <span>Cotizador</span>
+      </button>
       <button data-seccion="agendas">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>
         <span>Agendas &amp; Setteo</span>
@@ -2089,6 +2150,7 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
     <section class="view" id="view-ventas" hidden></section>
 
     <section class="view" id="view-web" hidden></section>
+    <section class="view" id="view-cotizador" hidden></section>
     <section class="view" id="view-formulario" hidden></section>
     <section class="view" id="view-reporte" hidden></section>
 
@@ -3194,6 +3256,7 @@ function render(){
   else if(seccion === 'reporte') renderReporte();
   else if(seccion === 'inbox' && ibActivo) renderInbox();
   else if(seccion === 'setter' && ibActivo) renderSetter();
+  else if(seccion === 'cotizador' && czActivo) renderCotizador();
 }
 
 function renderLeads(){
@@ -3263,12 +3326,13 @@ function irA(nuevaSeccion){
   el('view-reporte').hidden       = seccion !== 'reporte';
   el('view-inbox').hidden         = seccion !== 'inbox';
   el('view-setter').hidden        = seccion !== 'setter';
+  el('view-cotizador').hidden     = seccion !== 'cotizador';
   if(seccion !== 'objetivos') document.body.classList.remove('ob-weekly');
   el('kpis').hidden               = seccion !== 'leads' && seccion !== 'ventas';
   el('subtabs').hidden            = seccion !== 'leads';
   el('vt-subtabs').hidden         = seccion !== 'ventas';
-  el('search-wrap').hidden        = seccion === 'conversacion' || seccion === 'performance' || seccion === 'objetivos' || seccion === 'web' || seccion === 'formulario' || seccion === 'reporte' || seccion === 'inbox' || seccion === 'setter';
-  el('new-btn').hidden            = seccion === 'conversacion' || seccion === 'performance' || seccion === 'planificador' || seccion === 'historias' || seccion === 'objetivos' || seccion === 'web' || seccion === 'formulario' || seccion === 'reporte' || seccion === 'inbox' || seccion === 'setter';
+  el('search-wrap').hidden        = seccion === 'conversacion' || seccion === 'performance' || seccion === 'objetivos' || seccion === 'web' || seccion === 'formulario' || seccion === 'reporte' || seccion === 'inbox' || seccion === 'setter' || seccion === 'cotizador';
+  el('new-btn').hidden            = seccion === 'conversacion' || seccion === 'performance' || seccion === 'planificador' || seccion === 'historias' || seccion === 'objetivos' || seccion === 'web' || seccion === 'formulario' || seccion === 'reporte' || seccion === 'inbox' || seccion === 'setter' || seccion === 'cotizador';
 
   el('new-btn-txt').textContent   = seccion === 'ventas' ? 'Nueva venta' : 'Nuevo lead';
 
@@ -3282,6 +3346,11 @@ function irA(nuevaSeccion){
   if(seccion === 'objetivos')    el('view-title').textContent = 'Objetivos';
   if(seccion === 'objetivos') cargarObjetivos();
   if(seccion === 'web'){ el('view-title').textContent = 'Web'; if(!wbCargado) cargarWeb(); }
+  if(seccion === 'cotizador'){
+    el('view-title').textContent = 'Cotizador';
+    if(!czActivo && !el('cz-root')) el('view-cotizador').innerHTML = `<div class="ag-empty">Cargando…</div>`;
+    else if(czActivo && !czCatalogo) czCargarCatalogo();
+  }
   if(seccion === 'formulario'){ el('view-title').textContent = 'Formulario'; if(!fmCargado) cargarFormulario(); }
   if(seccion === 'reporte'){ el('view-title').textContent = 'Reporte'; renderReporte(); }
   if(seccion === 'setter'){
@@ -3375,7 +3444,7 @@ function parseHash(){
     }
     return;
   }
-  const m = location.hash.match(/^#\/(leads|agendas|conversacion|planificador|historias|performance|objetivos|web|formulario|reporte|inbox|setter)(?:\/(pipeline|calificacion|tabla|cuenta|contenido|ranking|acumulado|detalle|calendario|leads|resumen|config|semana|weekly|agentes|analiticas|recursos|conocimiento|aprobar|simulador|salud|ajustes))?/);
+  const m = location.hash.match(/^#\/(leads|agendas|conversacion|planificador|historias|performance|objetivos|web|formulario|reporte|inbox|setter|cotizador)(?:\/(pipeline|calificacion|tabla|cuenta|contenido|ranking|acumulado|detalle|calendario|leads|resumen|config|semana|weekly|agentes|analiticas|recursos|conocimiento|aprobar|simulador|salud|ajustes))?/);
   if(!m) return;
   if(m[1] === 'leads' && m[2]){
     vista = m[2];
@@ -10079,6 +10148,7 @@ function entrar(){
   cargarIdeas();
   startPolling();
   setterInit();
+  cotizadorInit();
 }
 
 /* ---------------- Objetivos ---------------- */
@@ -11752,6 +11822,332 @@ function ibCuando(iso){
 const ibNombre = c => (c.nombre || c.nombre_perfil || '+' + c.wa_id).trim();
 const ibVentanaAbierta = c => !!(c && c.ventana_hasta && c.ventana_hasta > new Date().toISOString());
 
+/* ================= Cotizador (solo Luna Llena) ================= */
+// Cotización armada a mano desde el catálogo de la web. Los importes los calcula el
+// cotizador por código (repo luna-llena-cotizador, en Vercel) a través de /api/cotizador/*:
+// acá no se suma ni se edita ningún precio. Para cambiar algo se cambia el pedido y se vuelve a cotizar.
+// La pestaña aparece solo si el CRM tiene el secret COTIZADOR_TOKEN (hoy, solo Luna Llena).
+
+let czActivo = false;
+let czCatalogo = null;      // productos de la web: [{id, nombre, categoria, duracion, consultar, unidad, tarifas}]
+let czCargandoCat = false;
+let czRes = null;           // última respuesta del cotizador
+let czCotizando = false;
+const CZ_VACIO = () => ({ nombre:'', idioma:'es', whatsapp:'', fecha:'', dias:'', llegada:'',
+  viajeros:[{ tipo:'adulto', edad:'', nacionalidad:'', estudiante:false }], items:[] });
+let czForm = CZ_VACIO();
+try{ const g = JSON.parse(localStorage.getItem('cz_borrador') || 'null'); if(g && Array.isArray(g.viajeros) && Array.isArray(g.items)) czForm = { ...CZ_VACIO(), ...g }; }catch(e){}
+const czGuardar = () => { try{ localStorage.setItem('cz_borrador', JSON.stringify(czForm)); }catch(e){} };
+
+const CZ_CAT = { 'machu-picchu':'Machu Picchu', cusco:'Cusco', trek:'Trek', paquete:'Paquete', retiro:'Retiro', aventura:'Aventura' };
+const CZ_ESTADO = { calculado:'Calculado', sin_disponibilidad_confirmada:'Calculado · cupos sin confirmar', pendiente_regla:'Regla sin definir',
+  pendiente_dato:'Falta un dato', pendiente_tarifa:'Falta una tarifa', requiere_humano:'Lo revisa un asesor' };
+const CZ_CON_TOTAL = ['calculado', 'sin_disponibilidad_confirmada'];
+const CZ_PUBLICO = { extranjero:'Extranjero', nacional_can:'CAN', nacional:'Peruano' };
+const CZ_PAISES = ['Perú','Argentina','Chile','Brasil','Colombia','México','Uruguay','Paraguay','Bolivia','Ecuador','Venezuela',
+  'España','Estados Unidos','Canadá','Francia','Alemania','Italia','Reino Unido','Países Bajos','Suiza','Israel','Australia','Japón','Corea del Sur','China'];
+
+const czProd = id => (czCatalogo || []).find(p => p.id === id);
+const czVariantes = p => (p && p.tarifas.length > 1 && !p.tarifas.every(t => t.publico)) ? p.tarifas : [];
+const czNorm = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+function czUsd(v){
+  if(v === null || v === undefined || v === '') return '—';
+  return 'USD ' + Number(v).toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 });
+}
+function czDesde(p){
+  const us = p.tarifas.map(t => t.usd).filter(x => x !== null && x !== undefined);
+  return p.consultar || !us.length ? 'Consultar' : 'desde USD ' + Math.min(...us);
+}
+
+async function cotizadorInit(){
+  try{ czActivo = !!(await api('/api/cotizador/estado')).activo; }
+  catch(e){ czActivo = false; }   // CRM sin cotizador (otros clientes): la pestaña no aparece
+  el('nav-cotizador').hidden = !czActivo;
+  if(!czActivo){ if(seccion === 'cotizador') irA('leads'); return; }
+  if(seccion === 'cotizador') irA('cotizador');
+}
+
+async function czCargarCatalogo(){
+  if(czCargandoCat) return;
+  czCargandoCat = true;
+  if(!el('cz-root')) el('view-cotizador').innerHTML = `<div class="ag-empty">Cargando el catálogo de la web…</div>`;
+  try{
+    czCatalogo = (await api('/api/cotizador/catalogo')).productos || [];
+    // Si un producto del borrador ya no existe en la web, se saca.
+    czForm.items = czForm.items.filter(i => czProd(i.id));
+    if(seccion === 'cotizador') renderCotizador(true);
+  }catch(e){
+    if(e.message !== 'unauthorized') el('view-cotizador').innerHTML = `<div class="ag-empty">No se pudo leer el catálogo de la web: ${esc(e.message)}</div>`;
+  }finally{ czCargandoCat = false; }
+}
+
+function renderCotizador(forzar){
+  const host = el('view-cotizador');
+  if(!czCatalogo){ if(!el('cz-root')) host.innerHTML = `<div class="ag-empty">Cargando el catálogo de la web…</div>`; return; }
+  if(el('cz-root') && !forzar) return;   // el polling no repinta: borraría lo que se está escribiendo
+  const f = czForm;
+  host.innerHTML = `<div id="cz-root">
+    <div>
+    <div class="ag-sec-h"><h2>Armar cotización</h2><span class="hint">catálogo de la web · el precio lo calcula el cotizador, acá no se edita</span></div>
+    <div class="wb-panel" id="cz-form">
+      <div class="cz-sec">
+        <div class="cz-sec-tit">Cliente</div>
+        <div class="cz-grid3">
+          <div class="field"><label for="cz-nombre">Nombre</label><input id="cz-nombre" data-f="nombre" value="${esc(f.nombre)}" placeholder="Ana" maxlength="80"></div>
+          <div class="field"><label for="cz-idioma">Idioma del mensaje</label><select id="cz-idioma" data-f="idioma">
+            ${[['es','Español'],['en','Inglés'],['pt','Portugués']].map(([v, t]) => `<option value="${v}" ${f.idioma === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+          <div class="field"><label for="cz-wa">WhatsApp (opcional)</label><input id="cz-wa" data-f="whatsapp" value="${esc(f.whatsapp)}" placeholder="+54 9 11 …" inputmode="tel"></div>
+        </div>
+      </div>
+      <div class="cz-sec">
+        <div class="cz-sec-tit">Viaje</div>
+        <div class="cz-grid3">
+          <div class="field"><label for="cz-fecha">Fecha del viaje</label><input id="cz-fecha" type="date" data-f="fecha" value="${esc(f.fecha)}"></div>
+          <div class="field"><label for="cz-dias">Días en Cusco (opcional)</label><input id="cz-dias" type="number" min="1" max="60" data-f="dias" value="${esc(f.dias)}"></div>
+          <div class="field"><label for="cz-llegada">Llega a Cusco (opcional)</label><input id="cz-llegada" type="time" data-f="llegada" value="${esc(f.llegada)}">
+            <span class="hint">Después de las 12, el día 1 queda liviano.</span></div>
+        </div>
+      </div>
+      <div class="cz-sec">
+        <div class="cz-sec-tit">Viajeros <span class="spacer"></span><button type="button" class="cz-link" data-acc="nac-todos">Misma nacionalidad para todos</button></div>
+        <div id="cz-vjs"></div>
+        <button type="button" class="btn btn-ghost" data-acc="vj-mas">Agregar viajero</button>
+        <datalist id="cz-paises">${CZ_PAISES.map(p => `<option value="${esc(p)}">`).join('')}</datalist>
+      </div>
+      <div class="cz-sec">
+        <div class="cz-sec-tit">Productos</div>
+        <div class="cz-busca"><input id="cz-q" placeholder="Buscar: Valle Sur, Humantay, Machu Picchu…" autocomplete="off" aria-label="Buscar producto">
+          <div class="cz-sug" id="cz-sug" hidden role="listbox"></div></div>
+        <div id="cz-its"></div>
+        <div class="hint" style="font-size:11px;color:var(--ink-3)">El orden de los días lo arma el cotizador: paquetes primero, altura desde el día 3, Machu Picchu en el medio.</div>
+      </div>
+      <div class="cz-acciones">
+        <button type="button" class="btn btn-primary" id="cz-btn">Cotizar</button>
+        <button type="button" class="btn btn-ghost" data-acc="limpiar">Empezar de nuevo</button>
+        <span class="cz-err" id="cz-err" role="alert"></span>
+      </div>
+    </div>
+    </div>
+    <div id="cz-res" aria-live="polite"></div>
+  </div>`;
+  czPintarViajeros();
+  czPintarItems();
+  czPintarResultado();
+  czEventos();
+}
+
+function czPintarViajeros(){
+  el('cz-vjs').innerHTML = czForm.viajeros.map((v, i) => `<div class="cz-vj">
+      <span class="n">${i + 1}</span>
+      <select data-vj="${i}" data-k="tipo" aria-label="Adulto o menor (viajero ${i + 1})">
+        <option value="adulto" ${v.tipo === 'adulto' ? 'selected' : ''}>Adulto</option>
+        <option value="menor" ${v.tipo === 'menor' ? 'selected' : ''}>Menor</option></select>
+      <input data-vj="${i}" data-k="edad" type="number" min="0" max="17" placeholder="Edad" value="${esc(v.edad)}" ${v.tipo === 'adulto' ? 'disabled' : ''} aria-label="Edad (viajero ${i + 1})">
+      <input data-vj="${i}" data-k="nacionalidad" list="cz-paises" placeholder="Nacionalidad" value="${esc(v.nacionalidad)}" aria-label="Nacionalidad (viajero ${i + 1})">
+      <label class="est"><input type="checkbox" data-vj="${i}" data-k="estudiante" ${v.estudiante ? 'checked' : ''}> Estudiante</label>
+      <button type="button" class="cz-x" data-acc="vj-menos" data-i="${i}" aria-label="Quitar viajero ${i + 1}" ${czForm.viajeros.length < 2 ? 'hidden' : ''}>×</button>
+    </div>`).join('');
+}
+
+function czPintarItems(){
+  const box = el('cz-its');
+  if(!czForm.items.length){ box.innerHTML = `<div class="ag-empty" style="padding:var(--s3)">Todavía no elegiste productos.</div>`; return; }
+  box.innerHTML = czForm.items.map((it, i) => {
+    const p = czProd(it.id);
+    const vars = czVariantes(p);
+    const sub = [CZ_CAT[p.categoria] || p.categoria, p.duracion, p.dificultad, czDesde(p)].filter(Boolean).join(' · ');
+    const opc = [];
+    if(vars.length) opc.push(`<select data-it="${i}" data-k="tarifa" aria-label="Variante de ${esc(p.nombre)}">
+        <option value="">Elegí la variante…</option>
+        ${vars.map(t => `<option value="${esc(t.nombre)}" ${it.tarifa === t.nombre ? 'selected' : ''}>${esc(t.nombre)}${t.usd != null ? ' · USD ' + t.usd : ''}</option>`).join('')}</select>`);
+    if(p.unidad !== 'persona') opc.push(`<input data-it="${i}" data-k="cantidad" type="number" min="1" max="30" placeholder="¿Cuántas ${esc(p.unidad)}s?" value="${esc(it.cantidad || '')}" aria-label="Cantidad de ${esc(p.unidad)}s">`);
+    return `<div class="cz-it">
+      <div><div class="nom">${esc(p.nombre)}</div><div class="sub">${esc(sub)}${p.consultar ? ' · sin precio publicado: lo cotiza un asesor' : ''}</div></div>
+      <button type="button" class="cz-x" data-acc="it-menos" data-i="${i}" aria-label="Quitar ${esc(p.nombre)}">×</button>
+      ${opc.length ? `<div class="opc">${opc.join('')}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function czSugerencias(){
+  const q = czNorm(el('cz-q').value).trim();
+  const box = el('cz-sug');
+  if(!q){ box.hidden = true; return; }
+  const palabras = q.split(/\s+/);
+  const ya = new Set(czForm.items.map(i => i.id));
+  const res = czCatalogo.filter(p => !ya.has(p.id) && palabras.every(w => czNorm(p.nombre + ' ' + (p.zona || '') + ' ' + (CZ_CAT[p.categoria] || '')).includes(w))).slice(0, 12);
+  box.innerHTML = res.length
+    ? res.map((p, k) => `<button type="button" role="option" data-add="${esc(p.id)}" aria-selected="${k === 0}"><span>${esc(p.nombre)}</span><span class="meta">${esc([CZ_CAT[p.categoria], p.duracion, czDesde(p)].filter(Boolean).join(' · '))}</span></button>`).join('')
+    : `<div class="ag-empty">Nada con "${esc(el('cz-q').value)}" en el catálogo.</div>`;
+  box.hidden = false;
+}
+
+function czAgregar(id){
+  if(!czProd(id) || czForm.items.some(i => i.id === id)) return;
+  czForm.items.push({ id });
+  czGuardar();
+  el('cz-q').value = '';
+  el('cz-sug').hidden = true;
+  czPintarItems();
+  el('cz-q').focus();
+}
+
+function czEventos(){
+  const root = el('cz-root');
+  root.addEventListener('input', e => {
+    const t = e.target;
+    if(t.dataset.f){ czForm[t.dataset.f] = t.value; czGuardar(); return; }
+    if(t.dataset.vj !== undefined){
+      const v = czForm.viajeros[Number(t.dataset.vj)];
+      v[t.dataset.k] = t.type === 'checkbox' ? t.checked : t.value;
+      if(t.dataset.k === 'tipo'){ if(t.value === 'adulto') v.edad = ''; czPintarViajeros(); }
+      czGuardar(); return;
+    }
+    if(t.dataset.it !== undefined){ czForm.items[Number(t.dataset.it)][t.dataset.k] = t.value; czGuardar(); return; }
+    if(t.id === 'cz-q') czSugerencias();
+  });
+  root.addEventListener('click', e => {
+    const add = e.target.closest('[data-add]');
+    if(add){ czAgregar(add.dataset.add); return; }
+    const b = e.target.closest('[data-acc]');
+    if(b){
+      const a = b.dataset.acc, i = Number(b.dataset.i);
+      if(a === 'vj-mas'){ const ult = czForm.viajeros[czForm.viajeros.length - 1]; czForm.viajeros.push({ tipo:'adulto', edad:'', nacionalidad: ult ? ult.nacionalidad : '', estudiante:false }); czPintarViajeros(); }
+      if(a === 'vj-menos'){ czForm.viajeros.splice(i, 1); czPintarViajeros(); }
+      if(a === 'it-menos'){ czForm.items.splice(i, 1); czPintarItems(); }
+      if(a === 'nac-todos'){ const n = (czForm.viajeros.find(v => v.nacionalidad.trim()) || {}).nacionalidad || ''; czForm.viajeros.forEach(v => v.nacionalidad = n); czPintarViajeros(); }
+      if(a === 'limpiar'){ if(!confirm('¿Borrar el formulario y el resultado?')) return; czForm = CZ_VACIO(); czRes = null; czGuardar(); renderCotizador(true); return; }
+      if(a === 'copiar') czCopiar();
+      czGuardar();
+      return;
+    }
+    if(e.target.id === 'cz-btn') czCotizar();
+    if(!e.target.closest('.cz-busca')) el('cz-sug').hidden = true;
+  });
+  el('cz-q').addEventListener('keydown', e => {
+    if(e.key === 'Escape'){ el('cz-sug').hidden = true; return; }
+    if(e.key === 'Enter'){ e.preventDefault(); const p = el('cz-sug').querySelector('[data-add]'); if(p) czAgregar(p.dataset.add); }
+  });
+  el('cz-q').addEventListener('focus', czSugerencias);
+}
+
+function czValidar(){
+  const f = czForm;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(f.fecha)) return 'Falta la fecha del viaje.';
+  if(f.fecha < new Date().toLocaleDateString('en-CA', { timeZone:'America/Lima' })) return 'La fecha del viaje ya pasó.';
+  for(const [i, v] of f.viajeros.entries()){
+    if(!v.nacionalidad.trim()) return `Falta la nacionalidad del viajero ${i + 1} (cambia entradas y trenes).`;
+    if(v.tipo === 'menor' && !(v.edad !== '' && Number(v.edad) >= 0 && Number(v.edad) <= 17)) return `Falta la edad del viajero ${i + 1} (0 a 17).`;
+  }
+  if(!f.viajeros.some(v => v.tipo === 'adulto')) return 'Tiene que viajar al menos un adulto.';
+  if(!f.items.length) return 'Elegí al menos un producto.';
+  for(const it of f.items){
+    const p = czProd(it.id);
+    if(czVariantes(p).length && !it.tarifa) return `Elegí la variante de ${p.nombre}.`;
+    if(p.unidad !== 'persona' && !(Number(it.cantidad) >= 1)) return `Poné cuántas ${p.unidad}s para ${p.nombre}.`;
+  }
+  return '';
+}
+
+async function czCotizar(){
+  if(czCotizando) return;
+  const err = czValidar();
+  el('cz-err').textContent = err;
+  if(err) return;
+  const f = czForm;
+  const cuerpo = {
+    nombre: f.nombre.trim() || null,
+    idioma: f.idioma,
+    dias_disponibles: Number(f.dias) || null,
+    pedido: {
+      fecha_viaje: f.fecha,
+      viajeros: f.viajeros.map(v => ({ nacionalidad: v.nacionalidad.trim(), estudiante: !!v.estudiante,
+        ...(v.tipo === 'adulto' ? { adulto: true } : { edad: Number(v.edad) }) })),
+      items: f.items.map(it => ({ id: it.id, ...(it.tarifa ? { tarifa: it.tarifa } : {}), ...(it.cantidad ? { cantidad: Number(it.cantidad) } : {}) })),
+      ...(f.llegada ? { llegada: { dia: 1, hora: f.llegada } } : {}),
+    },
+  };
+  czCotizando = true;
+  const btn = el('cz-btn');
+  btn.disabled = true; btn.textContent = 'Cotizando…';
+  try{
+    czRes = await api('/api/cotizador/cotizar', { method:'POST', body: JSON.stringify(cuerpo) });
+    czRes._cuando = new Date().toISOString();
+    czPintarResultado();
+    if(window.matchMedia('(max-width:1100px)').matches) el('cz-res').scrollIntoView({ behavior:'smooth', block:'start' });
+  }catch(e){
+    if(e.message !== 'unauthorized') el('cz-err').textContent = e.message;
+  }finally{
+    czCotizando = false;
+    if(el('cz-btn')){ el('cz-btn').disabled = false; el('cz-btn').textContent = 'Cotizar'; }
+  }
+}
+
+function czPintarResultado(){
+  const box = el('cz-res');
+  if(!box) return;
+  if(!czRes){
+    box.innerHTML = `<div class="ag-sec-h"><h2>Resultado</h2></div><div class="wb-panel"><div class="pf2-empty">Completá el pedido y tocá <b>Cotizar</b>.<br>Acá vas a ver el itinerario, el desglose con de dónde sale cada número, las alertas y el mensaje listo para mandar.</div></div>`;
+    return;
+  }
+  const r = czRes, c = r.cotizacion || {};
+  const conTotal = CZ_CON_TOTAL.includes(c.estado) && c.total_usd;
+  const alertas = [
+    ...(r.pendientes || []).map(t => `<div class="cz-alerta" data-n="pend"><b>Pendiente:</b> ${esc(t)}</div>`),
+    ...(r.alertas || []).map(t => `<div class="cz-alerta">${esc(t)}</div>`),
+  ];
+  // Itinerario: los días los puso el cotizador.
+  const dias = {};
+  for(const it of (r.pedido && r.pedido.items) || []){ const p = czProd(it.id); (dias[it.dia || 0] = dias[it.dia || 0] || []).push(p ? p.nombre : it.id); }
+  if(Object.keys(dias).length && !dias[1]) dias[1] = ['Llegada a Cusco y descanso'];
+  const itin = Object.keys(dias).map(Number).sort((a, b) => a - b)
+    .map(d => `<li><b>${d ? 'Día ' + d : 'Sin día'}</b><span>${dias[d].map(esc).join(' + ')}</span></li>`).join('');
+  const filas = (c.lineas || []).map(l => `<tr data-ok="${CZ_CON_TOTAL.includes(l.estado) ? 1 : 0}">
+      <td>${esc(l.concepto)}${l.motivo ? `<div style="font-size:11px">${esc(l.motivo)}</div>` : ''}${(l.reglas || []).length ? `<div style="font-size:10.5px;color:var(--ink-3)">reglas: ${esc(l.reglas.join(', '))}</div>` : ''}</td>
+      <td>${l.viajero ? 'Viajero ' + esc(l.viajero) : 'Grupo'}${l.publico ? `<div style="font-size:11px;color:var(--ink-3)">${esc(CZ_PUBLICO[l.publico] || l.publico)}</div>` : ''}</td>
+      <td class="num">${esc(l.cantidad ?? 1)}</td>
+      <td class="num">${czUsd(l.unitario_usd)}</td>
+      <td class="num">${czUsd(l.subtotal_usd)}</td>
+      <td>${esc(CZ_ESTADO[l.estado] || l.estado)}</td>
+    </tr>`).join('');
+  const b = r.borrador || {};
+  const wa = (czForm.whatsapp || '').replace(/\D/g, '');
+  const waUrl = `https://wa.me/${wa}?text=${encodeURIComponent(b.texto || '')}`;
+  const v = c.versiones || {};
+  box.innerHTML = `
+    <div class="ag-sec-h"><h2>Resultado</h2><span class="cz-estado" data-ok="${conTotal ? 1 : 0}">${esc(CZ_ESTADO[c.estado] || c.estado || '')}</span></div>
+    ${alertas.length ? `<div class="cz-alertas">${alertas.join('')}</div>` : ''}
+    ${conTotal ? `<div class="pf2-grid cz-tot">
+        <div class="pf2-card"><div class="pf2-lbl">Total</div><div class="pf2-val">${czUsd(c.total_usd)}</div><div class="pf2-sub">${esc(czForm.viajeros.length)} viajero${czForm.viajeros.length === 1 ? '' : 's'}</div></div>
+        <div class="pf2-card"><div class="pf2-lbl">Por persona</div><div class="pf2-val">${czUsd(c.por_persona_usd)}</div><div class="pf2-sub"></div></div>
+        <div class="pf2-card"><div class="pf2-lbl">Adelanto 50%</div><div class="pf2-val">${czUsd(c.adelanto_usd)}</div><div class="pf2-sub">para reservar</div></div>
+        <div class="pf2-card"><div class="pf2-lbl">Saldo</div><div class="pf2-val">${czUsd(c.saldo_usd)}</div><div class="pf2-sub">antes del viaje</div></div>
+      </div>`
+      : `<div class="cz-alerta" data-n="pend" style="margin-bottom:var(--s4)"><b>Sin total para mandar.</b> Hay que resolver lo pendiente (o cotizarlo a mano). ${c.total_parcial_usd ? `Parcial calculado, solo de referencia interna: ${czUsd(c.total_parcial_usd)}.` : ''}</div>`}
+    <div class="ag-sec-h"><h2>Itinerario</h2></div>
+    <div class="wb-panel"><ul class="cz-dias">${itin}</ul></div>
+    <div class="ag-sec-h"><h2>Desglose</h2><span class="hint">de dónde sale cada número</span></div>
+    <div class="wb-panel cz-panel-tabla"><div class="cv-tblwrap"><table class="cz-tabla"><thead><tr><th>Concepto</th><th>Quién</th><th class="num">Cant.</th><th class="num">Unitario</th><th class="num">Subtotal</th><th>Estado</th></tr></thead><tbody>${filas}</tbody></table></div></div>
+    <div class="ag-sec-h"><h2>Mensaje para el cliente</h2><span class="hint">${esc({ es:'Español', en:'Inglés', pt:'Portugués' }[b.idioma] || '')}</span></div>
+    <div class="wb-panel">
+      <textarea class="cz-msg" id="cz-msg" readonly>${esc(b.texto || '')}</textarea>
+      <div class="cz-acciones" style="margin-top:var(--s3)">
+        <button type="button" class="btn btn-primary" data-acc="copiar">Copiar mensaje</button>
+        <a class="btn btn-ghost" href="${waUrl}" target="_blank" rel="noopener">${wa ? 'Abrir chat en WhatsApp' : 'Abrir en WhatsApp'}</a>
+      </div>
+      <div class="cz-pie">Revisalo antes de mandarlo: nada sale solo. Si cambiás algo del pedido, volvé a cotizar (los importes no se editan a mano).<br>
+        Cotizado ${new Date(r._cuando).toLocaleString('es-AR', { timeZone:'America/Lima', day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
+        · tipo de cambio ${esc(c.tipo_cambio || '—')} · ${esc([v.catalogo, v.entradas, v.reglas, v.tc].filter(Boolean).join(' · '))}</div>
+    </div>`;
+}
+
+async function czCopiar(){
+  const t = el('cz-msg');
+  if(!t) return;
+  try{ await navigator.clipboard.writeText(t.value); toast('Mensaje copiado'); }
+  catch(e){ t.select(); document.execCommand('copy'); toast('Mensaje copiado'); }
+}
+
 async function setterInit(){
   try{ ibActivo = !!(await api('/api/setter/estado')).activo; }
   catch(e){ ibActivo = false; }   // CRM sin setter: el endpoint ni existe
@@ -13035,6 +13431,7 @@ if(getToken()){
   cargarIdeas();
   startPolling();
   setterInit();
+  cotizadorInit();
 }
 </script>
 </body>
