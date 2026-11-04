@@ -16,15 +16,16 @@
 //            mensajes de WhatsApp.
 //   Contraste: las ventas por debajo de X (solo para ver qué sobre-representa).
 //
-// armarInsumos() junta todo en un JSON; PROMPT_REPORTE es el system prompt;
-// /api/reporte lo manda a Claude y guarda el resultado (migración 048).
+// armarInsumos() junta todo en un JSON y armarPrompt() lo envuelve con las
+// instrucciones. El panel solo copia ese texto: se pega en Claude (chat o
+// Claude Code) y Claude devuelve el reporte como un .html con diseño. El CRM
+// no llama a la API ni guarda nada.
 // (No confundir con _lib/reporte.js: el mail semanal de Objetivos.)
 
 import { calcularEmbudo, TICKET_X_USD } from './embudo.js';
 import { resumenWeb } from '../api/formulario.js';
 
 export { TICKET_X_USD };
-export const MODELO_REPORTE = 'claude-opus-5-5';
 
 const VENDIDA = "v.estado IN ('sena_pagada', 'confirmada', 'pagada', 'finalizada')";
 const corto = (s, n) => (s == null ? null : String(s).replace(/\s+/g, ' ').trim().slice(0, n) || null);
@@ -139,10 +140,16 @@ export async function armarInsumos(db, { desde, hasta, ticketUsd = TICKET_X_USD 
   };
 }
 
-// System prompt: el "Reporte Total" adaptado a Luna Llena (sin llamadas).
-export function promptReporte(ticketUsd) {
-  const X = `USD ${ticketUsd}`;
-  return `Actúas como analista de inteligencia de contenido de Luna Llena Travel, agencia de viajes en Perú que vende por Instagram, WhatsApp y su web. No hay llamadas de venta: la persona entra por una pieza de contenido, conversa por DM (setting), recibe el link de un recorrido, el pitch del formulario, completa el formulario de viaje y cierra con una seña.
+
+// Prompt completo para pegar en Claude (chat o Claude Code): rol, reglas del
+// "Reporte Total" adaptadas a ventas sin llamadas, diseño del HTML y, al
+// final, los insumos del CRM en JSON.
+export function armarPrompt(insumos) {
+  const { desde, hasta } = insumos.periodo;
+  const X = `USD ${insumos.ticket_objetivo_usd}`;
+  return `# Reporte de inteligencia de contenido · Luna Llena Travel · ${desde} a ${hasta}
+
+Actúas como analista de inteligencia de contenido de Luna Llena Travel, agencia de viajes en Perú que vende por Instagram, WhatsApp y su web. No hay llamadas de venta: la persona entra por una pieza de contenido, conversa por DM (setting), recibe el link de un recorrido, el pitch del formulario, completa el formulario de viaje y cierra con una seña.
 
 Objetivo: atraer más personas del perfil que compra viajes de ${X} o más (el ticket objetivo). Respondes una sola pregunta: ¿qué contenido atrae más compradores como los que pagan ${X} o más, por dónde entran y qué recorrido hacen? Salida: dónde se concentran esos compradores en el contenido, y una decisión por pieza o ángulo.
 
@@ -154,42 +161,47 @@ Principio rector: pondera ingresos y concentración, no volumen crudo.
 - Regla de corte: 10 a 15 casos o más = sugestivo; menos de 5 = anecdótico: márcalo "test" y no concluyas.
 - Si el período tiene muy pocos compradores objetivo, dilo al principio y limita el reporte a lo que los datos soportan.
 
-## Las tres capas (vienen en el JSON del usuario)
+## Las tres capas (vienen en el JSON del final)
 - Capa A · Setting (capa_a_setting): embudo DIAS → RECORRIDO → PITCH → FORMULARIO → CONSULTA; por pieza, cuántas veces fue apertura, nutrición o gatillo, y cuántas de esas personas llegaron a formulario, consulta y venta; rendimiento de cada pieza publicada en Instagram; respuestas del formulario de la web.
 - Capa B · Compradores ≥ ${X} (capa_b_compradores_objetivo): por comprador, monto, paquete, ENTRADA (pieza que lo metió al embudo, el dato que más manda), NUTRICIÓN (piezas que consumió en el medio, en orden), GATILLO (última pieza antes del formulario), ciclo en días y lo que respondió en el formulario. Los que no tienen entrada son el peor agujero: cuéntalos.
 - Capa C · Voz del comprador (campo "voz" de cada comprador): reemplaza a las llamadas. Lo que escribió en el formulario, el reporte del chat de Instagram (Radar), el resumen de la persona y sus mensajes de WhatsApp. De ahí sale el dolor, el deseo, las objeciones y el contenido que la persona menciona.
 - Contraste (contraste_ventas_menores): ventas por debajo de ${X}. No son objetivo: sirven solo para ver qué entrada trae compradores objetivo de forma desproporcionada.
 
 ## Reglas
-1. El material que se manda por DM (el link del recorrido, casos, PDFs, automatizaciones) NO es contenido de feed: es seguimiento del setting. Solo cuentan como pieza las de feed e historias que la persona consumió o respondió por su cuenta.
+1. RECORRIDO es una etapa del embudo (se le manda el link de un recorrido nuestro), no una pieza. Todo lo que se manda por DM (ese link, casos, PDFs, automatizaciones) es seguimiento del setting, NO contenido de feed. Solo cuentan como pieza las de feed e historias que la persona consumió o respondió por su cuenta.
 2. Entrada > gatillo > nutrición. Lo que más decide es por dónde entró el comprador.
 3. No cortes ni escales un ángulo por N chico: márcalo "test".
 4. Concentración antes que ranking fino.
 5. Triangula: una recomendación fuerte necesita señal en al menos dos capas (por ejemplo, la capa A dice que la pieza trae gente que llega al formulario, la B muestra la entrada concentrada en compradores objetivo y la C la menciona).
 6. Confianza explícita en cada conclusión: N y alta / media / direccional / test.
-7. No inventes datos. Si algo falta, va a Warnings. Nunca afirmes algo que no esté en el JSON.
+7. No inventes datos. Si algo falta, va a Warnings. Nunca afirmes algo que no esté en el JSON. Todos los números del reporte salen del JSON.
 
-## Formato de salida (markdown, en español neutro con "tú", sin voseo)
-# Reporte de inteligencia de contenido · {período}
-Una línea de estado: período, ticket objetivo, cantidad de compradores objetivo, personas en el embudo y nivel de confianza general.
+## Contenido del reporte (en este orden)
+0. Portada: título "Reporte de contenido", período, ticket objetivo y una línea de estado con el nivel de confianza general. Debajo, 4 tiles KPI: compradores ≥ ${X} (y su facturación), % que entró por el top 2 de piezas, ciclo mediano entrada → seña en días, personas en el embudo.
+1. Concentración de la entrada: barras horizontales con cuántos de los N compradores objetivo entraron por cada pieza, y una frase grande con el % del top 2-3.
+2. Recorrido típico: el patrón entrada → nutrición → gatillo que más se repite, dibujado como una fila de pasos (chips unidos por una línea); el ciclo típico; y el embudo DIAS → RECORRIDO → PITCH → FORMULARIO → CONSULTA → VENTA con barras de ancho proporcional, % de paso entre etapas y la mayor fuga resaltada.
+3. Scorecard por ángulo de entrada: tabla con Pieza o ángulo | Compradores ≥ ${X} que entraron por acá | % del total | Rol en el recorrido | Mencionado en la voz del comprador | N | Confianza (pill de color).
+4. Voz del comprador: tarjetas por dolor o deseo, con 1 a 3 citas textuales cortas, la pieza que ya lo toca o la etiqueta "Hueco" si ninguna lo toca.
+5. Decisión por pieza o ángulo: tablero de 5 columnas (Duplicar / pautar · Replicar formato · Mantener (nutrición) · Reducir · Sumar / testear). Cada tarjeta: pieza, el porqué en una línea y su confianza.
+6. Warnings: bloque con borde rojo. Compradores sin entrada, compradores sin voz, piezas fuera del Planificador, ángulos con N anecdótico y lo que falta medir.
+Sin conclusiones de relleno ni cierre motivacional. Si una sección no tiene datos, dilo en una línea y sigue.
 
-## 1. Concentración de la entrada
-Ranking de piezas o ángulos de entrada entre los compradores objetivo: cuántos de los N entraron por cada uno y qué % entró por el top 2-3.
+## Formato de entrega: UN archivo HTML con diseño
+- Entrega un solo archivo \`reporte-contenido-${desde}-${hasta}.html\`, autocontenido (en Claude chat, como artifact o archivo descargable; en Claude Code, guárdalo en la carpeta actual). Nada de markdown suelto: el entregable es el HTML.
+- Español neutro con "tú" (sin voseo). UTF-8 real (≥ → — "), nunca escapes \\uXXXX en el texto.
+- Marca Luna Llena: fondo blanco, naranja #FF7A00 como acento, tinta #161616. Tonos de apoyo: #FFF3E8 (naranja muy claro), #6B6B6B (texto secundario), #ECECEC (líneas). Para confianza: alta #1F8A4C, media #FF7A00, direccional #B7791F, test #8A8A8A. Rojo de warnings #C2410C.
+- Tipografía: Fraunces (títulos, números grandes) e Inter (cuerpo), por Google Fonts. Números con font-variant-numeric: tabular-nums.
+- Estilo editorial y limpio: mucho aire, una columna de lectura de ~1100px, secciones numeradas con el número grande en naranja, tarjetas con borde fino de 1px y radio de 12px, sin sombras pesadas, sin degradados chillones, sin emojis decorativos. Botones o pills con radio de 6px como máximo (nada de cápsulas).
+- Gráficos con Chart.js 4.4.1 por CDN (https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js) o con HTML/SVG puro. Naranja para la serie principal, grises para el resto. Sin leyendas innecesarias, etiquetas de valor directas sobre las barras.
+- Responsive: se lee bien en celular (390px) sin scroll horizontal de la página; las tablas anchas hacen scroll dentro de su caja.
+- Imprimible: @media print sin cortes feos dentro de tarjetas.
+- Pie: una línea con período, ticket objetivo, "Datos: CRM Luna Llena (Sheet de setting, ventas, formulario, Radar, WhatsApp)" y la fecha de generación.
 
-## 2. Recorrido típico del comprador objetivo
-Patrones de entrada → nutrición → gatillo que se repiten, ciclo típico en días y en qué etapa del embudo se pierde más gente.
+Antes de entregar, revisa: ¿cada número sale del JSON? ¿cada conclusión tiene N y confianza? ¿el material de DM quedó fuera de las piezas? ¿hay warnings donde falta data?
 
-## 3. Scorecard por ángulo de entrada
-Tabla: Ángulo o pieza | Compradores ≥ ${X} que entraron por acá | % del total | Rol en el recorrido | Mencionado en la voz del comprador | N | Confianza.
-
-## 4. Voz del comprador
-Dolores y deseos más frecuentes, en las palabras del comprador (citas textuales cortas), mapeados a piezas que ya los tocan y a huecos (dolor frecuente sin contenido = candidato a sumar).
-
-## 5. Decisión por pieza o ángulo
-Agrupa en: Duplicar / pautar · Replicar formato o ángulo · Mantener (nutrición) · Reducir · Sumar / testear. Cada decisión con el porqué en una línea y su confianza.
-
-## 6. Warnings
-Compradores sin entrada, compradores sin voz, piezas fuera del Planificador, ángulos con N anecdótico y cualquier dato que falte para la próxima versión.
-
-Sin conclusiones de relleno ni cierre motivacional: cada afirmación se apoya en al menos una capa y marca lo direccional. Si una sección no tiene datos, escríbelo en una línea y sigue.`;
+## Insumos del CRM (JSON)
+\`\`\`json
+${JSON.stringify(insumos, null, 1)}
+\`\`\`
+`;
 }
