@@ -17,6 +17,7 @@ import { checkToken, json } from '../../_lib/auth.js';
 
 const URL_COTIZADOR = 'https://luna-llena-cotizador.vercel.app';
 const URL_CATALOGO = 'https://lunallenatravel.vercel.app/data/catalogo.json';
+const URL_PROPUESTA = 'https://lunallenatravel.vercel.app/p/';   // la web reescribe /p/* a functions/p/[slug].js
 const MAX_CUERPO = 32 * 1024;
 
 const activo = env => !!env.COTIZADOR_TOKEN;
@@ -108,10 +109,21 @@ async function guardar(request, env) {
   const c = cuerpoCotizar(b);
   if (c.error) return json({ error: c.error }, 400);
 
+  // Página de propuesta: slug al azar; el link va dentro del mensaje (lo pone el cotizador).
+  let slug = null, link = null;
+  if (b.pagina) {
+    const bytes = crypto.getRandomValues(new Uint8Array(14));
+    slug = btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    link = URL_PROPUESTA + slug + '/';
+    Object.assign(c, { pagina: true, link });
+  }
+
   const { status, data } = await pedir(env, '/v1/cotizar', c);
   if (status !== 200) return json({ error: (data && data.error) || 'El cotizador no respondió' }, 502);
   const cot = data.cotizacion || {};
   const conTotal = ['calculado', 'sin_disponibilidad_confirmada'].includes(cot.estado) && cot.total_usd;
+  const html = slug && conTotal && data.propuesta_html ? String(data.propuesta_html) : null;
+  if (slug && !html) { slug = null; link = null; }   // sin total no hay página para el cliente
   const enviada = b.enviada ? 1 : 0;
   const now = new Date().toISOString();
   const quien = b.quien ? String(b.quien).slice(0, 60) : null;
@@ -124,10 +136,11 @@ async function guardar(request, env) {
 
   const sentencias = [env.DB.prepare(
     `INSERT INTO cotizador_cotizaciones (lead_id, estado, total_usd, adelanto_usd, viajeros, fecha_viaje, resumen, idioma, mensaje,
-       pedido_json, versiones, enviada, quien, creado_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       pedido_json, versiones, enviada, quien, creado_en, slug, propuesta_html) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(leadId, cot.estado || 'desconocido', conTotal ? String(cot.total_usd) : null, conTotal ? String(cot.adelanto_usd) : null,
     c.pedido.viajeros.length, c.pedido.fecha_viaje, resumen, c.idioma, (data.borrador && data.borrador.texto) || null,
-    JSON.stringify(data.pedido || c.pedido), [v.catalogo, v.entradas, v.reglas, v.tc].filter(Boolean).join(' · '), enviada, quien, now)];
+    JSON.stringify(data.pedido || c.pedido), [v.catalogo, v.entradas, v.reglas, v.tc].filter(Boolean).join(' · '), enviada, quien, now,
+    slug, html)];
 
   let etapa = lead.etapa;
   if (enviada && ANTES_DE_ENVIADA.includes(lead.etapa)) {
@@ -140,15 +153,18 @@ async function guardar(request, env) {
   if (enviada && conTotal && !lead.precio) {
     sentencias.push(env.DB.prepare('UPDATE leads SET precio = ?, actualizado_en = ? WHERE id = ?').bind('USD ' + cot.total_usd, now, leadId));
   }
+  // Con página, el link del lead (propuesta_url) apunta a la última propuesta.
+  if (link) sentencias.push(env.DB.prepare('UPDATE leads SET propuesta_url = ?, actualizado_en = ? WHERE id = ?').bind(link, now, leadId));
   await env.DB.batch(sentencias);
-  return json({ ok: true, etapa, cambio_etapa: etapa !== lead.etapa, estado: cot.estado, total_usd: conTotal ? cot.total_usd : null });
+  return json({ ok: true, etapa, cambio_etapa: etapa !== lead.etapa, estado: cot.estado, total_usd: conTotal ? cot.total_usd : null,
+    link, mensaje: (data.borrador && data.borrador.texto) || null, pagina_pedida: !!b.pagina });
 }
 
 async function deLead(env, id) {
   const leadId = Number(id);
   if (!Number.isInteger(leadId) || leadId <= 0) return json({ error: 'lead inválido' }, 400);
   const r = await env.DB.prepare(
-    `SELECT id, estado, total_usd, adelanto_usd, viajeros, fecha_viaje, resumen, idioma, mensaje, pedido_json, versiones, enviada, quien, creado_en
+    `SELECT id, estado, total_usd, adelanto_usd, viajeros, fecha_viaje, resumen, idioma, mensaje, pedido_json, versiones, enviada, quien, creado_en, slug
      FROM cotizador_cotizaciones WHERE lead_id = ? ORDER BY creado_en DESC LIMIT 30`
   ).bind(leadId).all();
   return json({ cotizaciones: r.results || [] });
