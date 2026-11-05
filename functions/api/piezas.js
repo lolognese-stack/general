@@ -1,4 +1,5 @@
 import { checkToken } from '../_lib/auth.js';
+import { piezaHecha, marcarIdeasUsadas } from '../_lib/ideas-usadas.js';
 // Piezas del planificador de contenido. Una sola fila por pieza — el
 // registro planificado y el publicado-con-métricas son el mismo, solo
 // cambia `estado`. A propósito distinto de separar "plan" y "publicadas":
@@ -61,6 +62,8 @@ export async function onRequestPost({ request, env }) {
   const result = await env.DB.prepare(sql)
     .bind(...cols.map((c) => datos[c]), now, now)
     .run();
+
+  if (piezaHecha(datos.estado)) await marcarIdeasUsadas(env, datos.inspiracion);
 
   return json({ id: result.meta.last_row_id }, 201);
 }

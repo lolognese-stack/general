@@ -4094,6 +4094,8 @@ async function pzInlinePatch(id, campo, valor){
     await api('/api/piezas/' + id, { method:'PATCH', body:JSON.stringify({ [campo]: valor }) });
     const p = piezas.find(x => x.id === id);
     if(p) p[campo] = valor;
+    // El server puede haber marcado como usada la idea de la inspiración.
+    if(campo === 'estado' || campo === 'inspiracion') cargarIdeas();
   }catch(e){
     if(e.message !== 'unauthorized') toast('No se pudo guardar: ' + e.message, { tipo:'error' });
   }
@@ -4713,11 +4715,14 @@ const idDeSeccion = (f = idFiltro) => ideas.filter(i => (f.tipo === 'audio') ===
 function idListaFiltrada(f = idFiltro){
   f = { ...ID_FILTRO_BASE, ...f };
   const enPlan = new Set(piezas.map(p => p.id));
+  // Usada gana sobre agendada: si no, la idea de una pieza editada no aparecería
+  // en Usadas.
+  const agendada = (i) => i.uso !== 'usado' && i.pieza_id && enPlan.has(i.pieza_id);
   const q = angNormalizar(f.q.trim());
   const lista = ideas.filter(i =>
     (!f.formato || i.formato === f.formato) &&
     (!f.angulo || i.angulo_ids.includes(Number(f.angulo))) &&
-    (f.uso === 'plan' ? (i.pieza_id && enPlan.has(i.pieza_id)) : !(i.pieza_id && enPlan.has(i.pieza_id))) &&
+    (f.uso === 'plan' ? agendada(i) : !agendada(i)) &&
     (f.uso === '' || f.uso === 'todas' || f.uso === 'plan' ? true : (i.uso || '') === (f.uso === 'sin' ? '' : f.uso)) &&
     (f.tipo === 'audio' ? i.tipo === 'audio' : i.tipo !== 'audio') &&
     (!q || angNormalizar([i.texto, i.aplicacion, i.caption, i.transcripcion, i.creador, i.formato, i.audio_nombre, i.audio_artista, ...i.angulo_ids.map(id => (idAngulo(id) || {}).nombre)].join(' ')).includes(q))
@@ -4828,7 +4833,7 @@ function idCardAudioHtml(i){
   const foto = i.foto_v
     ? `<img src="/api/foto-idea/${i.id}?v=${i.foto_v}" alt="" loading="lazy" decoding="async">`
     : `<div class="id-audio-vacio">${ID_NOTA_SVG.replace('width="14" height="14"', 'width="40" height="40"')}</div>`;
-  const pz = idPiezaDe(i);
+  const pz = i.uso === 'usado' ? null : idPiezaDe(i);
   const uso = pz
     ? `<span class="id-uso" data-uso="plan">${pz.fecha ? 'Agendado ' + new Date(pz.fecha + 'T12:00:00').toLocaleDateString('es-AR', { day:'numeric', month:'short' }) : 'En planificador'}</span>`
     : i.uso ? `<span class="id-uso" data-uso="${i.uso}">${i.uso === 'usado' ? 'Usado' : 'Para usar'}</span>` : '';
@@ -4849,7 +4854,7 @@ function idCardHtml(i){
   const foto = i.foto_v
     ? `<img src="/api/foto-idea/${i.id}?v=${i.foto_v}" alt="" loading="lazy" decoding="async">`
     : `<div class="id-media-vacia">${i.url ? 'Sin portada todavía' : esc((i.aplicacion || i.texto || 'Idea suelta').slice(0, 90))}</div>`;
-  const pz = idPiezaDe(i);
+  const pz = i.uso === 'usado' ? null : idPiezaDe(i);
   const uso = pz
     ? `<span class="id-uso" data-uso="plan">${pz.fecha ? 'Agendada ' + new Date(pz.fecha + 'T12:00:00').toLocaleDateString('es-AR', { day:'numeric', month:'short' }) : 'En planificador'}</span>`
     : i.uso ? `<span class="id-uso" data-uso="${i.uso}">${i.uso === 'usado' ? 'Usada' : 'Para usar'}</span>` : '';
@@ -5411,7 +5416,7 @@ function pzBandejaLista(){
   // idListaFiltrada ya deja afuera las ideas que son pieza: arrastrar una
   // la saca de la bandeja (y de Ideas) al toque.
   return idListaFiltrada({ q: pzBandeja.q, orden: pzBandeja.orden, formato: pzBandeja.formato }).filter(i =>
-    pzBandeja.filtro === 'todas' || i.uso === 'usar'
+    i.uso !== 'usado' && (pzBandeja.filtro === 'todas' || i.uso === 'usar')
   ).slice(0, 60);
 }
 
@@ -10173,6 +10178,7 @@ async function guardarPieza(){
     else   await api('/api/piezas',       { method:'POST',  body:JSON.stringify(body) });
     cerrarDrawerPieza();
     await cargarPiezas();
+    cargarIdeas();
   }catch(e){
     if(e.message !== 'unauthorized') toast('No se pudo guardar: ' + e.message, { tipo:'error' });
   }finally{

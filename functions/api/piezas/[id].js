@@ -1,5 +1,6 @@
 import { checkToken } from '../../_lib/auth.js';
 import { CAMPOS_PIEZA } from '../piezas.js';
+import { piezaHecha, marcarIdeasUsadas } from '../../_lib/ideas-usadas.js';
 
 
 function json(data, status = 200) {
@@ -24,9 +25,23 @@ export async function onRequestPatch({ request, env, params }) {
   });
   values.push(now, params.id);
 
+  // Solo al pasar a Editado o al cambiar la inspiración: guardar la ficha de nuevo
+  // no vuelve a marcar una idea que se desmarcó a mano.
+  const antes = fields.includes('estado') || fields.includes('inspiracion')
+    ? await env.DB.prepare('SELECT estado, inspiracion FROM piezas WHERE id = ?').bind(params.id).first()
+    : null;
+
   await env.DB.prepare(`UPDATE piezas SET ${setClause} WHERE id = ?`)
     .bind(...values)
     .run();
+
+  if (antes) {
+    const estado = fields.includes('estado') ? body.estado : antes.estado;
+    const inspiracion = fields.includes('inspiracion') ? body.inspiracion : antes.inspiracion;
+    if (piezaHecha(estado) && (!piezaHecha(antes.estado) || (inspiracion || '') !== (antes.inspiracion || ''))) {
+      await marcarIdeasUsadas(env, inspiracion);
+    }
+  }
 
   return json({ ok: true });
 }

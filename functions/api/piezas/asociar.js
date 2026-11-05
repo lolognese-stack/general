@@ -1,4 +1,5 @@
 import { checkToken } from '../../_lib/auth.js';
+import { marcarIdeasUsadas } from '../../_lib/ideas-usadas.js';
 
 // Asocia un posteo importado de Instagram (tema "(importado, sin clasificar)")
 // a una pieza planificada, para que el posteo no quede suelto cuando el sync
@@ -35,7 +36,7 @@ export async function onRequestPost({ request, env }) {
 
   const [imp, dest] = await Promise.all([
     env.DB.prepare('SELECT id, tema, video_url FROM piezas WHERE id = ?').bind(importada).first(),
-    env.DB.prepare('SELECT id, tema, video_url FROM piezas WHERE id = ?').bind(destino).first(),
+    env.DB.prepare('SELECT id, tema, video_url, inspiracion FROM piezas WHERE id = ?').bind(destino).first(),
   ]);
   if (!imp || imp.tema !== TEMA_IMPORTADO) return json({ error: 'el posteo no está sin asociar' }, 409);
   if (!dest || dest.tema === TEMA_IMPORTADO) return json({ error: 'pieza destino inválida' }, 409);
@@ -66,6 +67,8 @@ export async function onRequestPost({ request, env }) {
     env.DB.prepare('UPDATE ideas SET pieza_id = ?2 WHERE pieza_id = ?1').bind(importada, destino),
     env.DB.prepare('DELETE FROM piezas WHERE id = ?1').bind(importada),
   ]);
+
+  await marcarIdeasUsadas(env, dest.inspiracion);
 
   return json({ ok: true, id: destino });
 }
