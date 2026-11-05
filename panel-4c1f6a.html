@@ -985,6 +985,18 @@ tr:hover .pz-link-edit,.pz-link-edit:focus-visible{opacity:1}
 .pz-cal-piece{display:flex;flex-direction:column;gap:2px;text-align:left;width:100%;border:1px solid var(--line-soft);background:var(--surface-2);border-radius:6px;padding:6px 8px;cursor:pointer;font:inherit;color:inherit}
 .pz-cal-piece:hover{border-color:var(--glacier)}
 .pz-cal-piece[data-estado="Editado"]{background:color-mix(in srgb,var(--est-subido) 14%,var(--surface));border-color:color-mix(in srgb,var(--est-subido) 35%,var(--line-soft))}
+.pz-cal-piece[data-estado="Subido"]{background:color-mix(in srgb,var(--est-subido) 34%,var(--surface));border-color:var(--est-subido)}
+.pz-cal-piece[data-estado="Subido"]:hover{border-color:var(--est-subido);background:color-mix(in srgb,var(--est-subido) 42%,var(--surface))}
+.sa-barra{border:1px solid var(--masomenos);background:var(--masomenos-bg);border-radius:var(--radius-sm);padding:var(--s3) var(--s4);margin-bottom:var(--s4)}
+.sa-barra>summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--ink);list-style:none}
+.sa-barra>summary::-webkit-details-marker{display:none}
+.sa-barra>summary .hint{font-weight:500;color:var(--ink-3);margin-left:8px}
+.sa-lista{display:flex;flex-direction:column;gap:6px;margin-top:var(--s3)}
+.sa-fila{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;background:var(--surface);border:1px solid var(--line-soft);border-radius:6px;padding:8px 10px;font-size:12.5px}
+.sa-info{flex:1 1 220px;min-width:0;color:var(--ink-2)}
+.sa-info b{color:var(--ink)}
+.sa-sel{flex:1 1 260px;min-width:0;max-width:420px;font:inherit}
+.sa-btn{flex:none}
 .pz-cal-piece[data-estado="Editando"]{background:color-mix(in srgb,#F2C94C 22%,var(--surface));border-color:color-mix(in srgb,#F2C94C 45%,var(--line-soft))}
 .pz-cal-piece.dragging{opacity:.45}
 .pz-cal-day.dragover{border-color:var(--glacier);background:var(--glacier-soft)}
@@ -3970,6 +3982,56 @@ function pzOptsPlano(lista, sel){
 // guarda por PATCH al cambiar, sin pasar por el drawer. El lápiz abre el
 // drawer solo para los campos que no entran en la tabla (hook, cta, etiqueta,
 // performance...). Etiqueta/Leads son de cruce interno, no van acá.
+// Posteos que el sync trajo de Instagram sin poder vincularlos a una pieza.
+// La barra deja elegir a mano a cuál corresponde: la lista son las piezas
+// Editadas (listas para subir) con el nombre de su etiqueta; abajo, el resto
+// de las que todavía no tienen link.
+const TEMA_SIN_ASOCIAR = '(importado, sin clasificar)';
+const pzSinAsociar = () => piezas.filter(p => p.tema === TEMA_SIN_ASOCIAR)
+  .sort((a,b) => (b.fecha || '').localeCompare(a.fecha || ''));
+
+function pzSinAsociarHtml(){
+  const sueltos = pzSinAsociar();
+  if(!sueltos.length) return '';
+  const libres = piezas.filter(p => p.tema !== TEMA_SIN_ASOCIAR && p.estado !== 'Subido' && !p.video_url)
+    .sort((a,b) => (a.fecha || '9999').localeCompare(b.fecha || '9999'));
+  const nombre = (p) => (p.etiqueta_manychat || p.tema) + (p.fecha ? ' · ' + fechaCorta(p.fecha) : '');
+  const grupo = (titulo, items) => items.length
+    ? `<optgroup label="${esc(titulo)}">${items.map(p => `<option value="${p.id}" title="${esc(p.tema)}">${esc(nombre(p))}</option>`).join('')}</optgroup>` : '';
+  const editadas = libres.filter(p => p.estado === 'Editado');
+  const otras = libres.filter(p => p.estado !== 'Editado');
+  const opciones = `<option value="">Elegí la pieza…</option>${grupo('Editadas', editadas)}${grupo('Otras sin link', otras)}`;
+  return `<details class="sa-barra" open>
+    <summary>${sueltos.length} ${sueltos.length === 1 ? 'posteo sin asociar' : 'posteos sin asociar'}<span class="hint">elegí a qué pieza corresponde cada uno</span></summary>
+    <div class="sa-lista">${sueltos.map(p => `
+      <div class="sa-fila" data-id="${p.id}">
+        <div class="sa-info"><b>${p.fecha ? esc(fechaCorta(p.fecha)) : 'Sin fecha'}</b> · ${esc(p.formato || 'Sin formato')}${p.views != null ? ' · ' + numCorto(p.views) + ' views' : ''}${p.video_url ? ` · <a href="${esc(p.video_url)}" target="_blank" rel="noopener">Ver posteo ↗</a>` : ''}</div>
+        <select class="sa-sel" aria-label="Pieza a la que corresponde">${opciones}</select>
+        <button type="button" class="btn sa-btn" disabled>Asociar</button>
+      </div>`).join('')}
+    </div>
+  </details>`;
+}
+
+function pzSinAsociarWire(host){
+  host.querySelectorAll('.sa-fila').forEach(fila => {
+    const sel = fila.querySelector('.sa-sel'), btn = fila.querySelector('.sa-btn');
+    sel.addEventListener('change', () => { btn.disabled = !sel.value; });
+    btn.addEventListener('click', async () => {
+      if(!sel.value) return;
+      btn.disabled = true; btn.textContent = 'Asociando…';
+      try{
+        await api('/api/piezas/asociar', { method:'POST', body:JSON.stringify({ importada_id:Number(fila.dataset.id), destino_id:Number(sel.value) }) });
+        toast('Posteo asociado a la pieza. Quedó como Subido.');
+        await cargarPiezas();
+      }catch(e){
+        btn.textContent = 'Asociar'; btn.disabled = false;
+        if(e.message !== 'unauthorized') toast('No se pudo asociar: ' + e.message, { tipo:'error' });
+      }
+    });
+  });
+}
+
 function pzRowEditableHtml(p){
   const d = p.fecha ? new Date(p.fecha + 'T12:00:00') : null;
   const diaIdx = d ? (d.getDay() + 6) % 7 : '';
@@ -5552,7 +5614,9 @@ function renderPlanificador(){
       </div>
       <div class="pz-periodo-t">${pzPeriodoTituloHtml()}</div>
     </div>` : ''}
+    ${enMatriz ? '' : pzSinAsociarHtml()}
     <div id="pz-body"></div>`;
+  if(!enMatriz) pzSinAsociarWire(el('view-planificador'));
 
   if(pzVista === 'tabla') renderPlanificadorTabla(lista);
   else if(pzVista === 'calendario') renderPlanificadorCalendario(lista);
@@ -8791,6 +8855,7 @@ function renderPerformance(){
     </div>`;
 
   const bloqueContenido = () => `
+    ${pzSinAsociarHtml()}
     ${pfDashContenidoHtml(subidas)}
     <div class="ag-sec-h"><h2 style="margin:0">Piezas publicadas</h2><span class="hint">clic en una fila para cargar sus métricas · las columnas completas están en Detalle</span></div>
     ${pfTablaPiezasHtml(subidas, PF_COLS_CONTENIDO)}
@@ -8850,6 +8915,7 @@ function renderPerformance(){
 
   pzWireRows(el('view-performance'));
   pfWireModo();
+  pzSinAsociarWire(el('view-performance'));
 
   const rangoSel = el('pf-ig-rango');
   if(rangoSel) rangoSel.querySelectorAll('button').forEach(b => {
