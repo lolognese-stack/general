@@ -1069,6 +1069,9 @@ tr:hover .pz-link-edit,.pz-link-edit:focus-visible{opacity:1}
 }
 .pf2-lbl{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
 .pf2-val{font-size:28px;font-weight:800;letter-spacing:-.025em;line-height:1.08;font-variant-numeric:tabular-nums}
+.pf2-val-fila{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}
+.pf2-val-1000{font-size:12px;font-weight:500;line-height:1.35;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.pf2-val-1000 b{color:var(--ink);font-weight:700}
 .pf2-sub{font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums;min-height:18px}
 .pf2-sub b{color:var(--ink-2);font-weight:700}
 .pf2-spark{margin:var(--s3) calc(var(--s4) * -1) 0;line-height:0}
@@ -7947,7 +7950,7 @@ function pfTablaPiezasHtml(subidas, cols){
     er: p.alcance ? (p.engagement||0)/p.alcance : null,
     tasaGuardado: p.alcance ? (p.guardados||0)/p.alcance : null,
     tasaCompartido: p.alcance ? (p.compartidos||0)/p.alcance : null,
-    comXView: p.views ? (p.comentarios||0)/p.views : null,
+    comXView: p.views ? pfComPropios(p.comentarios)/p.views : null,
     indiceAlcance: medianaGlobal ? (p.alcance||0)/medianaGlobal : null,
     leads_n: p.etiqueta_manychat ? (p.leads_n||0) : null,
   }));
@@ -7971,7 +7974,8 @@ function pfTablaPiezasHtml(subidas, cols){
     if(campo === 'formato') return esc(p.formato||'—');
     if(campo === 'hora_publicacion') return esc(p.hora_publicacion||'—');
     if(campo === 'tiempo_prom') return esc(p.tiempo_prom||'—');
-    if(campo === 'er' || campo === 'tasaGuardado' || campo === 'tasaCompartido' || campo === 'comXView') return pct(p[campo]);
+    if(campo === 'comXView') return pfTasaTxt(p[campo]);
+    if(campo === 'er' || campo === 'tasaGuardado' || campo === 'tasaCompartido') return pct(p[campo]);
     if(campo === 'alcance') return num(p.alcance) + (p.indiceAlcance !== null && p.indiceAlcance >= 5 ? ' <span class="pf-hit" title="5× o más que la mediana histórica">HIT</span>' : '');
     return p[campo] === null || p[campo] === undefined ? '—' : num(p[campo]);
   };
@@ -8109,14 +8113,14 @@ function pfAcumuladoHtml(){
   const suma = c => dias.reduce((s,d) => s + (+d[c]||0), 0);
   const sumV = suma('views'), sumC = suma('comments'), sumS = suma('new_followers');
   const n = dias.length;
-  const tasaView = sumV ? sumC/sumV : null;
+  const tasaView = sumV ? pfComPropios(sumC)/sumV : null;
 
   // Seguidores al final del período: total de hoy menos lo que entró después.
   const segsFin = demografiaCache && demografiaCache.followers_count
     ? Math.max(1, (+demografiaCache.followers_count) - todos.reduce((s,d) => s + (d.fecha > dias[n-1].fecha ? (+d.new_followers||0) : 0), 0))
     : null;
-  const distView = dias.filter(d => +d.views).map(d => (+d.comments||0)/(+d.views));
-  const distSeg = segsFin ? dias.map(d => (+d.comments||0)/segsFin) : [];
+  const distView = dias.filter(d => +d.views).map(d => pfComPropios(d.comments)/(+d.views));
+  const distSeg = segsFin ? dias.map(d => pfComPropios(d.comments)/segsFin) : [];
   // Promedio diario, no acumulado: los comentarios de un mes sobre el stock
   // de seguidores pasa el 100% y deja de leerse como tasa.
   const promSeg = distSeg.length ? distSeg.reduce((s,v) => s+v, 0)/distSeg.length : null;
@@ -8135,12 +8139,12 @@ function pfAcumuladoHtml(){
         dias.map(d => +d.comments||0), 'var(--est-guionando)')}
       ${pfTarjeta('Seguidores nuevos', num(sumS), `prom. <b>${prom(sumS)}</b> por día`,
         dias.map(d => +d.new_followers||0), 'var(--si)')}
-      ${pfTarjetaTasa('Comentarios × view', tasaView === null ? '—' : pct(tasaView, 3),
-        `cada punto es un día · la marca gruesa es el período`,
-        distView, tasaView, 'var(--masomenos)')}
-      ${pfTarjetaTasa('Comentarios × seguidor', promSeg === null ? '—' : pct(promSeg, 2),
-        segsFin ? `promedio por día · sobre <b>${num(segsFin)}</b> seguidores al cierre` : 'sin demografía cargada',
-        distSeg, promSeg, 'var(--ang-producto-1)')}
+      ${pfTarjetaTasa('Comentarios × view', pfTasaTxt(tasaView),
+        `sin la mitad que genera ManyChat · cada punto es un día · la marca gruesa es el período`,
+        distView, tasaView, 'var(--masomenos)', pfDe1000Html(tasaView, 'views'))}
+      ${pfTarjetaTasa('Comentarios × seguidor', pfTasaTxt(promSeg),
+        segsFin ? `sin la mitad que genera ManyChat · promedio por día · sobre <b>${num(segsFin)}</b> seguidores al cierre` : 'sin demografía cargada',
+        distSeg, promSeg, 'var(--ang-producto-1)', pfDe1000Html(promSeg, 'seguidores'))}
     </div>
     <div class="cv-note" style="margin-top:var(--s4)">
       Estos números no van a cuadrar con Contenido y está bien: allá cada view se le carga a la pieza que la generó, en la fecha en que se publicó; acá se cuenta el día en que la view ocurrió. Además el alcance de la cuenta incluye historias y contenido viejo, que no son piezas del planificador.
@@ -8475,10 +8479,27 @@ function pf2Strip(valores, promedio, color){
 }
 
 // Tarjeta con cinta en vez de curva: para tasas, no para volúmenes.
-function pfTarjetaTasa(lbl, valor, sub, valores, promedio, color){
+// La mitad de los comentarios los genera ManyChat: las tasas se calculan solo
+// con la otra mitad. Los totales de comentarios se siguen mostrando completos.
+const PF_COM_PROPIOS = 0.5;
+const pfComPropios = (n) => (+n||0) * PF_COM_PROPIOS;
+
+// 8,5% y no 8,512%. Solo una tasa tan chica que daría 0% lleva dos decimales.
+function pfTasaTxt(v){
+  if(v === null || !isFinite(v)) return '—';
+  return pct(v, v > 0 && v < 0.0005 ? 2 : 1);
+}
+// La misma tasa en cosas contables: "de 1.000 views → 85 comentarios".
+function pfDe1000Html(v, base){
+  if(v === null || !isFinite(v)) return '';
+  const c = v * 1000;
+  return `promedio general: de <b>1.000</b> ${base} → <b>${c.toLocaleString('es-AR', { maximumFractionDigits: c < 10 ? 1 : 0 })}</b> comentarios`;
+}
+
+function pfTarjetaTasa(lbl, valor, sub, valores, promedio, color, de1000 = ''){
   return `<div class="pf2-card" style="padding-bottom:var(--s3)">
     <div class="pf2-lbl">${lbl}</div>
-    <div class="pf2-val">${valor}</div>
+    <div class="pf2-val-fila"><div class="pf2-val">${valor}</div>${de1000 ? `<div class="pf2-val-1000">${de1000}</div>` : ''}</div>
     <div class="pf2-sub">${sub}</div>
     ${pf2Strip(valores, promedio, color)}
   </div>`;
@@ -8572,7 +8593,7 @@ function pfTasasContenidoHtml(subidas){
   const vw = pfConValor(subidas,'views');
   const sumV = vw.reduce((s,p) => s + (+p.views||0), 0);
   const sumC = pfConValor(subidas,'comentarios').reduce((s,p) => s + (+p.comentarios||0), 0);
-  const tasa = sumV ? sumC/sumV : null;
+  const tasa = sumV ? pfComPropios(sumC)/sumV : null;
 
   // Seguidores a la fecha de cada pieza: se descuentan del total de hoy los
   // new_followers posteriores. Para piezas anteriores al primer día de la
@@ -8584,20 +8605,20 @@ function pfTasasContenidoHtml(subidas){
   };
   const segsHoy = demografiaCache ? +demografiaCache.followers_count : null;
 
-  const distView = subidas.filter(p => p.views).map(p => (p.comentarios||0)/p.views);
+  const distView = subidas.filter(p => p.views).map(p => pfComPropios(p.comentarios)/p.views);
   const distSeg = subidas.filter(p => p.comentarios != null).map(p => {
     const s = segsEn(p.fecha);
-    return s ? (p.comentarios||0)/s : null;
+    return s ? pfComPropios(p.comentarios)/s : null;
   }).filter(v => v !== null);
   const promSeg = distSeg.length ? distSeg.reduce((s,v) => s+v, 0)/distSeg.length : null;
 
   return `<div class="pf2-grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">
-    ${pfTarjetaTasa('Comentarios × view', tasa === null ? '—' : pct(tasa, 3),
-      `cada punto es una pieza · la marca gruesa es el período`,
-      distView, tasa, 'var(--masomenos)')}
-    ${pfTarjetaTasa('Comentarios × seguidor', promSeg === null ? '—' : pct(promSeg, 2),
-      segsHoy ? `promedio por publicación · cada pieza contra los seguidores que había ese día` : 'sin demografía cargada',
-      distSeg, promSeg, 'var(--ang-producto-1)')}
+    ${pfTarjetaTasa('Comentarios × view', pfTasaTxt(tasa),
+      `sin la mitad que genera ManyChat · cada punto es una pieza · la marca gruesa es el período`,
+      distView, tasa, 'var(--masomenos)', pfDe1000Html(tasa, 'views'))}
+    ${pfTarjetaTasa('Comentarios × seguidor', pfTasaTxt(promSeg),
+      segsHoy ? `sin la mitad que genera ManyChat · promedio por publicación · cada pieza contra los seguidores que había ese día` : 'sin demografía cargada',
+      distSeg, promSeg, 'var(--ang-producto-1)', pfDe1000Html(promSeg, 'seguidores'))}
   </div>`;
 }
 
