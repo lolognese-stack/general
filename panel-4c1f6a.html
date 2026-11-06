@@ -8714,6 +8714,39 @@ function pfIgTarjetas(campos, actual, previo){
   }).join('');
 }
 
+// Views y alcance de la cuenta según quién los generó: seguidores o gente que
+// no te sigue (migración 047). Meta avisa que los dos lados pueden sumar menos
+// que el total, por eso el % se calcula sobre la suma de ambos, no sobre "views".
+const PF_IG_SEGUIDORES = [
+  ['Views de no seguidores',   'views_followers', 'views_non_followers', 'cuánto de lo que se vio llegó a gente que no te sigue'],
+  ['Alcance de no seguidores', 'reach_followers', 'reach_non_followers', 'cuentas distintas que no te siguen y vieron tu contenido'],
+];
+
+function pfIgSeguidoresHtml(actual, previo){
+  const suma = (l,c) => l.reduce((s,d) => s + (+d[c]||0), 0);
+  const hay = actual.some(d => PF_IG_SEGUIDORES.some(([,cs,cn]) => (d[cs] !== null && d[cs] !== undefined) || (d[cn] !== null && d[cn] !== undefined)));
+  if(!hay){
+    return `<div class="pf2-empty">Todavía sin datos. El sync diario los empieza a guardar en su próxima corrida (5 AM).</div>`;
+  }
+  const pts = x => (x >= 0 ? '+' : '−') + Math.abs(x*100).toLocaleString('es-AR',{maximumFractionDigits:1}) + ' pts';
+  return `<div class="pf2-grid">${PF_IG_SEGUIDORES.map(([label, cs, cn, ayuda]) => {
+    const s = suma(actual, cs), n = suma(actual, cn), t = s + n;
+    const sp = suma(previo, cs), np = suma(previo, cn), tp = sp + np;
+    const p = t ? n/t : null, pp = tp ? np/tp : null;
+    const delta = (p !== null && pp !== null) ? ` · ${pts(p - pp)} vs. período anterior` : '';
+    const barra = p === null ? '' : `<div style="display:flex;height:8px;border-radius:4px;overflow:hidden;margin-top:var(--s3)" role="img" aria-label="${pct(1-p)} seguidores, ${pct(p)} no seguidores">
+      <span style="width:${((1-p)*100).toFixed(1)}%;background:var(--glacier)"></span><span style="width:${(p*100).toFixed(1)}%;background:var(--cv-s1)"></span></div>`;
+    return `<div class="pf2-card">
+      <div class="pf2-lbl">${label}</div>
+      <div class="pf2-val">${pct(p)}</div>
+      <div class="pf2-sub">${esc(ayuda)}</div>
+      <div class="pf2-sub"><b>${numAbrev(n)}</b> no seguidores · <b>${numAbrev(s)}</b> seguidores${delta}</div>
+      ${barra}
+      <div class="pf2-spark">${pfCurvaHtml(actual.map(d => +d[cn]||0), 'var(--cv-s1)')}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
 function pfIgSerieHtml(){
   const { actual, previo } = pfIgVentana();
   const hayPerfil = PF_IG_PERFIL.some(([c]) => actual.some(d => d[c] !== null && d[c] !== undefined));
@@ -8727,6 +8760,8 @@ function pfIgSerieHtml(){
       <span class="hint">${desde} – ${hasta}${previo.length ? ` · el delta compara contra los ${pfIgRango} días anteriores` : ''}</span>
     </div>
     <div class="pf2-grid">${pfIgTarjetas(PF_IG_METRICAS, actual, previo)}</div>
+    <div class="ag-sec-h"><h2>Quién te ve</h2><span class="hint">seguidores vs. gente que no te sigue · el crecimiento viene de los no seguidores</span></div>
+    ${pfIgSeguidoresHtml(actual, previo)}
     <div class="ag-sec-h"><h2>Actividad de perfil</h2><span class="hint">qué pasa cuando alguien deja el feed y entra al perfil</span></div>
     ${hayPerfil
       ? `<div class="pf2-grid">${pfIgTarjetas(PF_IG_PERFIL, actual, previo)}</div>`
