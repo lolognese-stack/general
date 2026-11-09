@@ -1075,6 +1075,9 @@ tr:hover .pz-link-edit,.pz-link-edit:focus-visible{opacity:1}
 .it-dias li{display:grid;grid-template-columns:78px 1fr;gap:var(--s3);font-size:13px;line-height:1.4}
 .it-fecha{color:var(--ink-3);font-variant-numeric:tabular-nums;font-size:12px;padding-top:1px}
 .it-dias p{margin:2px 0 0;color:var(--ink-2)}
+.it-acciones{display:flex;gap:var(--s2);flex-wrap:wrap;margin:var(--s2) 0}
+.it-editor{margin:var(--s2) 0}
+.it-txt{width:100%;min-height:180px;box-sizing:border-box;padding:var(--s3);border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);color:var(--ink);font:inherit;font-size:13px;line-height:1.45;resize:vertical}
 .pf2-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(228px,1fr));gap:var(--s3);margin-bottom:var(--s4)}
 .pf2-card{
   background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
@@ -2331,6 +2334,7 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
     <fieldset class="fieldset">
       <legend>Viaje</legend>
       <div id="it-bloque" style="display:none"></div>
+      <div id="it-ctl"></div>
       <div class="field" id="f-destinos-wrap"><label for="f-destinos">Destinos</label><input id="f-destinos" placeholder="Destino 1, Destino 2"></div>
       <div class="field"><label for="f-fecha_viaje">Fecha de viaje (como lo escribió)</label><input id="f-fecha_viaje" placeholder="6 al 12 Agosto"></div>
       <div class="grid2">
@@ -9875,8 +9879,75 @@ function itinerarioHtml(it){
     <ol class="it-dias">${(t.dias || []).map(d => `<li><span class="it-fecha">${esc(itFechaCorta(d.fecha))}</span><div><b>${esc(d.lugar || '')}</b>${d.detalle ? `<p>${esc(d.detalle)}</p>` : ''}</div></li>`).join('')}</ol>
   </section>`).join('');
 }
+// Texto pegado -> itinerario. Reconoce "1. Título" como tramo y "5 de noviembre — Lima"
+// o "6 nov. — Paracas" como día; las líneas que siguen son el detalle de ese día.
+// Un día con la misma fecha y lugar, o un tramo con el mismo título, no se repite.
+const IT_MESES = { ene:1, enero:1, feb:2, febrero:2, mar:3, marzo:3, abr:4, abril:4, may:5, mayo:5, jun:6, junio:6,
+  jul:7, julio:7, ago:8, agosto:8, sep:9, sept:9, set:9, septiembre:9, setiembre:9, oct:10, octubre:10,
+  nov:11, noviembre:11, dic:12, diciembre:12 };
+function itParsear(texto, anioBase){
+  const lineas = String(texto || '').replace(/[⁠​ ]/g, ' ').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  const reDia = /^(\d{1,2})\s*(?:de\s+)?([a-záéíóú]+)\.?\s*[—–-]+\s*(.+)$/i;
+  const reTramo = /^\d{1,2}\s*[.)]\s+(.+)$/;
+  const tramos = [], vistos = new Set();
+  let tramo = null, dia = null, anio = anioBase, ultimoMes = 0, n = 0;
+  const abrirTramo = titulo => {
+    tramo = tramos.find(t => t.titulo === titulo);
+    if(!tramo){ tramo = { titulo, dias: [] }; tramos.push(tramo); }
+    dia = null;
+  };
+  for(const ln of lineas){
+    const md = reDia.exec(ln);
+    const mes = md ? IT_MESES[md[2].toLowerCase()] : 0;
+    if(mes){
+      if(mes < ultimoMes) anio++;
+      ultimoMes = mes;
+      const fecha = `${anio}-${String(mes).padStart(2,'0')}-${String(+md[1]).padStart(2,'0')}`;
+      const lugar = md[3].trim();
+      if(!tramo) abrirTramo('Itinerario');
+      const clave = fecha + '|' + lugar.toLowerCase();
+      if(vistos.has(clave)){ dia = null; continue; }
+      vistos.add(clave);
+      dia = { fecha, lugar, detalle: '' };
+      tramo.dias.push(dia);
+      n++;
+      continue;
+    }
+    const mt = reTramo.exec(ln);
+    if(mt){ abrirTramo(mt[1].trim()); continue; }
+    if(dia) dia.detalle = (dia.detalle ? dia.detalle + ' ' : '') + ln;
+  }
+  return { tramos: tramos.filter(t => t.dias.length), dias: n };
+}
+
+async function itGuardar(texto){
+  const id = Number(el('f-id').value);
+  const l = leads.find(x => x.id === id);
+  if(!l) return;
+  let valor = '', n = 0;
+  if(texto !== null){
+    const anio = /^\d{4}/.test(l.llegada || '') ? +String(l.llegada).slice(0, 4) : new Date().getFullYear();
+    const r = itParsear(texto, anio);
+    if(!r.dias){
+      toast('No encontré días con fecha. Cada día va así: "5 de noviembre — Lima" y abajo el detalle.', { tipo:'error', ms:8000 });
+      return;
+    }
+    valor = JSON.stringify(r.tramos);
+    n = r.dias;
+  }
+  try{
+    await api('/api/leads/' + id, { method:'PATCH', body:JSON.stringify({ itinerario: valor }) });
+    l.itinerario = valor || null;
+    pintarItinerario(l);
+    render();
+    toast(valor ? `Itinerario guardado: ${n} días.` : 'Itinerario quitado.');
+  }catch(e){
+    if(e.message !== 'unauthorized') toast('No se pudo guardar: ' + e.message, { tipo:'error' });
+  }
+}
+
 function pintarItinerario(l){
-  const it = itinerarioDe(l), box = el('it-bloque');
+  const it = itinerarioDe(l), box = el('it-bloque'), ctl = el('it-ctl');
   box.style.display = it ? '' : 'none';
   box.innerHTML = it
     ? `<div class="it-cab"><span>Itinerario detallado</span><span>${l.dias ? esc(l.dias) + ' días' : ''}</span></div>` + itinerarioHtml(it)
@@ -9884,6 +9955,32 @@ function pintarItinerario(l){
   // Destinos y días siguen guardados (sirven para buscar), pero no se muestran sueltos.
   el('f-destinos-wrap').style.display = it ? 'none' : '';
   el('f-dias-wrap').style.display = it ? 'none' : '';
+
+  if(!l || !l.id){ ctl.innerHTML = ''; return; }
+  ctl.innerHTML = `
+    <div class="it-acciones">
+      <button type="button" class="btn btn-ghost btn-sm" id="it-pegar">${it ? 'Reemplazar itinerario' : 'Pegar itinerario día por día'}</button>
+      ${it ? `<button type="button" class="btn btn-ghost btn-sm" id="it-quitar">Quitar</button>` : ''}
+    </div>
+    <div class="it-editor" id="it-editor" style="display:none">
+      <textarea class="it-txt" id="it-txt" spellcheck="false" placeholder="1. Lima y Paracas&#10;5 de noviembre — Lima&#10;Llegada y paseo por Miraflores.&#10;6 nov. — Paracas&#10;Islas Ballestas en lancha."></textarea>
+      <div class="hint" id="it-prev">Pegá el itinerario completo.</div>
+      <div class="it-acciones">
+        <button type="button" class="btn btn-primary btn-sm" id="it-ok" disabled>Guardar itinerario</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="it-cancelar">Cancelar</button>
+      </div>
+    </div>`;
+  const anio = () => /^\d{4}/.test(l.llegada || '') ? +String(l.llegada).slice(0, 4) : new Date().getFullYear();
+  el('it-pegar').addEventListener('click', () => { el('it-editor').style.display = ''; el('it-txt').focus(); });
+  el('it-cancelar').addEventListener('click', () => { el('it-editor').style.display = 'none'; });
+  const quitar = el('it-quitar');
+  if(quitar) quitar.addEventListener('click', () => itGuardar(null));
+  el('it-txt').addEventListener('input', () => {
+    const r = itParsear(el('it-txt').value, anio());
+    el('it-ok').disabled = !r.dias;
+    el('it-prev').textContent = r.dias ? `Detecté ${r.dias} días en ${r.tramos.length} ${r.tramos.length === 1 ? 'tramo' : 'tramos'}.` : 'No detecto días con fecha todavía.';
+  });
+  el('it-ok').addEventListener('click', () => itGuardar(el('it-txt').value));
 }
 
 function abrirDrawer(id){
