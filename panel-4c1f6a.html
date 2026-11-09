@@ -996,6 +996,11 @@ tr:hover .pz-link-edit,.pz-link-edit:focus-visible{opacity:1}
 .sa-info{flex:1 1 220px;min-width:0;color:var(--ink-2)}
 .sa-info b{color:var(--ink)}
 .sa-sel{flex:1 1 260px;min-width:0;max-width:420px;font:inherit}
+/* La lista nativa del select se abre con fondo blanco: el texto va en negro para que se lea. */
+.sa-sel option,.sa-sel optgroup{color:#111;background:#fff}
+.pz-etq-grid{grid-template-columns:minmax(0,2.2fr) minmax(0,1fr)}
+.pz-copiar{width:36px;height:auto;align-self:stretch}
+#pz-asociar-wrap .sa-sel{max-width:none}
 .sa-btn{flex:none}
 .pz-cal-piece[data-estado="Editando"]{background:color-mix(in srgb,#F2C94C 22%,var(--surface));border-color:color-mix(in srgb,#F2C94C 45%,var(--line-soft))}
 .pz-cal-piece.dragging{opacity:.45}
@@ -2544,13 +2549,17 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 
     <fieldset class="fieldset">
       <legend>Atribución (ManyChat)</legend>
-      <div class="grid2">
+      <div class="grid2 pz-etq-grid">
         <div class="field"><label for="pz-f-etiqueta_manychat">Etiqueta</label>
-          <div class="pz-link-row"><input id="pz-f-etiqueta_manychat" placeholder="CARRUSEL | Paisaje | 05-11"><button type="button" class="btn btn-ghost" id="pz-copiar-etiqueta">Copiar</button></div>
+          <div class="pz-link-row"><input id="pz-f-etiqueta_manychat" placeholder="CARRUSEL | Paisaje | 05-11"><button type="button" class="icon-btn pz-copiar" id="pz-copiar-etiqueta" title="Copiar etiqueta" aria-label="Copiar etiqueta"></button></div>
         </div>
         <div class="field"><label for="pz-f-link_manychat">Link al flujo</label><input id="pz-f-link_manychat" type="url"></div>
       </div>
       <div class="hint" id="pz-etiqueta-hint">Se cruza por texto exacto con los leads.</div>
+      <div class="field" id="pz-asociar-wrap" hidden style="margin-top:var(--s3)"><label for="pz-asociar-sel">Asociar posteo de Instagram</label>
+        <div class="pz-link-row"><select id="pz-asociar-sel" class="sa-sel"></select><button type="button" class="btn" id="pz-asociar-btn" disabled>Asociar</button></div>
+        <div class="hint">Posteos que el sync trajo sin pieza. Al asociar, la pieza toma el link y queda como Subido.</div>
+      </div>
       <div class="field" id="pz-leads-info" style="display:none;margin-top:8px">
         <label>Leads atribuidos</label>
         <div class="hint" id="pz-leads-txt"></div>
@@ -9990,6 +9999,7 @@ function abrirDrawerPieza(id){
   const inEtiqueta = el('pz-f-etiqueta_manychat');
   if(p && !inEtiqueta.value.trim()) inEtiqueta.value = pzEtiquetaSugerida(p);
 
+  pzPintarAsociar(p);
   el('pz-delete-btn').style.display = p ? '' : 'none';
   pzCargarSerie(p);
   el('pz-hero').innerHTML = pzHeroHtml(p);
@@ -10004,6 +10014,20 @@ function abrirDrawerPieza(id){
   el('drawer-pieza').setAttribute('aria-hidden','false');
   el('pz-scrim').classList.add('open');
   el('pz-f-tema').focus();
+}
+
+// En el drawer de una pieza sin publicar: elegir cuál de los posteos sueltos
+// (importados sin clasificar) es el suyo. Mismo endpoint que la barra de arriba.
+function pzPintarAsociar(p){
+  const wrap = el('pz-asociar-wrap');
+  const sueltos = pzSinAsociar();
+  const ver = !!(p && p.tema !== TEMA_SIN_ASOCIAR && !p.video_url && p.estado !== 'Subido' && sueltos.length);
+  wrap.hidden = !ver;
+  if(!ver) return;
+  const desc = (s) => (s.fecha ? fechaCorta(s.fecha) : 'Sin fecha') + ' · ' + (s.formato || 'Sin formato') + (s.views != null ? ' · ' + numCorto(s.views) + ' views' : '');
+  el('pz-asociar-sel').innerHTML = `<option value="">Elegí el posteo…</option>` + sueltos.map(s => `<option value="${s.id}">${esc(desc(s))}</option>`).join('');
+  el('pz-asociar-btn').disabled = true;
+  el('pz-asociar-btn').textContent = 'Asociar';
 }
 
 // Mismo nombre que la carpeta de Drive: FORMATO | Ángulo | DD-MM (ver nombre_carpeta en pieza.py).
@@ -11100,6 +11124,9 @@ el('pz-f-inspiracion').addEventListener('change', () => {
   pzPintarInspiracion(id ? piezas.find(x => x.id === id) : null);
 });
 el('pz-delete-btn').addEventListener('click', eliminarPieza);
+const PZ_COPIAR_SVG = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>`;
+const PZ_OK_SVG = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>`;
+el('pz-copiar-etiqueta').innerHTML = PZ_COPIAR_SVG;
 el('pz-copiar-etiqueta').addEventListener('click', async () => {
   const input = el('pz-f-etiqueta_manychat');
   const v = input.value.trim();
@@ -11107,8 +11134,30 @@ el('pz-copiar-etiqueta').addEventListener('click', async () => {
   try{ await navigator.clipboard.writeText(v); }
   catch(e){ input.select(); document.execCommand('copy'); }
   const b = el('pz-copiar-etiqueta');
-  b.textContent = 'Copiado ✓';
-  setTimeout(() => { b.textContent = 'Copiar'; }, 1500);
+  b.innerHTML = PZ_OK_SVG; b.title = 'Copiado';
+  setTimeout(() => { b.innerHTML = PZ_COPIAR_SVG; b.title = 'Copiar etiqueta'; }, 1500);
+});
+el('pz-asociar-sel').addEventListener('change', () => { el('pz-asociar-btn').disabled = !el('pz-asociar-sel').value; });
+el('pz-asociar-btn').addEventListener('click', async () => {
+  const id = Number(el('pz-f-id').value), sel = el('pz-asociar-sel'), btn = el('pz-asociar-btn');
+  if(!id || !sel.value) return;
+  btn.disabled = true; btn.textContent = 'Asociando…';
+  try{
+    await api('/api/piezas/asociar', { method:'POST', body:JSON.stringify({ importada_id:Number(sel.value), destino_id:id }) });
+    toast('Posteo asociado a la pieza. Quedó como Subido.');
+    await cargarPiezas();
+    // Solo se refrescan link y estado: lo demás que se esté editando en el drawer queda.
+    const p = piezas.find(x => x.id === id);
+    if(p && Number(el('pz-f-id').value) === id){
+      el('pz-f-video_url').value = p.video_url || '';
+      if(p.estado) el('pz-f-estado').value = p.estado;
+      pzActualizarAbrir();
+      pzPintarAsociar(p);
+    }
+  }catch(e){
+    btn.textContent = 'Asociar'; btn.disabled = false;
+    if(e.message !== 'unauthorized') toast('No se pudo asociar: ' + e.message, { tipo:'error' });
+  }
 });
 el('pz-f-fecha').addEventListener('change', pzActualizarHintSemana);
 
