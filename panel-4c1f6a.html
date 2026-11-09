@@ -1067,6 +1067,14 @@ tr:hover .pz-link-edit,.pz-link-edit:focus-visible{opacity:1}
    Cada tarjeta trae su métrica Y su curva: no hay selector de métrica, todo
    se ve de arranque. Las curvas son monótonas cúbicas, no polilíneas -- de
    ahí que no se vean "cuadradas". */
+/* Itinerario día por día del lead (migración 048): reemplaza a destinos + días sueltos. */
+.it-cab{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--s2);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.it-tramo{border:1px solid var(--line);border-radius:var(--radius);padding:var(--s3) var(--s4);margin-bottom:var(--s2)}
+.it-tit{margin:0 0 var(--s2);font-size:14px;font-weight:700;letter-spacing:-.01em}
+.it-dias{list-style:none;margin:0;padding:0;display:grid;gap:var(--s2)}
+.it-dias li{display:grid;grid-template-columns:78px 1fr;gap:var(--s3);font-size:13px;line-height:1.4}
+.it-fecha{color:var(--ink-3);font-variant-numeric:tabular-nums;font-size:12px;padding-top:1px}
+.it-dias p{margin:2px 0 0;color:var(--ink-2)}
 .pf2-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(228px,1fr));gap:var(--s3);margin-bottom:var(--s4)}
 .pf2-card{
   background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
@@ -2322,14 +2330,15 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 
     <fieldset class="fieldset">
       <legend>Viaje</legend>
-      <div class="field"><label for="f-destinos">Destinos</label><input id="f-destinos" placeholder="Destino 1, Destino 2"></div>
+      <div id="it-bloque" style="display:none"></div>
+      <div class="field" id="f-destinos-wrap"><label for="f-destinos">Destinos</label><input id="f-destinos" placeholder="Destino 1, Destino 2"></div>
       <div class="field"><label for="f-fecha_viaje">Fecha de viaje (como lo escribió)</label><input id="f-fecha_viaje" placeholder="6 al 12 Agosto"></div>
       <div class="grid2">
         <div class="field"><label for="f-llegada">Llegada</label><input id="f-llegada" type="date"></div>
         <div class="field"><label for="f-salida">Salida</label><input id="f-salida" type="date"></div>
       </div>
       <div class="grid2">
-        <div class="field"><label for="f-dias">Días</label><input id="f-dias" type="number" min="1" inputmode="numeric"></div>
+        <div class="field" id="f-dias-wrap"><label for="f-dias">Días</label><input id="f-dias" type="number" min="1" inputmode="numeric"></div>
         <div class="field"><label for="f-pasajes">Pasajes</label>
           <select id="f-pasajes">
             <option value="">—</option>
@@ -3561,6 +3570,8 @@ function cardHtml(l){
   const pax  = l.personas ? `${l.personas} pax` : '';
   const dias = l.dias ? `${l.dias}d` : '';
   const cal  = CALIFICACIONES.find(c => c.key === l.calificado);
+  const itin = itinerarioDe(l);
+  const dest = itin ? itinerarioResumen(itin) : l.destinos;
 
   const chips = [];
   if(l.score)      chips.push(scoreChip(l));
@@ -3579,7 +3590,7 @@ function cardHtml(l){
         <span class="card-name">${esc(leadNombre(l))}${(l.nombre || '').trim() && l.ig_username ? `<span class="card-ig">@${esc(l.ig_username)}</span>` : ''}</span>
         ${pax ? `<span class="card-pax">${pax}</span>` : ''}
       </div>
-      ${l.destinos ? `<p class="card-dest">${esc(l.destinos)}</p>` : ''}
+      ${dest ? `<p class="card-dest">${esc(dest)}</p>` : ''}
       ${chips.length ? `<div class="card-foot">${chips.join('')}</div>` : ''}
     </article>`;
 }
@@ -9841,6 +9852,40 @@ function poblarAtribucion(l){
   el('f-medio_agenda').innerHTML = pzOptsPlano(MEDIOS, l ? (l.medio_agenda || '') : '');
 }
 
+// Itinerario día por día (migración 048). JSON en leads.itinerario:
+// [{ titulo, dias: [{ fecha:'YYYY-MM-DD', lugar, detalle }] }]. Si existe, se muestra
+// en vez de los destinos y los días sueltos.
+function itinerarioDe(l){
+  if(!l || !l.itinerario) return null;
+  try{
+    const x = JSON.parse(l.itinerario);
+    return Array.isArray(x) && x.some(t => t && Array.isArray(t.dias) && t.dias.length) ? x : null;
+  }catch(e){ return null; }
+}
+function itFechaCorta(iso){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+  if(!m) return iso || '';
+  const d = new Date(Date.UTC(+m[1], +m[2]-1, +m[3]));
+  return d.toLocaleDateString('es-AR', { weekday:'short', day:'numeric', month:'short', timeZone:'UTC' }).replace(/[.,]/g, '');
+}
+function itinerarioResumen(it){ return it.map(t => (t.titulo || '').trim()).filter(Boolean).join(' · '); }
+function itinerarioHtml(it){
+  return it.map((t, i) => `<section class="it-tramo">
+    <h4 class="it-tit">${i+1}. ${esc(t.titulo || '')}</h4>
+    <ol class="it-dias">${(t.dias || []).map(d => `<li><span class="it-fecha">${esc(itFechaCorta(d.fecha))}</span><div><b>${esc(d.lugar || '')}</b>${d.detalle ? `<p>${esc(d.detalle)}</p>` : ''}</div></li>`).join('')}</ol>
+  </section>`).join('');
+}
+function pintarItinerario(l){
+  const it = itinerarioDe(l), box = el('it-bloque');
+  box.style.display = it ? '' : 'none';
+  box.innerHTML = it
+    ? `<div class="it-cab"><span>Itinerario detallado</span><span>${l.dias ? esc(l.dias) + ' días' : ''}</span></div>` + itinerarioHtml(it)
+    : '';
+  // Destinos y días siguen guardados (sirven para buscar), pero no se muestran sueltos.
+  el('f-destinos-wrap').style.display = it ? 'none' : '';
+  el('f-dias-wrap').style.display = it ? 'none' : '';
+}
+
 function abrirDrawer(id){
   const l = id ? leads.find(x => x.id === id) : null;
 
@@ -9858,6 +9903,7 @@ function abrirDrawer(id){
   el('f-personas').value = l && l.personas ? l.personas : '';
   el('f-dias').value = l && l.dias ? l.dias : '';
   if(!l) el('f-etapa').value = 'lead_nuevo';
+  pintarItinerario(l);
 
   calSeleccionada = l ? (l.calificado || null) : null;
   pintarCalificacion();

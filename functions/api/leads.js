@@ -19,6 +19,8 @@ export const CAMPOS = [
   // Instagram y ManyChat, aparte del nombre (migraciones 032 y 042): el Sheet
   // de setting trae el usuario, no el nombre de la persona.
   'ig_username', 'manychat_id',
+  // itinerario día por día en JSON (migración 048)
+  'itinerario',
 ];
 
 // "@Juan.Perez " -> "juan.perez". Vacío queda vacío.
