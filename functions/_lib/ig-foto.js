@@ -122,7 +122,10 @@ export function datosDeEmbed(emb) {
 export async function datosIg(link) {
   const code = codigoIg(link);
   if (!code) throw new Error('link de Instagram inválido');
-  const emb = datosDeEmbed(await html(`https://www.instagram.com/p/${code}/embed/captioned/`));
+  let emb = datosDeEmbed(await html(`https://www.instagram.com/p/${code}/embed/captioned/`).catch(() => ''));
+  // A veces Instagram no sirve la embed (y sin ella no hay views): un segundo
+  // intento por la ruta de reel antes de caer al og:description.
+  if (!emb) emb = datosDeEmbed(await html(`https://www.instagram.com/reel/${code}/embed/captioned/`).catch(() => ''));
   let og = null;
   if (!emb || emb.likes == null || emb.comentarios == null || !emb.creador) {
     const pag = await html(`https://www.instagram.com/p/${code}/`);

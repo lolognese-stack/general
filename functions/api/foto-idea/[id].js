@@ -8,6 +8,8 @@ import { portadaIg, datosIg, aBase64 } from '../../_lib/ig-foto.js';
 //                           ya traía el ideador viejo).
 //   body vacío           -> trae portada + likes/comentarios/caption de
 //                           Instagram y actualiza la idea.
+//   body { solo_datos }  -> solo views/likes/comentarios, sin volver a bajar
+//                           la portada (botón "Traer views" del Ideador).
 
 export async function onRequestGet({ env, params }) {
   const row = await env.DB.prepare('SELECT mime, data FROM ideas_foto WHERE idea_id = ?').bind(params.id).first();
@@ -25,6 +27,18 @@ export async function onRequestPost({ request, env, params }) {
 
   let body = {};
   try { body = await request.json(); } catch {}
+
+  if (body.solo_datos) {
+    let datos;
+    try { datos = await datosIg(idea.url); }
+    catch (e) { return json({ error: e.message }, 502); }
+    await env.DB.prepare(
+      `UPDATE ideas SET views = COALESCE(?, views), likes = COALESCE(?, likes), comentarios = COALESCE(?, comentarios),
+         creador = COALESCE(creador, ?), caption = COALESCE(NULLIF(caption, ''), ?), actualizado_en = ? WHERE id = ?`
+    ).bind(datos.views ?? null, datos.likes, datos.comentarios, datos.creador, datos.caption || null, new Date().toISOString(), params.id).run();
+    const row = await env.DB.prepare('SELECT views, likes, comentarios, creador, caption FROM ideas WHERE id = ?').bind(params.id).first();
+    return json({ ok: true, ...row });
+  }
 
   let mime, data, origen, datos = null, audio = null;
   if (body.data) {

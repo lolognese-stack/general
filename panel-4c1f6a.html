@@ -825,6 +825,7 @@ tr:hover .pz-link-edit,.pz-link-edit:focus-visible{opacity:1}
 /* Audios */
 .id-resumen-fila{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);flex-wrap:wrap;margin:var(--s2) 0 var(--s3)}
 .id-resumen-fila .id-resumen{margin:0}
+.id-resumen-acc{display:flex;gap:var(--s2);flex-wrap:wrap}
 .id-tipo-audio{position:absolute;top:10px;left:10px;display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;padding:4px 9px;border-radius:7px;background:var(--brand);color:var(--brand-on);box-shadow:var(--shadow)}
 .id-audio-vacio{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--ink-3);background:linear-gradient(160deg,var(--surface-sunk),var(--glacier-soft))}
 .id-audio-artista{font-size:13px;color:var(--ink-2);margin-top:-4px}
@@ -4903,6 +4904,7 @@ function renderIdeador(){
   const lista = idListaFiltrada();
   const nSeccion = idDeSeccion().length;
   const pendientesDatos = ideas.filter(idFaltanDatos).length;
+  const pendientesViews = ideas.filter(idFaltanViews).length;
   const usar = idDeSeccion().filter(i => i.uso === 'usar').length;
   const formatos = [...new Set([...FORMATOS, ...ideas.map(i => i.formato).filter(Boolean)])];
   body.innerHTML = `
@@ -4924,7 +4926,10 @@ function renderIdeador(){
     </div>
     <div class="id-resumen-fila">
       <p class="id-resumen"><b>${lista.length}</b> ${lista.length === 1 ? (idFiltro.tipo === 'audio' ? 'audio' : 'idea') : (idFiltro.tipo === 'audio' ? 'audios' : 'ideas')}${lista.length !== nSeccion ? ` de ${nSeccion}` : ''} · ${usar} para usar</p>
+      <span class="id-resumen-acc">
+      ${pendientesViews ? `<button type="button" class="btn btn-ghost btn-sm" id="id-traer-views" title="Vuelve a pedirle a Instagram las views de los videos que quedaron sin views (a veces trae solo likes y comentarios)">Traer views de ${pendientesViews} ${pendientesViews === 1 ? 'video' : 'videos'}</button>` : ''}
       ${pendientesDatos ? `<button type="button" class="btn btn-ghost btn-sm" id="id-traer-todo" title="Trae portada, likes, comentarios, creador y caption de Instagram para las ideas que no los tienen">Traer datos de ${pendientesDatos} ${pendientesDatos === 1 ? 'idea' : 'ideas'}</button>` : ''}
+      </span>
     </div>
     ${lista.length ? `<div class="id-grid">${lista.map(idCardHtml).join('')}</div>`
       : `<div class="ag-empty">${ideas.length ? 'Ninguna idea con ese filtro.' : 'Todavía no hay ideas. Guardalas desde la extensión de Chrome o con "+ Nueva idea".'}</div>`}`;
@@ -4938,6 +4943,8 @@ function renderIdeador(){
   idWireVistas(body);
   const traerTodo = el('id-traer-todo');
   if(traerTodo) traerTodo.addEventListener('click', idTraerTodosLosDatos);
+  const traerViews = el('id-traer-views');
+  if(traerViews) traerViews.addEventListener('click', idTraerViews);
   body.querySelectorAll('#id-uso-flt button').forEach(b => b.addEventListener('click', () => { idFiltro.uso = b.dataset.v; renderIdeador(); }));
   el('id-flt-formato').addEventListener('change', e => { idFiltro.formato = e.target.value; renderIdeador(); });
   el('id-flt-angulo').addEventListener('change', e => { idFiltro.angulo = e.target.value; renderIdeador(); });
@@ -4958,6 +4965,50 @@ function idFaltanDatos(i){
   if(!/instagram\.com/.test(i.url || '') || idFotoPedida.has(i.id)) return false;
   if(i.tipo === 'audio') return !i.foto_v || !i.audio_nombre;
   return !i.foto_v || i.likes == null || i.comentarios == null || !i.creador || !i.caption;
+}
+
+// Videos sin views: Instagram solo da views en la embed, y cuando no la sirve
+// la idea queda con likes y comentarios pero sin views. Carruseles y fotos
+// nunca tienen views, así que no cuentan. Lo ya intentado en esta sesión
+// tampoco (si Instagram no las da, el botón no queda pidiendo siempre).
+const idViewsPedida = new Set();
+const ID_SIN_VIEWS = ['Carrusel', 'Foto con copy'];
+function idFaltanViews(i){
+  if(i.tipo === 'audio' || i.views != null || idViewsPedida.has(i.id)) return false;
+  if(!/instagram\.com\/(?:[\w.]+\/)?(?:p|reels?|tv)\//.test(i.url || '')) return false;
+  return !ID_SIN_VIEWS.includes(i.formato);
+}
+
+let idTraerViewsEnCurso = false;
+async function idTraerViews(){
+  if(idTraerViewsEnCurso) return;
+  const pend = ideas.filter(idFaltanViews);
+  if(!pend.length) return;
+  idTraerViewsEnCurso = true;
+  let conViews = 0, sinViews = 0, hechas = 0;
+  // De a 3 en paralelo: rápido sin que Instagram empiece a cortar.
+  const cola = pend.slice();
+  const trabajar = async () => {
+    while(cola.length){
+      const i = cola.shift();
+      idViewsPedida.add(i.id);
+      try{
+        const r = await api('/api/foto-idea/' + i.id, { method:'POST', body:JSON.stringify({ solo_datos:true }) });
+        Object.assign(i, { views:r.views ?? i.views, likes:r.likes ?? i.likes, comentarios:r.comentarios ?? i.comentarios, creador:r.creador ?? i.creador, caption:r.caption ?? i.caption });
+        if(r.views != null) conViews++; else sinViews++;
+      }catch(e){
+        if(e.message === 'unauthorized'){ cola.length = 0; return; }
+        sinViews++;
+      }
+      hechas++;
+      const btn = el('id-traer-views');
+      if(btn){ btn.disabled = true; btn.textContent = `Trayendo views ${hechas} de ${pend.length}…`; }
+    }
+  };
+  await Promise.all([trabajar(), trabajar(), trabajar()]);
+  idTraerViewsEnCurso = false;
+  toast(`Views de ${conViews} ${conViews === 1 ? 'video' : 'videos'}${sinViews ? ` · ${sinViews} sin views (Instagram no las dio o no es video)` : ''}.`, sinViews && !conViews ? { tipo:'error' } : {});
+  if(seccion === 'planificador' && pzVista === 'ideas' && !idDrawerAbierto) renderIdeador();
 }
 
 let idTraerTodoEnCurso = false;
