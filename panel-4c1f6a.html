@@ -2329,6 +2329,7 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
       </div>
       <div class="field"><label for="f-whatsapp">WhatsApp</label><input id="f-whatsapp" type="tel" autocomplete="tel"></div>
       <div class="field"><label for="f-email">Mail</label><input id="f-email" type="email" autocomplete="email"></div>
+      <div class="field" id="aviso-wrap" style="display:none"><button type="button" class="btn btn-ghost btn-sm" id="aviso-btn">Mandarme por mail para contactarla por WhatsApp</button></div>
     </fieldset>
 
     <fieldset class="fieldset">
@@ -9983,6 +9984,21 @@ function pintarItinerario(l){
   el('it-ok').addEventListener('click', () => itGuardar(el('it-txt').value));
 }
 
+// Manda a tu mail los datos del lead con el botón de WhatsApp, marcando lo que falta
+// (para los que no llenaron el formulario). Necesita RESEND_API_KEY en Cloudflare.
+async function avisoPorMail(id){
+  const b = el('aviso-btn');
+  b.disabled = true;
+  try{
+    const r = await api('/api/lead-aviso/' + id, { method:'POST' });
+    toast('Mail enviado.' + (r.faltan && r.faltan.length ? ' Marca como faltantes: ' + r.faltan.join(', ') + '.' : ''), { ms:8000 });
+  }catch(e){
+    if(e.message !== 'unauthorized') toast(/RESEND/.test(e.message) ? 'Falta configurar el mail (RESEND_API_KEY en Cloudflare).' : 'No se pudo mandar el mail: ' + e.message, { tipo:'error', ms:9000 });
+  }finally{
+    b.disabled = false;
+  }
+}
+
 function abrirDrawer(id){
   const l = id ? leads.find(x => x.id === id) : null;
 
@@ -10001,6 +10017,8 @@ function abrirDrawer(id){
   el('f-dias').value = l && l.dias ? l.dias : '';
   if(!l) el('f-etapa').value = 'lead_nuevo';
   pintarItinerario(l);
+  el('aviso-wrap').style.display = l ? '' : 'none';
+  el('aviso-btn').onclick = l ? () => avisoPorMail(l.id) : null;
 
   calSeleccionada = l ? (l.calificado || null) : null;
   pintarCalificacion();

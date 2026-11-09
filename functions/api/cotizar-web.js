@@ -14,6 +14,7 @@
 
 import { canalDesdeReferer } from '../_lib/canal.js';
 import { sincronizarManychat } from '../_lib/manychat.js';
+import { enviarAvisoLead } from '../_lib/aviso-lead.js';
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -195,10 +196,14 @@ export async function onRequestPost({ request, env, waitUntil }) {
   const now = new Date().toISOString();
 
   // Mismo envío (parcial y después el final): se completa ese lead.
-  const mismo = await env.DB.prepare('SELECT id FROM leads WHERE submission_id = ? LIMIT 1').bind(submissionId).first();
+  const mismo = await env.DB.prepare('SELECT id, meta_json FROM leads WHERE submission_id = ? LIMIT 1').bind(submissionId).first();
   if (mismo) {
+    // Un reintento del envío final no vuelve a mandar el mail.
+    let yaCompleto = false;
+    try { yaCompleto = JSON.parse(mismo.meta_json || '{}').completo === true; } catch {}
     await actualizar(env, mismo.id, datos, now);
     sincronizar(env, manychatId, waitUntil, body.interno === true);
+    if (!yaCompleto) avisar(env, mismo.id, waitUntil, body);
     return json({ ok: true, crm_id: mismo.id, actualizado: true });
   }
 
@@ -218,6 +223,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
     const { notas: _n, nombre: _nombre, ...resto } = datos;
     await actualizar(env, previo.id, resto, now);
     sincronizar(env, manychatId, waitUntil, body.interno === true);
+    avisar(env, previo.id, waitUntil, body);
     return json({ ok: true, crm_id: previo.id, actualizado: true });
   }
 
@@ -227,6 +233,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
      VALUES (${cols.map(() => '?').join(', ')}, ?, ?, 'lead_nuevo', ?, ?, ?)`
   ).bind(...cols.map((k) => datos[k]), submissionId, FUENTE, now, now, now).run();
   sincronizar(env, manychatId, waitUntil, body.interno === true);
+  avisar(env, res.meta.last_row_id, waitUntil, body);
   return json({ ok: true, crm_id: res.meta.last_row_id }, 201);
 }
 
@@ -245,6 +252,17 @@ async function clickWhatsapp(env, submissionId) {
     "INSERT INTO eventos (lead_id, etapa_desde, etapa_hasta, quien, creado_en) VALUES (?, NULL, 'click_whatsapp', 'formulario-viaje', ?)"
   ).bind(lead.id, new Date().toISOString()).run();
   return json({ ok: true });
+}
+
+// Mail con los datos y el botón de WhatsApp cuando entra un formulario completo
+// (no el parcial ni las pruebas del equipo). Si Resend no está configurado, no pasa nada.
+function avisar(env, leadId, waitUntil, body) {
+  if (body.parcial === true || body.interno === true || !env.RESEND_API_KEY) return;
+  const p = (async () => {
+    const lead = await env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(leadId).first();
+    if (lead) await enviarAvisoLead(env, lead);
+  })().catch(() => {});
+  if (waitUntil) waitUntil(p);
 }
 
 function sincronizar(env, manychatId, waitUntil, interno) {
