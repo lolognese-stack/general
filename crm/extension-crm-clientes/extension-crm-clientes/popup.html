@@ -12,12 +12,14 @@
       <svg class="marca" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.4.3.6.8.6 1.3V16h6v-.9c0-.5.2-1 .6-1.3A6 6 0 0 0 12 3Z"/></svg>
       <span>Ideador</span>
     </div>
-    <button type="button" id="cerrar" class="icono" aria-label="Cerrar" hidden>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
-    </button>
+    <div class="cab-der">
+      <a href="opciones.html" target="_blank" id="conexion" class="conexion" title="Ver o cambiar la conexión"></a>
+      <button type="button" id="cerrar" class="icono" aria-label="Cerrar" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
   </header>
 
-  <p id="conexion" class="conexion"></p>
   <p id="aviso" class="aviso" hidden></p>
 
   <div id="sin-conexion" class="vacio" hidden>
@@ -41,20 +43,24 @@
     </div>
     <p id="ya-guardada" class="ya" hidden>Ya está en el ideador. Al guardar se actualiza.</p>
 
-    <div class="fila">
-      <label class="campo">
-        <span>Formato</span>
-        <select id="formato"><option value="">Elegí…</option></select>
-      </label>
-      <div class="estrellas" data-campo="formato_score" role="group" aria-label="Puntaje del formato"></div>
+    <div class="campo">
+      <span id="formato-tit">Formato</span>
+      <div class="chips" role="group" aria-labelledby="formato-tit">
+        <span id="formato-chips" class="chips-in"></span>
+        <select id="formato-otro" class="chip chip-sel" aria-label="Otro formato"><option value="">Otro…</option></select>
+      </div>
     </div>
 
-    <div class="fila">
-      <label class="campo">
-        <span>Ángulo</span>
-        <select id="angulo"><option value="">Elegí…</option></select>
-      </label>
-      <div class="estrellas" data-campo="angulo_score" role="group" aria-label="Puntaje del ángulo"></div>
+    <div class="campo">
+      <span id="angulo-tit">Ángulo</span>
+      <div class="chips" role="group" aria-labelledby="angulo-tit">
+        <span id="angulo-chips" class="chips-in"></span>
+        <button type="button" id="angulo-otro" class="chip chip-combo" aria-haspopup="listbox" aria-expanded="false" aria-controls="angulo-pop">Otro…</button>
+      </div>
+      <div id="angulo-pop" class="combo-pop" hidden>
+        <input id="angulo-buscar" type="search" placeholder="Buscar ángulo…" autocomplete="off" aria-controls="angulo-lista">
+        <ul id="angulo-lista" role="listbox" aria-label="Ángulos"></ul>
+      </div>
     </div>
 
     <div id="nuevo-angulo" class="nuevo" hidden>
@@ -80,16 +86,9 @@
       <textarea id="aplicacion" rows="3" placeholder="¿Cómo lo usaríamos?"></textarea>
     </label>
 
-    <label class="campo campo-chico">
-      <span>Views</span>
-      <input id="views" type="number" min="0" inputmode="numeric" placeholder="Opcional">
-    </label>
-
     <button id="guardar" type="submit" class="primario">Guardar</button>
     <p id="estado" class="estado" role="status"></p>
   </form>
-
-  <footer class="pie"><a href="opciones.html" target="_blank" id="link-opciones">Conexión</a></footer>
 
   <script src="comun.js"></script>
   <script src="popup.js"></script>

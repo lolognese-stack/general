@@ -6,9 +6,11 @@ const params = new URLSearchParams(location.search);
 const EMBEBIDO = params.has('embebido');
 const $ = (id) => document.getElementById(id);
 
-const ESTRELLA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.85 5.95 6.55.85-4.8 4.55 1.2 6.5L12 17.3l-5.8 3.15 1.2-6.5-4.8-4.55 6.55-.85z"/></svg>';
+// Los que más se usan van como botones; el resto, en "Otro…".
+const FORMATOS_PRINCIPALES = ['Broll Texto', 'Carrusel', 'Clip/s Paisaje'];
+const ANGULOS_PRINCIPALES = ['Paisaje', 'Itinerario'];
 
-const puntajes = { formato_score: 0, angulo_score: 0 };
+let formatoElegido = '';
 let existentes = new Map(); // codigo -> idea ya guardada
 let vista = null;           // lo que devolvió /api/ig-datos para el link actual
 let pedidoVista = 0;
@@ -31,14 +33,16 @@ function cerrar() {
 function mostrarSinConexion(con) {
   $('form').hidden = true;
   $('sin-conexion').hidden = false;
-  $('conexion').textContent = con?.crmNombre ? `Antes conectada a: ${con.crmNombre}` : 'Sin conectar';
+  $('conexion').textContent = 'Sin conectar';
+  $('conexion').classList.add('off');
+  $('conexion').title = con?.crmNombre ? `Antes conectada a: ${con.crmNombre}` : 'Sin conectar';
 }
 
 function mostrarConexion(con) {
-  $('conexion').textContent = 'Conectada a: ';
-  const b = document.createElement('b');
-  b.textContent = con.crmNombre || con.crmUrl;
-  $('conexion').append(b);
+  const nombre = con.crmNombre || con.crmUrl;
+  $('conexion').textContent = nombre;
+  $('conexion').classList.remove('off');
+  $('conexion').title = `Conectada a: ${nombre}`;
   if (con.avisoCambio) {
     $('aviso').textContent = `Cambió la conexión: antes estaba en ${con.avisoCambio}.`;
     $('aviso').hidden = false;
@@ -61,25 +65,39 @@ function opcion(valor, texto) {
   return o;
 }
 
-function llenarFormatos() {
-  for (const f of FORMATOS) $('formato').append(opcion(f, f));
+function chip(valor, texto, on) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'chip' + (on ? ' on' : '');
+  b.dataset.valor = valor;
+  b.textContent = texto;
+  b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  return b;
 }
 
-function pintarEstrellas() {
-  for (const grupo of document.querySelectorAll('.estrellas')) {
-    const campo = grupo.dataset.campo;
-    grupo.innerHTML = [1, 2, 3, 4, 5].map((n) =>
-      `<button type="button" data-n="${n}" class="${n <= puntajes[campo] ? 'on' : ''}" aria-label="${n} de 5">${ESTRELLA}</button>`).join('');
-  }
+// --- Formato ---------------------------------------------------------------
+
+function pintarFormatos() {
+  $('formato-chips').replaceChildren(...FORMATOS_PRINCIPALES.map((f) => chip(f, f, f === formatoElegido)));
+  const sel = $('formato-otro');
+  const otros = FORMATOS.filter((f) => !FORMATOS_PRINCIPALES.includes(f));
+  // Un formato viejo que ya no está en la lista se muestra igual.
+  if (formatoElegido && !FORMATOS.includes(formatoElegido)) otros.push(formatoElegido);
+  sel.replaceChildren(opcion('', 'Otro…'), ...otros.map((f) => opcion(f, f)));
+  const esOtro = !!formatoElegido && !FORMATOS_PRINCIPALES.includes(formatoElegido);
+  sel.value = esOtro ? formatoElegido : '';
+  sel.classList.toggle('on', esOtro);
 }
 
-document.addEventListener('click', (e) => {
-  const b = e.target.closest('.estrellas button');
+$('formato-chips').addEventListener('click', (e) => {
+  const b = e.target.closest('.chip');
   if (!b) return;
-  const campo = b.parentElement.dataset.campo;
-  const n = Number(b.dataset.n);
-  puntajes[campo] = puntajes[campo] === n ? 0 : n; // tocar la misma estrella la saca
-  pintarEstrellas();
+  formatoElegido = formatoElegido === b.dataset.valor ? '' : b.dataset.valor; // tocarlo de nuevo lo saca
+  pintarFormatos();
+});
+$('formato-otro').addEventListener('change', () => {
+  formatoElegido = $('formato-otro').value;
+  pintarFormatos();
 });
 
 // --- Ángulos ---------------------------------------------------------------
@@ -90,30 +108,125 @@ const NUEVO_ANGULO = '__nuevo';
 let angulosActivos = [];
 let anguloElegido = ''; // para volver a él si se cancela el alta
 
+const sinTildes = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLocaleLowerCase('es').trim();
+const anguloPorId = (id) => angulosActivos.find((a) => String(a.id) === String(id));
+// Los principales se buscan por nombre en los ángulos de este CRM; si alguno no existe, no aparece.
+const angulosPrincipales = () => ANGULOS_PRINCIPALES.map((n) => angulosActivos.find((a) => sinTildes(a.nombre) === sinTildes(n))).filter(Boolean);
+
 async function cargarAngulos(seleccionar) {
   angulosActivos = (await apiCrm('/api/angulos')).filter((a) => a.activo === undefined || Number(a.activo) === 1);
-  const sel = $('angulo');
-  const previo = seleccionar ?? anguloElegido;
-  sel.replaceChildren(opcion('', angulosActivos.length ? 'Elegí…' : 'Todavía no hay ángulos'));
-  const categorias = [...CATEGORIAS_ANGULO, ...new Set(angulosActivos.map((a) => a.categoria || 'Otros'))];
-  for (const cat of new Set(categorias)) {
-    const delGrupo = angulosActivos.filter((a) => (a.categoria || 'Otros') === cat);
-    if (!delGrupo.length) continue;
-    const g = document.createElement('optgroup');
-    g.label = cat;
-    for (const a of delGrupo) g.append(opcion(a.id, a.nombre));
-    sel.append(g);
-  }
-  sel.append(opcion(NUEVO_ANGULO, '+ Nuevo ángulo…'));
-  sel.value = String(previo ?? '');
-  if (sel.value !== String(previo ?? '')) sel.value = '';
-  anguloElegido = sel.value;
+  const previo = String(seleccionar ?? anguloElegido ?? '');
+  anguloElegido = anguloPorId(previo) ? previo : '';
+  pintarAngulos();
 }
 
-function abrirNuevoAngulo() {
-  $('angulo').value = anguloElegido;
+function pintarAngulos() {
+  const principales = angulosPrincipales();
+  $('angulo-chips').replaceChildren(...principales.map((a) => chip(a.id, a.nombre, String(a.id) === anguloElegido)));
+  const elegido = anguloPorId(anguloElegido);
+  const esOtro = !!elegido && !principales.includes(elegido);
+  const b = $('angulo-otro');
+  b.textContent = esOtro ? elegido.nombre : (angulosActivos.length ? 'Otro…' : 'Elegí o creá uno…');
+  b.classList.toggle('on', esOtro);
+}
+
+$('angulo-chips').addEventListener('click', (e) => {
+  const b = e.target.closest('.chip');
+  if (!b) return;
+  anguloElegido = anguloElegido === b.dataset.valor ? '' : b.dataset.valor; // tocarlo de nuevo lo saca
+  pintarAngulos();
+});
+
+// --- Desplegable de ángulos con buscador -----------------------------------
+
+let activo = -1; // índice resaltado con las flechas
+
+function opcionesFiltradas() {
+  const q = sinTildes($('angulo-buscar').value);
+  return angulosActivos.filter((a) => !q || sinTildes(a.nombre).includes(q) || sinTildes(a.categoria).includes(q));
+}
+
+function itemLista(clase, texto, valor) {
+  const li = document.createElement('li');
+  li.className = clase;
+  li.textContent = texto;
+  if (valor !== undefined) {
+    li.setAttribute('role', 'option');
+    li.dataset.valor = valor;
+    li.setAttribute('aria-selected', String(valor) === anguloElegido ? 'true' : 'false');
+  } else {
+    li.setAttribute('role', 'presentation');
+  }
+  return li;
+}
+
+function pintarLista() {
+  const filtrados = opcionesFiltradas();
+  const items = [];
+  const categorias = new Set([...CATEGORIAS_ANGULO, ...filtrados.map((a) => a.categoria || 'Otros')]);
+  for (const cat of categorias) {
+    const delGrupo = filtrados.filter((a) => (a.categoria || 'Otros') === cat);
+    if (!delGrupo.length) continue;
+    items.push(itemLista('grupo', cat));
+    for (const a of delGrupo) items.push(itemLista('op', a.nombre, String(a.id)));
+  }
+  if (!filtrados.length) items.push(itemLista('vacio-op', 'No hay ángulos con ese nombre.'));
+  const q = $('angulo-buscar').value.trim();
+  items.push(itemLista('op nuevo-op', q ? `+ Crear "${q}"` : '+ Nuevo ángulo…', NUEVO_ANGULO));
+  $('angulo-lista').replaceChildren(...items);
+  activo = 0;
+  marcarActivo();
+}
+
+function marcarActivo() {
+  const ops = [...$('angulo-lista').querySelectorAll('.op')];
+  ops.forEach((li, i) => li.classList.toggle('activo', i === activo));
+  ops[activo]?.scrollIntoView({ block: 'nearest' });
+}
+
+function abrirCombo() {
+  $('angulo-pop').hidden = false;
+  $('angulo-otro').setAttribute('aria-expanded', 'true');
+  $('angulo-buscar').value = '';
+  pintarLista();
+  $('angulo-buscar').focus();
+}
+
+function cerrarCombo() {
+  $('angulo-pop').hidden = true;
+  $('angulo-otro').setAttribute('aria-expanded', 'false');
+}
+
+function elegirDeLista(valor) {
+  const q = $('angulo-buscar').value.trim();
+  cerrarCombo();
+  if (valor === NUEVO_ANGULO) return abrirNuevoAngulo(q);
+  anguloElegido = String(valor);
+  pintarAngulos();
+}
+
+$('angulo-otro').addEventListener('click', () => ($('angulo-pop').hidden ? abrirCombo() : cerrarCombo()));
+$('angulo-buscar').addEventListener('input', pintarLista);
+$('angulo-buscar').addEventListener('keydown', (e) => {
+  const ops = [...$('angulo-lista').querySelectorAll('.op')];
+  if (e.key === 'ArrowDown') { e.preventDefault(); activo = Math.min(activo + 1, ops.length - 1); marcarActivo(); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); activo = Math.max(activo - 1, 0); marcarActivo(); }
+  else if (e.key === 'Enter') { e.preventDefault(); if (ops[activo]) elegirDeLista(ops[activo].dataset.valor); }
+  else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cerrarCombo(); $('angulo-otro').focus(); }
+});
+$('angulo-lista').addEventListener('mousedown', (e) => e.preventDefault()); // que el buscador no pierda el foco
+$('angulo-lista').addEventListener('click', (e) => {
+  const li = e.target.closest('.op');
+  if (li) elegirDeLista(li.dataset.valor);
+});
+document.addEventListener('click', (e) => {
+  if (!$('angulo-pop').hidden && !e.target.closest('#angulo-pop, #angulo-otro')) cerrarCombo();
+});
+
+function abrirNuevoAngulo(nombre = '') {
   $('nuevo-angulo').hidden = false;
   $('nuevo-estado').textContent = '';
+  $('nuevo-nombre').value = nombre;
   $('nuevo-nombre').focus();
 }
 
@@ -159,10 +272,6 @@ async function agregarAngulo() {
   }
 }
 
-$('angulo').addEventListener('change', () => {
-  if ($('angulo').value === NUEVO_ANGULO) abrirNuevoAngulo();
-  else anguloElegido = $('angulo').value;
-});
 $('nuevo-agregar').addEventListener('click', agregarAngulo);
 $('nuevo-cancelar').addEventListener('click', cerrarNuevoAngulo);
 $('nuevo-nombre').addEventListener('input', () => { $('nuevo-estado').textContent = ''; });
@@ -180,18 +289,12 @@ async function cargarExistentes() {
 
 // Si el post ya estaba, el formulario arranca con lo que tiene en el CRM.
 function precargar(idea) {
-  $('formato').value = idea?.formato || '';
-  if (idea?.formato && $('formato').value !== idea.formato) {
-    $('formato').append(opcion(idea.formato, idea.formato));
-    $('formato').value = idea.formato;
-  }
-  $('angulo').value = idea?.angulo_ids?.[0] ?? '';
-  anguloElegido = $('angulo').value;
+  formatoElegido = idea?.formato || '';
+  pintarFormatos();
+  const id = String(idea?.angulo_ids?.[0] ?? '');
+  anguloElegido = anguloPorId(id) ? id : '';
+  pintarAngulos();
   $('aplicacion').value = idea?.aplicacion || '';
-  $('views').value = idea?.views ?? '';
-  puntajes.formato_score = idea?.formato_score || 0;
-  puntajes.angulo_score = idea?.angulo_score || 0;
-  pintarEstrellas();
 }
 
 // --- Vista previa ----------------------------------------------------------
@@ -276,20 +379,16 @@ $('form').addEventListener('submit', async (e) => {
   $('estado').textContent = 'Guardando…';
   $('estado').className = 'estado';
   try {
-    const angulo = Number($('angulo').value);
-    const views = $('views').value === '' ? undefined : Number($('views').value);
+    const angulo = Number(anguloElegido);
     const idea = await apiCrm('/api/ideas', {
       method: 'POST',
       body: {
         url: urlCanonica(url),
-        formato: $('formato').value,
-        formato_score: puntajes.formato_score,
+        formato: formatoElegido,
         angulo_ids: angulo ? [angulo] : [],
-        angulo_score: puntajes.angulo_score,
         aplicacion: $('aplicacion').value.trim(),
         caption: vista?.caption || undefined,
         creador: vista?.creador || undefined,
-        views,
         likes: vista?.likes ?? undefined,
         comentarios: vista?.comentarios ?? undefined,
         origen: 'extension',
@@ -324,7 +423,7 @@ async function urlInicial() {
 
 $('cerrar').addEventListener('click', cerrar);
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && EMBEBIDO) cerrar(); });
-$('link-opciones').addEventListener('click', (e) => {
+$('conexion').addEventListener('click', (e) => {
   e.preventDefault();
   chrome.runtime.openOptionsPage();
 });
@@ -340,8 +439,7 @@ $('link-opciones').addEventListener('click', (e) => {
 
   mostrarConexion(con);
   $('form').hidden = false;
-  llenarFormatos();
-  pintarEstrellas();
+  pintarFormatos();
   $('url').value = await urlInicial();
 
   try {

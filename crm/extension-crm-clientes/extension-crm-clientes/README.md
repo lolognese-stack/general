@@ -30,12 +30,12 @@ Si el CRM rechaza el token (por ejemplo porque se rotó), la extensión lo borra
 
 ## Cómo se usa
 
-- **En Instagram:** al lado de los likes, a la izquierda del corazón, aparece un botón cuadrado con una lamparita. Al tocarlo se abre a la derecha un panel con el formulario: formato, ángulo, puntajes, aplicación y views. La portada, el creador, los likes y los comentarios se completan solos. Al guardar, el botón queda relleno ("Ya está en el ideador").
+- **En Instagram:** al lado de los likes, a la izquierda del corazón, aparece un botón cuadrado con una lamparita. Al tocarlo se abre a la derecha un panel con el formulario: formato, ángulo y aplicación. Formato y ángulo tienen botones para los más usados (Broll Texto, Carrusel, Clip/s Paisaje; Paisaje, Itinerario: `FORMATOS_PRINCIPALES` y `ANGULOS_PRINCIPALES` en `popup.js`) y "Otro…" para el resto; el de ángulos tiene buscador. La portada, el creador, los likes y los comentarios se completan solos. Al guardar, el botón queda relleno ("Ya está en el ideador").
 - **Desde el popup:** con un post abierto, el ícono de la extensión abre el mismo formulario con el link cargado. También se puede pegar un link a mano.
 
 Guardar dos veces el mismo post no lo duplica: lo actualiza en el CRM.
 
-**Ángulos nuevos:** la última opción de la lista de ángulos es **"+ Nuevo ángulo…"**. Ahí se escribe el nombre, se elige la categoría (Problema, Solución, Producto u Otros) y queda creado en el CRM y elegido para la idea. Sirve para un cliente que todavía no tiene ángulos cargados. Si ya existe uno con el mismo nombre, se elige ese en vez de crear otro.
+**Ángulos nuevos:** la última opción del buscador de ángulos ("Otro…") es **"+ Nuevo ángulo…"** (o "+ Crear …" con lo que se escribió). Ahí se escribe el nombre, se elige la categoría (Problema, Solución, Producto u Otros) y queda creado en el CRM y elegido para la idea. Sirve para un cliente que todavía no tiene ángulos cargados. Si ya existe uno con el mismo nombre, se elige ese en vez de crear otro.
 
 ## Si Instagram cambia la barra y el botón deja de aparecer
 
