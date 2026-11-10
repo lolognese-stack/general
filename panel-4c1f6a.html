@@ -1872,6 +1872,13 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 .ib-col + .ib-col{border-left:1px solid var(--line)}
 .ib-filtros{padding:var(--s3);border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
 .ib-filtros input[type=search]{width:100%;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);font:inherit;font-size:12.5px;padding:7px 9px}
+.ib-busca{display:flex;gap:6px;align-items:center}
+.ib-busca input[type=search]{flex:1;min-width:0}
+.ib-busca .btn{white-space:nowrap}
+.ib-nuevo{display:flex;flex-direction:column;gap:6px;padding:8px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-2,var(--surface))}
+.ib-nuevo[hidden]{display:none}
+.ib-nuevo input{width:100%;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);font:inherit;font-size:12.5px;padding:7px 9px}
+.ib-nuevo-acc{display:flex;gap:6px;justify-content:flex-end}
 .ib-sel{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .ib-sel select,.ib-sel input[type=date]{min-width:0;width:100%;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink-2);font:inherit;font-size:11.5px;padding:5px 6px}
 .ib-sel select.on{color:var(--ink);border-color:var(--ink-3);font-weight:600}
@@ -13289,7 +13296,13 @@ function renderInbox(){
   host.innerHTML = `<div class="ib" id="ib-root">
     <div class="ib-col ib-col-lista">
       <div class="ib-filtros">
-        <input type="search" id="ib-q" placeholder="Buscar por nombre, número o mensaje" autocomplete="off">
+        <div class="ib-busca"><input type="search" id="ib-q" placeholder="Buscar por nombre, número o mensaje" autocomplete="off"><button type="button" class="btn btn-ghost btn-sm" id="ib-nuevo" aria-expanded="false" aria-controls="ib-nuevo-form">+ Contacto</button></div>
+        <form class="ib-nuevo" id="ib-nuevo-form" hidden>
+          <input type="text" id="ib-nuevo-nombre" placeholder="Nombre (opcional)" maxlength="80" autocomplete="off">
+          <input type="tel" id="ib-nuevo-wa" placeholder="WhatsApp, con código de país: +51 982 360 927" required autocomplete="off">
+          <div class="hint" id="ib-nuevo-res" aria-live="polite">La IA queda pausada en este chat. Para escribirle primero hace falta una plantilla aprobada por Meta.</div>
+          <div class="ib-nuevo-acc"><button type="button" class="btn btn-ghost btn-sm" id="ib-nuevo-no">Cancelar</button><button type="submit" class="btn btn-primary btn-sm" id="ib-nuevo-ok">Agregar</button></div>
+        </form>
         <div class="ib-sel">
           ${sel('estado', 'Estado: todos', IB_ESTADOS)}
           ${sel('responde', 'Responde: todos', [['ia','Con IA'], ['humano','Humano']])}
@@ -13346,6 +13359,34 @@ function renderInbox(){
   el('ib-q').addEventListener('input', e => {
     clearTimeout(t);
     t = setTimeout(() => { ibFiltros.q = e.target.value.trim(); ibFiltrosCambiaron(); }, 250);
+  });
+  el('ib-nuevo').addEventListener('click', () => {
+    const f = el('ib-nuevo-form');
+    f.hidden = !f.hidden;
+    el('ib-nuevo').setAttribute('aria-expanded', String(!f.hidden));
+    if(!f.hidden) el('ib-nuevo-wa').focus();
+  });
+  el('ib-nuevo-no').addEventListener('click', () => { el('ib-nuevo-form').hidden = true; el('ib-nuevo').setAttribute('aria-expanded', 'false'); });
+  el('ib-nuevo-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const ok = el('ib-nuevo-ok'), res = el('ib-nuevo-res');
+    ok.disabled = true; res.textContent = 'Agregando…';
+    try{
+      const r = await api('/api/setter/contactos', { method:'POST', body: JSON.stringify({ nombre: el('ib-nuevo-nombre').value, whatsapp: el('ib-nuevo-wa').value }) });
+      el('ib-nuevo-nombre').value = ''; el('ib-nuevo-wa').value = '';
+      el('ib-nuevo-form').hidden = true; el('ib-nuevo').setAttribute('aria-expanded', 'false');
+      toast(r.creado ? 'Contacto agregado' : 'Ese número ya estaba: abrí su chat', { tipo:'ok' });
+      ibFiltros = { ...IB_FILTROS_VACIOS };
+      host.querySelectorAll('[data-ibf]').forEach(s => { s.value = ''; });
+      el('ib-urg').checked = false; el('ib-q').value = '';
+      ibFiltrosPintados();
+      await ibCargarLista();
+      ibAbrir(r.conversacion_id);
+    }catch(err){
+      res.textContent = err.message;
+    }finally{
+      ok.disabled = false;
+    }
   });
   el('ib-limpiar').addEventListener('click', () => {
     ibFiltros = { ...IB_FILTROS_VACIOS };

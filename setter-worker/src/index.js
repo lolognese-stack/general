@@ -3,6 +3,7 @@
 //   GET  /webhook          handshake de Meta (hub.verify_token); Kapso no lo usa
 //   POST /webhook          valida firma (Meta o Kapso, ver canal/adapter.js), guarda en D1 (idempotente), avisa al DO y responde 200
 //   POST /interno/enviar   envío desde el panel (Service Binding) con x-setter-secret
+//   POST /interno/contacto alta manual de un contacto (lead + conversación, IA pausada)
 //   GET  /interno/media/<id>  stream de una nota de voz o foto de WhatsApp (mismo secreto)
 //   POST /interno/playground | puntuar | asistente   editor de prompts (Setter IA)
 //
@@ -10,7 +11,8 @@
 // webhook tarda o no devuelve 200.
 
 import { canalDe } from './canal/adapter.js';
-import { guardarEventos } from './ingesta.js';
+import { guardarEventos, conversacionDe } from './ingesta.js';
+import { normalizarWa } from './leads.js';
 import { enviar, ErrorEnvio } from './enviar.js';
 import { playground, puntuar, asistente } from './agente/playground.js';
 import { correrSeguimientos } from './agente/seguimiento.js';
@@ -79,6 +81,25 @@ async function enviarInterno(request, env) {
   }
 }
 
+// Alta manual de un contacto desde el Inbox: cruza con los leads por número
+// (no duplica) y abre la conversación vacía. Si el chat es nuevo, la IA queda
+// pausada: el contacto lo cargó una persona, no escribió primero.
+async function contactoInterno(request, env) {
+  if (!secretoOk(request, env)) return json({ error: 'unauthorized' }, 401);
+  let b;
+  try { b = await request.json(); } catch { return json({ error: 'body no es json' }, 400); }
+  const waId = normalizarWa(b.whatsapp);
+  if (!waId) return json({ error: 'número de WhatsApp inválido' }, 400);
+  const nombre = typeof b.nombre === 'string' ? b.nombre.trim().slice(0, 80) || null : null;
+  const ahora = new Date().toISOString();
+  const previa = await env.DB.prepare('SELECT id FROM wa_conversaciones WHERE wa_id = ?').bind(waId).first();
+  const conv = await conversacionDe(env.DB, { waId, nombre, abiertaPor: 'nosotros', codigoWeb: null, origen: null }, ahora);
+  if (!previa) {
+    await env.DB.prepare(`UPDATE wa_conversaciones SET ia_activa = 0, ia_pausa_motivo = 'manual' WHERE id = ?`).bind(conv.id).run();
+  }
+  return json({ ok: true, conversacion_id: conv.id, lead_id: conv.lead_id, creado: !previa });
+}
+
 async function mediaInterna(request, env, mediaId) {
   if (!secretoOk(request, env)) return json({ error: 'unauthorized' }, 401);
   try {
@@ -111,6 +132,7 @@ export default {
     const { pathname } = new URL(request.url);
     if (pathname === '/webhook' && (request.method === 'GET' || request.method === 'POST')) return webhook(request, env, ctx);
     if (pathname === '/interno/enviar' && request.method === 'POST') return enviarInterno(request, env);
+    if (pathname === '/interno/contacto' && request.method === 'POST') return contactoInterno(request, env);
     const ed = pathname.match(/^\/interno\/(playground|puntuar|asistente|aprender|aprender_chat|simular)$/);
     if (ed && request.method === 'POST') return editor(request, env, ed[1]);
     const media = pathname.match(/^\/interno\/media\/([\w.-]+)$/);
