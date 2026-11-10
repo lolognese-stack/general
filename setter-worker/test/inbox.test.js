@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as lista from '../../functions/api/setter/conversaciones.js';
 import * as chat from '../../functions/api/setter/conversaciones/[id].js';
 import * as enviar from '../../functions/api/setter/conversaciones/[id]/enviar.js';
+import * as contactos from '../../functions/api/setter/contactos.js';
 import * as pulso from '../../functions/api/setter/pulso.js';
 import * as estado from '../../functions/api/setter/estado.js';
 import { prepararDb, webhookFirmado, payloadMensaje } from './ayuda.js';
@@ -129,5 +130,46 @@ describe('pulso', () => {
     expect(d.activo).toBe(true);
     expect(d.ultimo).toBeTruthy();
     expect(d.urgentes).toHaveLength(1);
+  });
+});
+
+describe('agregar contacto a mano', () => {
+  const alta = (body, token = 'tok') => contactos.onRequestPost({
+    request: new Request('https://crm.test/api/setter/contactos', { method: 'POST', body: JSON.stringify(body), headers: { 'x-crm-token': token } }),
+    env: envCrm(),
+  });
+
+  it('sin token, 401', async () => {
+    expect((await alta({ whatsapp: '+51 930 299 443' }, 'malo')).status).toBe(401);
+  });
+
+  it('número inválido, 400', async () => {
+    const r = await alta({ nombre: 'Ana', whatsapp: 'abc' });
+    expect(r.status).toBe(400);
+  });
+
+  it('crea lead y conversación con la IA pausada', async () => {
+    const r = await alta({ nombre: 'Ana Torres', whatsapp: '+51 930 299 443' });
+    expect(r.status).toBe(200);
+    const d = await r.json();
+    expect(d.creado).toBe(true);
+    const conv = await uno('SELECT * FROM wa_conversaciones WHERE id = ?', d.conversacion_id);
+    expect(conv.wa_id).toBe('51930299443');
+    expect(conv.ia_activa).toBe(0);
+    expect(conv.ia_pausa_motivo).toBe('manual');
+    expect(conv.abierta_por).toBe('nosotros');
+    const lead = await uno('SELECT nombre, whatsapp, wa_id FROM leads WHERE id = ?', d.lead_id);
+    expect(lead).toMatchObject({ nombre: 'Ana Torres', wa_id: '51930299443' });
+  });
+
+  it('repetir el número no duplica ni toca la IA de un chat existente', async () => {
+    const antes = await uno('SELECT id, ia_activa FROM wa_conversaciones WHERE wa_id = ?', '51911111111');
+    const r = await alta({ nombre: 'Otro nombre', whatsapp: '51911111111' });
+    const d = await r.json();
+    expect(d).toMatchObject({ creado: false, conversacion_id: antes.id });
+    const despues = await uno('SELECT ia_activa FROM wa_conversaciones WHERE id = ?', antes.id);
+    expect(despues.ia_activa).toBe(antes.ia_activa);
+    const n = await uno('SELECT count(*) n FROM wa_conversaciones WHERE wa_id = ?', '51911111111');
+    expect(n.n).toBe(1);
   });
 });
