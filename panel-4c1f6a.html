@@ -13670,15 +13670,13 @@ function ibPintarHilo(){
 // repintarlo con el polling borraría lo que se está escribiendo.
 function ibPintarPie(){
   const c = ibHilo.conversacion, pie = el('ib-pie');
-  const abierta = ibVentanaAbierta(c);
-  if(pie.dataset.conv === String(c.id) && pie.dataset.abierta === String(abierta)) return;
+  if(pie.dataset.conv === String(c.id)) return;
   pie.dataset.conv = String(c.id);
-  pie.dataset.abierta = String(abierta);
-  pie.innerHTML = (abierta ? '' : `<div class="ib-aviso">La ventana de 24 h está cerrada: WhatsApp solo deja mandar plantillas aprobadas hasta que el lead vuelva a escribir.</div>`) + `
+  pie.innerHTML = `
     <form class="ib-comp" id="ib-form">
-      <textarea id="ib-texto" rows="2" placeholder="${abierta ? 'Escribe una respuesta… (Ctrl+Enter envía)' : 'Ventana cerrada'}" ${abierta ? '' : 'disabled'}></textarea>
+      <textarea id="ib-texto" rows="2" placeholder="Escribe una respuesta… (Ctrl+Enter envía)"></textarea>
       <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
-        <button type="submit" class="btn btn-primary btn-sm" id="ib-enviar" ${abierta ? '' : 'disabled'}>Enviar</button>
+        <button type="submit" class="btn btn-primary btn-sm" id="ib-enviar">Enviar</button>
         ${c.ia_activa ? `<span class="hint">Al enviar, la IA se pausa</span>` : ''}
       </div>
     </form>`;
@@ -13721,7 +13719,7 @@ async function ibEnviar(){
     alert('No se pudo enviar: ' + e.message);
   }finally{
     ibEnviando = false;
-    if(el('ib-enviar')) el('ib-enviar').disabled = !ibVentanaAbierta(ibHilo && ibHilo.conversacion);
+    if(el('ib-enviar')) el('ib-enviar').disabled = false;
   }
 }
 
