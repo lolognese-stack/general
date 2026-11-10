@@ -141,6 +141,26 @@ describe('responder desde el CRM', () => {
     vi.restoreAllMocks();
   });
 
+  it('manda la plantilla de primer contacto con el nombre y pausa la IA', async () => {
+    const { id } = await uno(`SELECT id FROM wa_conversaciones WHERE wa_id = '51922222222'`);
+    const original = globalThis.fetch;
+    const meta = vi.spyOn(globalThis, 'fetch').mockImplementation((url, init) =>
+      String(url).startsWith('https://graph.facebook.com/') ? Promise.resolve(Response.json({ messages: [{ id: 'wamid.PL1' }] })) : original(url, init));
+    const r = await enviar.onRequestPost({ request: pedido('/x', { method: 'POST', body: JSON.stringify({ plantilla: { nombre: 'contacto_lead_viaje', idioma: 'es', params: ['Pedro'] } }) }), env: envCrm(), params: { id } });
+    expect(r.status).toBe(200);
+    const cuerpo = JSON.parse(meta.mock.calls.find(([u]) => String(u).startsWith('https://graph.facebook.com/'))[1].body);
+    expect(cuerpo).toMatchObject({ type: 'template', template: { name: 'contacto_lead_viaje', language: { code: 'es' }, components: [{ type: 'body', parameters: [{ type: 'text', text: 'Pedro' }] }] } });
+    expect(await uno('SELECT ia_activa FROM wa_conversaciones WHERE id = ?', id)).toEqual({ ia_activa: 0 });
+    vi.restoreAllMocks();
+  });
+
+  it('plantilla con nombre inválido o sin dato, 400', async () => {
+    const { id } = await uno(`SELECT id FROM wa_conversaciones WHERE wa_id = '51922222222'`);
+    const pedir = (plantilla) => enviar.onRequestPost({ request: pedido('/x', { method: 'POST', body: JSON.stringify({ plantilla }) }), env: envCrm(), params: { id } });
+    expect((await pedir({ nombre: 'Mal Nombre!', params: ['x'] })).status).toBe(400);
+    expect((await pedir({ nombre: 'contacto_lead_viaje', params: [''] })).status).toBe(400);
+  });
+
   it('los envíos automáticos (IA) siguen sin poder salir con la ventana cerrada', async () => {
     const { id } = await uno(`SELECT id FROM wa_conversaciones WHERE wa_id = '51922222222'`);
     await expect(enviarWorker(env, {}, { conversacionId: id, texto: 'x', autor: 'ia' })).rejects.toMatchObject({ status: 409 });

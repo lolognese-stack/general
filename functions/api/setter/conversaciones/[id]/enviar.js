@@ -10,15 +10,25 @@ export async function onRequestPost({ request, env, params }) {
   let b;
   try { b = await request.json(); } catch { return json({ error: 'body no es json' }, 400); }
   const texto = typeof b.texto === 'string' ? b.texto.trim() : '';
-  if (!texto) return json({ error: 'mensaje vacío' }, 400);
+  const pl = b.plantilla && typeof b.plantilla === 'object' ? b.plantilla : null;
+  if (!texto && !pl) return json({ error: 'mensaje vacío' }, 400);
   if (texto.length > 4096) return json({ error: 'máximo 4096 caracteres' }, 400);
+  // Plantilla aprobada por Meta (primer contacto, fuera de la ventana de 24 h).
+  let plantilla = null;
+  if (pl) {
+    const nombre = typeof pl.nombre === 'string' ? pl.nombre.trim() : '';
+    if (!/^[a-z0-9_]{1,512}$/.test(nombre)) return json({ error: 'nombre de plantilla inválido' }, 400);
+    const params = Array.isArray(pl.params) ? pl.params.map((p) => String(p ?? '').trim().slice(0, 200)) : [];
+    if (params.length > 10 || params.some((p) => !p)) return json({ error: 'falta un dato de la plantilla' }, 400);
+    plantilla = { nombre, idioma: /^[a-z]{2}(_[A-Z]{2})?$/.test(pl.idioma || '') ? pl.idioma : 'es', params };
+  }
 
   const conv = await env.DB.prepare('SELECT id, lead_id, ia_activa, agente_activo FROM wa_conversaciones WHERE id = ?').bind(params.id).first();
   if (!conv) return json({ error: 'no existe la conversación' }, 404);
 
   const r = await alWorker(env, 'interno/enviar', {
     method: 'POST',
-    body: JSON.stringify({ conversacion_id: conv.id, texto, autor: 'asesora_web' }),
+    body: JSON.stringify(plantilla ? { conversacion_id: conv.id, plantilla, autor: 'asesora_web' } : { conversacion_id: conv.id, texto, autor: 'asesora_web' }),
   });
   const data = await r.json().catch(() => ({ error: 'el Worker no respondió bien' }));
   if (!r.ok) return json({ error: data.error || 'no se pudo enviar' }, r.status);

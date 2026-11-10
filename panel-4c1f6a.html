@@ -13677,12 +13677,14 @@ function ibPintarPie(){
       <textarea id="ib-texto" rows="2" placeholder="Escribe una respuesta… (Ctrl+Enter envía)"></textarea>
       <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
         <button type="submit" class="btn btn-primary btn-sm" id="ib-enviar">Enviar</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="ib-plantilla" title="Mandar la plantilla aprobada de primer contacto (sirve aunque el lead no haya escrito)">Plantilla</button>
         ${c.ia_activa ? `<span class="hint">Al enviar, la IA se pausa</span>` : ''}
       </div>
     </form>`;
   const ta = el('ib-texto');
   ta.addEventListener('keydown', e => { if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); ibEnviar(); } });
   el('ib-form').addEventListener('submit', e => { e.preventDefault(); ibEnviar(); });
+  el('ib-plantilla').addEventListener('click', ibEnviarPlantilla);
 }
 
 // Copia el mensaje del aviso para pegarlo a mano en WhatsApp.
@@ -13702,6 +13704,31 @@ async function ibCopiarSugerido(btn){
   const txt = btn.textContent;
   btn.textContent = 'Copiado ✓';
   setTimeout(() => { btn.textContent = txt; }, 2000);
+}
+
+// Plantilla de primer contacto aprobada por Meta: es lo único que WhatsApp deja mandar si el lead no escribió.
+const IB_PLANTILLA = { nombre: 'contacto_lead_viaje', idioma: 'es' };
+
+async function ibEnviarPlantilla(){
+  if(ibEnviando || !ibSel || !ibHilo) return;
+  const c = ibHilo.conversacion, l = ibHilo.lead;
+  const sug = String((l && l.nombre) || c.nombre_perfil || '').trim().split(/\s+/)[0] || '';
+  const nombre = (prompt(`Plantilla de primer contacto a +${c.wa_id}.\n¿Cómo lo saludamos? («Hola ___! Te escribimos de Luna Llena Travel…»)`, sug) || '').trim();
+  if(!nombre) return;
+  ibEnviando = true;
+  const btn = el('ib-plantilla');
+  if(btn) btn.disabled = true;
+  try{
+    await api(`/api/setter/conversaciones/${ibSel}/enviar`, { method:'POST', body: JSON.stringify({ plantilla: { ...IB_PLANTILLA, params: [nombre] } }) });
+    el('ib-pie').dataset.conv = '';
+    await ibCargarHilo(ibSel, { silencioso:true });
+    ibCargarLista();
+  }catch(e){
+    alert('No se pudo enviar la plantilla: ' + e.message);
+  }finally{
+    ibEnviando = false;
+    if(el('ib-plantilla')) el('ib-plantilla').disabled = false;
+  }
 }
 
 async function ibEnviar(){
