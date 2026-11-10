@@ -2,7 +2,7 @@
 // webhooks, y wa_mensajes.provider_id es UNIQUE, así que un mensaje repetido
 // no se guarda dos veces ni vuelve a tocar contadores.
 
-import { buscarOCrearLead, codigoWebDe } from './leads.js';
+import { buscarOCrearLead, codigoWebDe, variantes } from './leads.js';
 
 const VENTANA_MS = 24 * 3600 * 1000;
 // Un estado nunca retrocede: un 'delivered' que llega después del 'read' se ignora.
@@ -36,7 +36,8 @@ export async function respondeSiempre(db, conv) {
 }
 
 export async function conversacionDe(db, { waId, nombre, abiertaPor, codigoWeb, origen }, ahora) {
-  const conv = await db.prepare('SELECT * FROM wa_conversaciones WHERE wa_id = ?').bind(waId).first();
+  const vars = variantes(waId);
+  const conv = await db.prepare(`SELECT * FROM wa_conversaciones WHERE wa_id IN (${vars.map(() => '?').join(',')}) ORDER BY wa_id = ? DESC LIMIT 1`).bind(...vars, waId).first();
   if (conv) return conv;
   const { leadId } = await buscarOCrearLead(db, { waId, nombre, codigoWeb, origen }, ahora);
   // OR IGNORE: dos webhooks del mismo número a la vez no crean dos conversaciones.

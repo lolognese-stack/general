@@ -16,8 +16,23 @@ export function normalizarWa(t) {
   return d.length >= 8 ? d : null;
 }
 
+// Formas de escribir el mismo número: México (52 + 10 dígitos o 521 + 10) y Argentina
+// (54 + 10 o 549 + 10). Meta usa una u otra según el evento (el eco de lo que mandás
+// desde el celular trae 521…, el lead se cargó con 52…): sin esto el mismo contacto
+// terminaba en dos chats.
+export function variantes(waId) {
+  const set = new Set([waId]);
+  let m;
+  if ((m = /^521(\d{10})$/.exec(waId))) set.add('52' + m[1]);
+  else if ((m = /^52(\d{10})$/.exec(waId))) set.add('521' + m[1]);
+  if ((m = /^549(\d{10})$/.exec(waId))) set.add('54' + m[1]);
+  else if ((m = /^54(\d{10})$/.exec(waId))) set.add('549' + m[1]);
+  return [...set];
+}
+
 export async function buscarOCrearLead(db, { waId, nombre, codigoWeb, origen }, ahora) {
-  let lead = await db.prepare('SELECT id FROM leads WHERE wa_id = ? LIMIT 1').bind(waId).first();
+  const vars = variantes(waId);
+  let lead = await db.prepare(`SELECT id FROM leads WHERE wa_id IN (${vars.map(() => '?').join(',')}) LIMIT 1`).bind(...vars).first();
 
   if (!lead) {
     // Candidatos por los últimos 8 dígitos; se confirma normalizando en JS.
@@ -28,7 +43,7 @@ export async function buscarOCrearLead(db, { waId, nombre, codigoWeb, origen }, 
           AND replace(replace(replace(replace(replace(whatsapp,' ',''),'-',''),'+',''),'(',''),')','') LIKE ?
         ORDER BY id DESC`
     ).bind('%' + cola).all();
-    lead = results.find((r) => normalizarWa(r.whatsapp) === waId) || null;
+    lead = results.find((r) => vars.includes(normalizarWa(r.whatsapp))) || null;
   }
 
   if (!lead && codigoWeb) {

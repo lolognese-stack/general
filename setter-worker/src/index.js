@@ -13,7 +13,7 @@
 
 import { canalDe } from './canal/adapter.js';
 import { guardarEventos, conversacionDe, insertarMensaje, ultimoSql } from './ingesta.js';
-import { normalizarWa } from './leads.js';
+import { normalizarWa, variantes } from './leads.js';
 import { enviar, ErrorEnvio } from './enviar.js';
 import { playground, puntuar, asistente } from './agente/playground.js';
 import { correrSeguimientos } from './agente/seguimiento.js';
@@ -101,7 +101,8 @@ async function abrirConversacion(env, b, ahora = new Date().toISOString()) {
   const waId = normalizarWa(b.whatsapp);
   if (!waId) return { error: 'número de WhatsApp inválido' };
   const nombre = typeof b.nombre === 'string' ? b.nombre.trim().slice(0, 80) || null : null;
-  const previa = await env.DB.prepare('SELECT id FROM wa_conversaciones WHERE wa_id = ?').bind(waId).first();
+  const vars = variantes(waId);
+  const previa = await env.DB.prepare(`SELECT id FROM wa_conversaciones WHERE wa_id IN (${vars.map(() => '?').join(',')})`).bind(...vars).first();
   const conv = await conversacionDe(env.DB, { waId, nombre, abiertaPor: 'nosotros', codigoWeb: null, origen: null }, ahora);
   if (!previa) {
     await env.DB.prepare(`UPDATE wa_conversaciones SET ia_activa = 0, ia_pausa_motivo = 'manual' WHERE id = ?`).bind(conv.id).run();
