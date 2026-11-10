@@ -2055,7 +2055,11 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 @media (max-width:1180px){ .st{grid-template-columns:200px minmax(0,1fr);height:auto} .st > div:last-child{grid-column:1 / -1;border-left:none;border-top:1px solid var(--line);min-height:420px} .st-con{grid-template-columns:1fr} }
 @media (max-width:760px){ .st{grid-template-columns:1fr} .st > div + div{border-left:none;border-top:1px solid var(--line)} .st-ed{min-height:320px} }
 
-/* Performance > Anuncios: planilla diaria. Blanco se carga, gris se calcula. */
+/* Anuncios: planillas de campañas. Claro se carga, oscuro se calcula. */
+.an-barra{justify-content:flex-start;align-items:center;gap:var(--s3)}
+.an-barra .an-mes{margin-left:auto}
+.an-ir-mes{border:0;background:transparent;color:inherit;font:inherit;font-weight:600;padding:0;cursor:pointer;text-transform:capitalize;text-decoration:underline;text-decoration-color:var(--line)}
+.an-ir-mes:hover{text-decoration-color:currentColor}
 .an-mes{display:flex;align-items:center;gap:10px;font-size:13px}
 .an-mes strong{min-width:140px;text-align:center;text-transform:capitalize}
 .an-nav{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:var(--radius-sm);width:30px;height:30px;font-size:17px;line-height:1;cursor:pointer}
@@ -2126,10 +2130,6 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 11h2M12 11h2M16 11h0M8 15h2M12 15h2M8 18h2M12 18h4M16 14.5v3.5"/></svg>
         <span>Cotizador</span>
       </button>
-      <button data-seccion="agendas">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>
-        <span>Agendas &amp; Setteo</span>
-      </button>
       <button data-seccion="conversacion">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H8l-4 4V5z"/></svg>
         <span>Conversación</span>
@@ -2145,6 +2145,10 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
       <button data-seccion="performance">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>
         <span>Performance</span>
+      </button>
+      <button data-seccion="anuncios">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5v3a1 1 0 0 0 1 1h2.5L12 19V5L6.5 9.5H4a1 1 0 0 0-1 1z"/><path d="M15.5 9a4.2 4.2 0 0 1 0 6M18.3 6.2a8.2 8.2 0 0 1 0 11.6"/></svg>
+        <span>Anuncios</span>
       </button>
       <button data-seccion="web">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
@@ -2178,6 +2182,7 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
         <button data-view="pipeline" aria-current="true">Pipeline<span class="tally" data-tally="total">0</span></button>
         <button data-view="calificacion">Calificación<span class="tally" data-tally="calificados">0</span></button>
         <button data-view="tabla">Tabla<span class="tally" data-tally="total2">0</span></button>
+        <button type="button" id="subtab-agendas">Agendas &amp; Setteo</button>
       </nav>
       <nav class="subtabs" id="vt-subtabs" aria-label="Vista de ventas" hidden>
         <button data-vt-view="pipeline" aria-current="true">Pipeline<span class="tally" data-vt-tally="total">0</span></button>
@@ -2216,6 +2221,7 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
     <section class="view" id="view-setter" hidden></section>
 
     <section class="view" id="view-agendas" hidden></section>
+    <section class="view" id="view-anuncios" hidden></section>
 
     <section class="view" id="view-conversacion" hidden>
       <div class="ag-sec-h cv-toolbar-top">
@@ -3310,7 +3316,8 @@ function render(){
 
   if(seccion === 'leads') renderLeads();
   else if(seccion === 'ventas') renderVentas();
-  else if(seccion === 'agendas') renderAgendas();
+  else if(seccion === 'agendas'){ ldTallies(visibles()); renderAgendas(); }
+  else if(seccion === 'anuncios') renderAnuncios();
   else if(seccion === 'conversacion') renderConversacion();
   else if(seccion === 'planificador') renderPlanificador();
   else if(seccion === 'historias') renderHistorias();
@@ -3320,6 +3327,17 @@ function render(){
   else if(seccion === 'inbox' && ibActivo) renderInbox();
   else if(seccion === 'setter' && ibActivo) renderSetter();
   else if(seccion === 'cotizador' && czActivo) renderCotizador();
+}
+
+// Contadores de las vistas de Leads. Agendas & Setteo comparte esa barra,
+// así que también los actualiza (si no, entrando directo quedaban en 0).
+function ldTallies(lista){
+  document.querySelectorAll('[data-tally]').forEach(n => {
+    const k = n.dataset.tally;
+    n.textContent = k === 'calificados'
+      ? lista.filter(l => l.calificado).length
+      : lista.length;
+  });
 }
 
 function renderLeads(){
@@ -3344,12 +3362,7 @@ function renderLeads(){
   ldRenderSemanas();
   ldRenderDias(lista);
 
-  document.querySelectorAll('[data-tally]').forEach(n => {
-    const k = n.dataset.tally;
-    n.textContent = k === 'calificados'
-      ? lista.filter(l => l.calificado).length
-      : lista.length;
-  });
+  ldTallies(lista);
 
   el('view-title').textContent =
     vista === 'pipeline' ? 'Pipeline' : vista === 'calificacion' ? 'Calificación' : 'Tabla';
@@ -3368,9 +3381,10 @@ function irA(nuevaSeccion){
   agEditando = false;
   hsEditando = false;
 
+  // Agendas & Setteo vive como cuarta vista de Leads (#/leads/agendas).
   // Historias vive como pestaña de Planificador y Setter IA como pestaña de
   // Inbox: en el menú se marca la sección madre.
-  const madre = seccion === 'historias' ? 'planificador' : seccion === 'setter' ? 'inbox' : seccion;
+  const madre = seccion === 'historias' ? 'planificador' : seccion === 'setter' ? 'inbox' : seccion === 'agendas' ? 'leads' : seccion;
   document.querySelectorAll('[data-seccion]').forEach(b =>
     b.setAttribute('aria-current', String(b.dataset.seccion === madre)));
   el('ib-tabs').hidden = !(seccion === 'inbox' || seccion === 'setter');
@@ -3378,6 +3392,7 @@ function irA(nuevaSeccion){
 
   el('view').hidden               = seccion !== 'leads';
   el('view-agendas').hidden       = seccion !== 'agendas';
+  el('view-anuncios').hidden      = seccion !== 'anuncios';
   el('view-conversacion').hidden  = seccion !== 'conversacion';
   el('view-planificador').hidden  = seccion !== 'planificador';
   el('view-historias').hidden     = seccion !== 'historias';
@@ -3391,16 +3406,21 @@ function irA(nuevaSeccion){
   el('view-cotizador').hidden     = seccion !== 'cotizador';
   if(seccion !== 'objetivos') document.body.classList.remove('ob-weekly');
   el('kpis').hidden               = seccion !== 'leads' && seccion !== 'ventas';
-  el('subtabs').hidden            = seccion !== 'leads';
+  el('subtabs').hidden            = seccion !== 'leads' && seccion !== 'agendas';
+  el('subtab-agendas').setAttribute('aria-current', String(seccion === 'agendas'));
+  if(seccion === 'leads' || seccion === 'agendas') document.querySelectorAll('[data-view]').forEach(x =>
+    x.setAttribute('aria-current', String(seccion === 'leads' && x.dataset.view === vista)));
   el('vt-subtabs').hidden         = seccion !== 'ventas';
   el('search-wrap').hidden        = seccion === 'conversacion' || seccion === 'performance' || seccion === 'objetivos' || seccion === 'web' || seccion === 'formulario' || seccion === 'inbox' || seccion === 'setter' || seccion === 'cotizador';
   el('new-btn').hidden            = seccion === 'conversacion' || seccion === 'performance' || seccion === 'planificador' || seccion === 'historias' || seccion === 'objetivos' || seccion === 'web' || seccion === 'formulario' || seccion === 'inbox' || seccion === 'setter' || seccion === 'cotizador';
 
+  if(seccion === 'anuncios'){ el('search-wrap').hidden = true; el('new-btn').hidden = true; }
   el('new-btn-txt').textContent   = seccion === 'ventas' ? 'Nueva venta' : 'Nuevo lead';
 
   if(seccion === 'ventas')       el('view-title').textContent = 'Ventas';
   if(seccion === 'ventas' && (!ventasCargado || vtAbrirId || Date.now() - vtUltimaCarga > 10000)) cargarVentas();
   if(seccion === 'agendas')      el('view-title').textContent = 'Agendas & Setteo';
+  if(seccion === 'anuncios')     el('view-title').textContent = 'Anuncios';
   if(seccion === 'conversacion') el('view-title').textContent = 'Conversación';
   if(seccion === 'planificador') el('view-title').textContent = 'Planificador Contenido';
   if(seccion === 'historias')    el('view-title').textContent = 'Planificador Contenido';
@@ -3442,6 +3462,8 @@ function irA(nuevaSeccion){
 }
 
 function rutaBase(){
+  if(seccion === 'agendas') return '#/leads/agendas';
+  if(seccion === 'anuncios') return '#/anuncios/' + anTipo;
   return '#/' + seccion + (seccion === 'leads' ? '/' + vista
     : seccion === 'ventas' ? '/' + vtVista
     : seccion === 'performance' ? '/' + pfVista
@@ -3505,8 +3527,13 @@ function parseHash(){
     }
     return;
   }
-  const m = location.hash.match(/^#\/(leads|agendas|conversacion|planificador|historias|performance|objetivos|web|formulario|inbox|setter|cotizador)(?:\/(pipeline|calificacion|tabla|cuenta|anuncios|contenido|ranking|acumulado|detalle|calendario|leads|resumen|config|semana|weekly|agentes|analiticas|recursos|conocimiento|aprobar|simulador|salud|ajustes))?/);
+  const m = location.hash.match(/^#\/(leads|agendas|anuncios|conversacion|planificador|historias|performance|objetivos|web|formulario|inbox|setter|cotizador)(?:\/(pipeline|calificacion|tabla|agendas|follow|mensajes|cuenta|anuncios|contenido|ranking|acumulado|detalle|calendario|leads|resumen|config|semana|weekly|agentes|analiticas|recursos|conocimiento|aprobar|simulador|salud|ajustes))?/);
   if(!m) return;
+  // Agendas & Setteo es la cuarta vista de Leads; #/agendas sigue andando.
+  if(m[1] === 'leads' && m[2] === 'agendas'){ m[1] = 'agendas'; m[2] = undefined; }
+  // La planilla de anuncios nació como pestaña de Performance.
+  if(m[1] === 'performance' && m[2] === 'anuncios'){ m[1] = 'anuncios'; m[2] = 'follow'; }
+  if(m[1] === 'anuncios' && (m[2] === 'follow' || m[2] === 'mensajes')) anTipo = m[2];
   if(m[1] === 'leads' && m[2]){
     vista = m[2];
     document.querySelectorAll('[data-view]').forEach(x => x.setAttribute('aria-current', String(x.dataset.view === vista)));
@@ -8989,31 +9016,77 @@ function pfAudienciaHtml(){
 // todo apilado). El selector de período (semana/mes/total) es compartido por
 // Contenido/Ranking/Leads -- Cuenta usa su propio corte (rango de
 // metricasCuenta), por eso no lo muestra.
-/* ---------------- Performance > Anuncios (planilla diaria de Follow Me Ads) ---------------- */
-// Una fila por día. Celdas blancas: se cargan a mano desde Ads Manager y se
-// guardan al salir de la celda. Celdas grises: se calculan (CPM, CTR, costos)
-// o salen de lo que el CRM ya tiene de ese día (cuenta de Instagram, Sheet de
-// setting, ventas). Datos: /api/anuncios (functions/api/anuncios.js).
+/* ---------------- Anuncios (planillas de campañas pagas) ---------------- */
+// Sección propia del menú. Dos campañas, cada una con su planilla:
+//   follow    Follow Me Ads (tráfico a perfil)
+//   mensajes  campaña a WhatsApp / DM
+// y dos vistas: día a día (se carga) y resumen del año (una fila por mes).
+// Celdas claras: se cargan a mano y se guardan al salir de la celda. Celdas
+// oscuras: se calculan, o en Follow Me Ads salen de lo que el CRM ya tiene de
+// ese día. Datos: /api/anuncios (functions/api/anuncios.js).
+let anTipo = 'follow';
+let anVista = 'dia';       // dia | anual
 let anMes = new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 7); // mes en curso, hora de Perú
-let anDatos = {};        // fecha -> fila
-let anMesCargado = null;
+let anAnio = Number(anMes.slice(0, 4));
+let anDatos = {};          // fecha -> fila
+let anClave = null;        // tipo|vista|período de lo que hay en anDatos
 let anCargando = false;
 
-// [campo, título, tipo]  m = manual · c = calculada · a = automática del CRM
-const AN_COLS = [
-  ['inversion', 'Inversión USD', 'm'], ['impresiones', 'Impresiones', 'm'], ['cpm', 'CPM', 'c'],
-  ['clicks', 'Clics', 'm'], ['ctr', 'CTR', 'c'], ['cpc', 'Costo por clic', 'c'],
-  ['seguidores', 'Seguidores por anuncios', 'm'], ['cps', 'Costo por seguidor', 'c'], ['frecuencia', 'Frecuencia', 'm'],
-  ['views', 'Views totales', 'a'], ['comentarios', 'Comentarios', 'a'], ['seguidores_total', 'Seguidores totales', 'a'],
-  ['conversaciones', 'Conversaciones', 'a'], ['cotizaciones', 'Cotizaciones', 'a'], ['ventas', 'Ventas', 'a'],
-];
 const AN_DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
 const AN_MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const AN_TITULO = {
+  inversion: 'Inversión USD', impresiones: 'Impresiones', cpm: 'CPM', clicks: 'Clics', ctr: 'CTR', cpc: 'Costo por clic',
+  seguidores: 'Seguidores por anuncios', cps: 'Costo por seguidor', frecuencia: 'Frecuencia',
+  views: 'Views totales', comentarios: 'Comentarios', seguidores_total: 'Seguidores totales',
+  conversaciones: 'Conversaciones', cotizaciones: 'Cotizaciones', ventas: 'Ventas',
+  repro_3s: 'Repro 3 seg', repro_50: 'Repro 50%', cpconv: 'Costo por conversación',
+  tasa_cot: 'Conversación a cotización', cpcot: 'Costo por cotización', clientes: 'Clientes',
+  cierre: 'Cierre', gcr: 'Conversión global', facturacion: 'Facturación USD', cash: 'Cobrado USD',
+  cpa: 'Costo por cliente', pl_fact: 'Resultado sobre facturación', pl_cash: 'Resultado sobre cobrado',
+  roi_fact: 'ROI facturación', roi_cash: 'ROI cobrado',
+};
+// usd2 / usd0 = plata · pct = porcentaje · dec2 = dos decimales · sin entrada = entero
+const AN_FMT = {
+  inversion: 'usd2', cpm: 'usd2', cpc: 'usd2', cps: 'usd2', cpconv: 'usd2', cpcot: 'usd2', cpa: 'usd2',
+  facturacion: 'usd0', cash: 'usd0', pl_fact: 'usd0', pl_cash: 'usd0',
+  ctr: 'pct2', tasa_cot: 'pct1', cierre: 'pct1', gcr: 'pct1', roi_fact: 'pct0', roi_cash: 'pct0', frecuencia: 'dec2',
+};
+const AN_SUMABLES = ['inversion', 'impresiones', 'clicks', 'seguidores', 'views', 'seguidores_total', 'conversaciones',
+  'conversaciones_pieza', 'cotizaciones', 'ventas', 'repro_3s', 'repro_50', 'clientes', 'facturacion', 'cash'];
+const AN_COLS_FOLLOW = ['inversion', 'impresiones', 'cpm', 'clicks', 'ctr', 'cpc', 'seguidores', 'cps', 'frecuencia',
+  'views', 'comentarios', 'seguidores_total', 'conversaciones', 'cotizaciones', 'ventas'];
+const AN_TIPOS = {
+  follow: {
+    nombre: 'Follow Me Ads',
+    manual: ['inversion', 'impresiones', 'clicks', 'seguidores', 'frecuencia'],
+    dia: AN_COLS_FOLLOW, anual: AN_COLS_FOLLOW,
+    gruposDia: [['Ads Manager', 9], ['Embudo del día, desde el CRM', 6]],
+    gruposAnual: [['Ads Manager', 9], ['Embudo, desde el CRM', 6]],
+    kpis: ['inversion', 'seguidores', 'cps', 'cpm', 'conversaciones', 'cotizaciones', 'ventas'],
+    nota: 'Las celdas claras se cargan desde Ads Manager y se guardan al salir de la celda. Las oscuras se calculan solas o vienen del CRM: cuenta de Instagram, Sheet de setting y ventas.',
+  },
+  mensajes: {
+    nombre: 'WhatsApp / DM',
+    manual: ['inversion', 'impresiones', 'clicks', 'repro_3s', 'repro_50', 'conversaciones', 'cotizaciones', 'clientes', 'facturacion', 'cash'],
+    dia: ['inversion', 'impresiones', 'cpm', 'clicks', 'ctr', 'cpc', 'repro_3s', 'repro_50',
+      'conversaciones', 'cpconv', 'cotizaciones', 'cpcot', 'clientes', 'facturacion', 'cash'],
+    anual: ['inversion', 'impresiones', 'cpm', 'clicks', 'ctr', 'cpc', 'repro_3s', 'repro_50',
+      'conversaciones', 'cotizaciones', 'tasa_cot', 'cpcot', 'clientes', 'cierre', 'gcr',
+      'facturacion', 'cash', 'cpa', 'pl_fact', 'pl_cash', 'roi_fact', 'roi_cash'],
+    gruposDia: [['Ads Manager', 8], ['Resultado de la campaña', 7]],
+    gruposAnual: [['Ads Manager', 8], ['Embudo', 7], ['Plata', 7]],
+    kpis: ['inversion', 'conversaciones', 'cpconv', 'cotizaciones', 'clientes', 'facturacion', 'roi_fact'],
+    nota: 'Todo se carga a mano y se guarda al salir de la celda: inversión, impresiones, clics y reproducciones desde Ads Manager; conversaciones, cotizaciones, clientes y plata, solo las que trajo esta campaña. Las celdas oscuras se calculan solas.',
+  },
+};
 
 function anFechasDelMes(mes){
   const [y, m] = mes.split('-').map(Number);
   const n = new Date(Date.UTC(y, m, 0)).getUTCDate();
   return Array.from({ length: n }, (_, i) => `${mes}-${String(i + 1).padStart(2, '0')}`);
+}
+function anMesesDelAnio(anio){
+  return Array.from({ length: 12 }, (_, i) => `${anio}-${String(i + 1).padStart(2, '0')}`);
 }
 function anMesMover(mes, d){
   const [y, m] = mes.split('-').map(Number);
@@ -9032,7 +9105,7 @@ function anSemanas(fechas){
 }
 function anN(v){ return v === null || v === undefined || v === '' ? null : Number(v); }
 function anFmt(v, dec = 0){
-  return v === null || !isFinite(v) ? '' : v.toLocaleString('es-AR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+  return v === null || v === undefined || !isFinite(v) ? '' : v.toLocaleString('es-AR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
 }
 function anValor(v){ return v === null || v === undefined ? '' : String(v).replace('.', ','); }
 // "1.250" = mil doscientos cincuenta, "12,5" y "12.5" = doce y medio.
@@ -9044,14 +9117,18 @@ function anParse(txt){
   const n = Number(s);
   return isFinite(n) && n >= 0 ? n : NaN;
 }
+function anPeriodo(){ return anVista === 'anual' ? String(anAnio) : anMes; }
+function anClaveActual(){ return `${anTipo}|${anVista}|${anPeriodo()}`; }
 
+// Suma un grupo de días y deja listas todas las columnas calculadas.
 function anSuma(fechas){
-  const s = { inversion: 0, impresiones: 0, clicks: 0, seguidores: 0, views: 0, comentarios: 0, seguidores_total: 0,
-    conversaciones: 0, conversaciones_pieza: 0, cotizaciones: 0, ventas: 0, frecSum: 0, frecN: 0, hay: {} };
+  const s = { hay: {}, comentarios: 0 };
+  AN_SUMABLES.forEach(k => { s[k] = 0; });
+  let frecSum = 0, frecN = 0;
   fechas.forEach(f => {
     const d = anDatos[f];
     if(!d) return;
-    ['inversion', 'impresiones', 'clicks', 'seguidores', 'views', 'seguidores_total', 'conversaciones', 'conversaciones_pieza', 'cotizaciones', 'ventas'].forEach(k => {
+    AN_SUMABLES.forEach(k => {
       const v = anN(d[k]);
       if(v !== null){ s[k] += v; s.hay[k] = true; }
     });
@@ -9060,83 +9137,121 @@ function anSuma(fechas){
     const c = anN(d.comentarios_ig);
     if(c !== null){ s.comentarios += c / 2; s.hay.comentarios = true; }
     const fr = anN(d.frecuencia);
-    if(fr !== null){ s.frecSum += fr; s.frecN++; }
+    if(fr !== null){ frecSum += fr; frecN++; }
   });
+  const inv = s.hay.inversion;
+  s.frecuencia = frecN ? frecSum / frecN : null;
   s.cpm = s.impresiones ? s.inversion / s.impresiones * 1000 : null;
   s.ctr = s.impresiones && s.hay.clicks ? s.clicks / s.impresiones * 100 : null;
   s.cpc = s.clicks ? s.inversion / s.clicks : null;
   s.cps = s.seguidores ? s.inversion / s.seguidores : null;
-  s.frec = s.frecN ? s.frecSum / s.frecN : null;
+  s.cpconv = inv && s.conversaciones ? s.inversion / s.conversaciones : null;
+  s.cpcot = inv && s.cotizaciones ? s.inversion / s.cotizaciones : null;
+  s.cpa = inv && s.clientes ? s.inversion / s.clientes : null;
+  s.tasa_cot = s.conversaciones ? s.cotizaciones / s.conversaciones * 100 : null;
+  s.cierre = s.cotizaciones ? s.clientes / s.cotizaciones * 100 : null;
+  s.gcr = s.conversaciones ? s.clientes / s.conversaciones * 100 : null;
+  s.pl_fact = s.hay.facturacion ? s.facturacion - s.inversion : null;
+  s.pl_cash = s.hay.cash ? s.cash - s.inversion : null;
+  s.roi_fact = s.hay.facturacion && s.inversion ? (s.facturacion - s.inversion) / s.inversion * 100 : null;
+  s.roi_cash = s.hay.cash && s.inversion ? (s.cash - s.inversion) / s.inversion * 100 : null;
   return s;
+}
+
+// Texto y tono de una columna para un grupo ya sumado.
+function anTexto(s, col){
+  let v;
+  if(AN_SUMABLES.includes(col)) v = s.hay[col] ? s[col] : null;
+  else if(col === 'comentarios') v = s.hay.comentarios ? Math.round(s.comentarios) : null;
+  else v = s[col];
+  if(v === null || v === undefined || !isFinite(v)) return ['', ''];
+  const f = AN_FMT[col] || 'n';
+  const txt = f === 'usd2' || f === 'dec2' ? anFmt(v, 2) : f === 'pct2' ? anFmt(v, 2) + '%'
+    : f === 'pct1' ? anFmt(v, 1) + '%' : f === 'pct0' ? anFmt(v, 0) + '%' : anFmt(v, 0);
+  let tono = '';
+  if(col === 'ctr') tono = v < 0.5 ? 'mal' : v > 5 ? 'ojo' : '';
+  else if(col === 'frecuencia') tono = v >= 2 ? 'mal' : v >= 1.6 ? 'ojo' : '';
+  else if(col === 'cps') tono = v > 15 ? 'mal' : '';
+  else if(col === 'pl_fact' || col === 'pl_cash' || col === 'roi_fact' || col === 'roi_cash') tono = v < 0 ? 'mal' : '';
+  return [txt, tono];
 }
 
 async function cargarAnuncios(){
   if(anCargando) return;
   anCargando = true;
-  const mes = anMes, fs = anFechasDelMes(mes);
+  const tipo = anTipo, clave = anClaveActual();
+  const fechas = anVista === 'anual' ? [`${anAnio}-01-01`, `${anAnio}-12-31`] : anFechasDelMes(anMes);
+  let datos = {};
   try{
-    const r = await api(`/api/anuncios?desde=${fs[0]}&hasta=${fs[fs.length - 1]}`);
-    anDatos = {};
-    (r.dias || []).forEach(d => { anDatos[d.fecha] = d; });
+    const r = await api(`/api/anuncios?tipo=${tipo}&desde=${fechas[0]}&hasta=${fechas[fechas.length - 1]}`);
+    (r.dias || []).forEach(d => { datos[d.fecha] = d; });
   }catch(e){
-    anDatos = {};
-    if(e.message !== 'unauthorized') toast('No se pudo cargar la planilla de anuncios: ' + e.message);
+    if(e.message !== 'unauthorized') toast('No se pudo cargar la planilla de anuncios: ' + e.message, { tipo: 'error' });
   }
-  anMesCargado = mes;
+  anDatos = datos;
+  anClave = clave;
   anCargando = false;
-  if(seccion === 'performance' && pfVista === 'anuncios') renderPerformance();
+  // Si mientras cargaba se cambió de campaña o de mes, renderAnuncios ve que
+  // la clave no coincide y vuelve a pedir.
+  if(seccion === 'anuncios') renderAnuncios(true);
 }
 
-function pfAnunciosHtml(){
-  if(anMesCargado !== anMes){
-    cargarAnuncios();
-    return `<div class="ag-empty">Cargando planilla de anuncios…</div>`;
-  }
-  const fechas = anFechasDelMes(anMes);
+function anCabeceraHtml(){
   const [y, m] = anMes.split('-').map(Number);
-  const nombreMes = `${AN_MESES[m - 1]} de ${y}`;
+  const periodo = anVista === 'anual' ? String(anAnio) : `${AN_MESES[m - 1]} de ${y}`;
+  return `
+    <div class="ag-sec-h an-barra">
+      <div class="cv-vswitch" id="an-tipo-switch">${Object.entries(AN_TIPOS).map(([k, t]) =>
+        `<button data-t="${k}" aria-current="${anTipo === k}">${t.nombre}</button>`).join('')}</div>
+      <div class="cv-vswitch" id="an-vista-switch">
+        <button data-v="dia" aria-current="${anVista === 'dia'}">Día a día</button>
+        <button data-v="anual" aria-current="${anVista === 'anual'}">Resumen del año</button>
+      </div>
+      <div class="an-mes">
+        <button type="button" class="an-nav" id="an-prev" aria-label="${anVista === 'anual' ? 'Año anterior' : 'Mes anterior'}">‹</button>
+        <strong>${periodo}</strong>
+        <button type="button" class="an-nav" id="an-next" aria-label="${anVista === 'anual' ? 'Año siguiente' : 'Mes siguiente'}">›</button>
+      </div>
+    </div>`;
+}
+
+function anKpisHtml(){
+  return `<dl class="kpis an-kpis">${AN_TIPOS[anTipo].kpis.map(c =>
+    `<div class="kpi"><dt>${AN_TITULO[c].replace(' USD', '')}</dt><dd id="an-k-${c}"></dd></div>`).join('')}</dl>`;
+}
+function anCabezaTablaHtml(cols, grupos, primera){
+  const manual = AN_TIPOS[anTipo].manual;
+  return `<thead>
+    <tr class="an-grupos"><th></th>${grupos.map(([t, n]) => `<th colspan="${n}">${t}</th>`).join('')}</tr>
+    <tr><th scope="col">${primera}</th>${cols.map(c => `<th scope="col" class="${manual.includes(c) ? 'an-h-m' : ''}">${AN_TITULO[c]}</th>`).join('')}</tr>
+  </thead>`;
+}
+function anCeldasHtml(clave, cols){ return cols.map(c => `<td id="an-${clave}-${c}"></td>`).join(''); }
+
+function anDiaHtml(){
+  const t = AN_TIPOS[anTipo], cols = t.dia, fechas = anFechasDelMes(anMes);
+  const m = Number(anMes.slice(5));
   const fin = {};   // última fecha de cada semana -> semana
   anSemanas(fechas).forEach(w => { fin[w.fechas[w.fechas.length - 1]] = w; });
-
-  const celdasGrupo = clave => AN_COLS.map(([c]) => `<td id="an-${clave}-${c}"></td>`).join('');
   const filaDia = f => {
-    const d = anDatos[f] || {}, ds = anDiaSemana(f);
-    return `<tr class="${ds === 1 ? 'an-lunes' : ''}"><th scope="row">${AN_DIAS[ds]} ${Number(f.slice(8))}</th>${AN_COLS.map(([c, titulo, tipo]) => tipo === 'm'
-      ? `<td class="an-m"><input class="an-in" id="an-in-${f}-${c}" data-f="${f}" data-c="${c}" inputmode="decimal" autocomplete="off" value="${esc(anValor(d[c]))}" aria-label="${esc(titulo)}, ${Number(f.slice(8))} de ${AN_MESES[m - 1]}"></td>`
+    const d = anDatos[f] || {}, ds = anDiaSemana(f), dia = Number(f.slice(8));
+    return `<tr class="${ds === 1 ? 'an-lunes' : ''}"><th scope="row">${AN_DIAS[ds]} ${dia}</th>${cols.map(c => t.manual.includes(c)
+      ? `<td class="an-m"><input class="an-in" id="an-in-${f}-${c}" data-f="${f}" data-c="${c}" inputmode="decimal" autocomplete="off" value="${esc(anValor(d[c]))}" aria-label="${esc(AN_TITULO[c])}, ${dia} de ${AN_MESES[m - 1]}"></td>`
       : `<td class="an-g" id="an-${f}-${c}"></td>`).join('')}</tr>`;
   };
   const filaSemana = w => {
     const a = Number(w.fechas[0].slice(8)), b = Number(w.fechas[w.fechas.length - 1].slice(8));
-    return `<tr class="an-sem"><th scope="row">Semana ${a === b ? a : a + ' al ' + b}</th>${celdasGrupo(w.clave)}</tr>`;
+    return `<tr class="an-sem"><th scope="row">Semana ${a === b ? a : a + ' al ' + b}</th>${anCeldasHtml(w.clave, cols)}</tr>`;
   };
-
   return `
-    <div class="ag-sec-h" style="margin-top:var(--s4)">
-      <h2>Planilla de anuncios</h2>
-      <div class="an-mes">
-        <button type="button" class="an-nav" id="an-prev" aria-label="Mes anterior">‹</button>
-        <strong id="an-mes-nombre">${nombreMes}</strong>
-        <button type="button" class="an-nav" id="an-next" aria-label="Mes siguiente">›</button>
-      </div>
-    </div>
-    <dl class="kpis an-kpis">
-      <div class="kpi"><dt>Inversión</dt><dd id="an-k-inversion"></dd></div>
-      <div class="kpi"><dt>Seguidores por anuncios</dt><dd id="an-k-seguidores"></dd></div>
-      <div class="kpi" data-tone="brand"><dt>Costo por seguidor</dt><dd id="an-k-cps"></dd></div>
-      <div class="kpi"><dt>CPM</dt><dd id="an-k-cpm"></dd></div>
-      <div class="kpi"><dt>Conversaciones</dt><dd id="an-k-conversaciones"></dd></div>
-      <div class="kpi"><dt>Cotizaciones</dt><dd id="an-k-cotizaciones"></dd></div>
-      <div class="kpi"><dt>Ventas</dt><dd id="an-k-ventas"></dd></div>
-    </dl>
-    <div class="cv-note" style="margin:0 0 var(--s3)">Las celdas claras se cargan desde Ads Manager y se guardan al salir de la celda. Las oscuras se calculan solas o vienen del CRM: cuenta de Instagram, Sheet de setting y ventas.</div>
+    ${anKpisHtml()}
+    <div class="cv-note" style="margin:0 0 var(--s3)">${t.nota}</div>
     <div class="an-wrap"><table class="an-tbl" id="an-tabla">
-      <thead>
-        <tr class="an-grupos"><th></th><th colspan="9">Ads Manager</th><th colspan="6">Embudo del día, desde el CRM</th></tr>
-        <tr><th scope="col">Día</th>${AN_COLS.map(([, titulo, tipo]) => `<th scope="col" class="an-h-${tipo}">${titulo}</th>`).join('')}</tr>
-      </thead>
+      ${anCabezaTablaHtml(cols, t.gruposDia, 'Día')}
       <tbody>${fechas.map(f => filaDia(f) + (fin[f] ? filaSemana(fin[f]) : '')).join('')}</tbody>
-      <tfoot><tr class="an-tot"><th scope="row">Total ${AN_MESES[m - 1]}</th>${celdasGrupo('tot')}</tr></tfoot>
+      <tfoot><tr class="an-tot"><th scope="row">Total ${AN_MESES[m - 1]}</th>${anCeldasHtml('tot', cols)}</tr></tfoot>
     </table></div>
+    ${anTipo !== 'follow' ? '' : `
     <div class="ag-sec-h" style="margin-top:var(--s5)"><h2>Tasas reales del mes</h2><span class="hint">para reemplazar los supuestos de la proyección de Follow Me Ads</span></div>
     <dl class="kpis an-kpis">
       <div class="kpi"><dt>Costo por mil impresiones</dt><dd id="an-t-cpm"></dd></div>
@@ -9147,96 +9262,110 @@ function pfAnunciosHtml(){
       <div class="kpi"><dt>Conversación a cotización</dt><dd id="an-t-convcot"></dd></div>
       <div class="kpi"><dt>Cotización a venta</dt><dd id="an-t-cotventa"></dd></div>
     </dl>
-    <div class="cv-note">Comentarios: la mitad de los que muestra Instagram, porque la otra mitad son respuestas de ManyChat. Conversación = persona que entró al Sheet de setting ese día; las que entraron por una pieza cuentan como venidas de un comentario y el resto como venidas de seguir la cuenta. Cotización = persona que llegó al formulario. Con pocos casos las tasas se mueven mucho.</div>`;
+    <div class="cv-note">Comentarios: la mitad de los que muestra Instagram, porque la otra mitad son respuestas de ManyChat. Conversación = persona que entró al Sheet de setting ese día; las que entraron por una pieza cuentan como venidas de un comentario y el resto como venidas de seguir la cuenta. Cotización = persona que llegó al formulario. Con pocos casos las tasas se mueven mucho.</div>`}`;
 }
 
-function anPintarGrupo(clave, fechas, esDia){
-  const s = anSuma(fechas);
-  const set = (col, txt, tono) => {
-    const e = el(`an-${clave}-${col}`);
-    if(!e) return;
-    e.textContent = txt;
-    e.dataset.tono = tono || '';
-  };
-  if(!esDia){
-    set('inversion', s.hay.inversion ? anFmt(s.inversion, 2) : '');
-    set('impresiones', s.hay.impresiones ? anFmt(s.impresiones) : '');
-    set('clicks', s.hay.clicks ? anFmt(s.clicks) : '');
-    set('seguidores', s.hay.seguidores ? anFmt(s.seguidores) : '');
-    set('frecuencia', anFmt(s.frec, 2), s.frec === null ? '' : s.frec >= 2 ? 'mal' : s.frec >= 1.6 ? 'ojo' : '');
-  }else{
-    const inp = el(`an-in-${clave}-frecuencia`);
-    if(inp) inp.dataset.tono = s.frec === null ? '' : s.frec >= 2 ? 'mal' : s.frec >= 1.6 ? 'ojo' : '';
-  }
-  set('cpm', anFmt(s.cpm, 2));
-  set('ctr', s.ctr === null ? '' : anFmt(s.ctr, 2) + '%', s.ctr === null ? '' : s.ctr < 0.5 ? 'mal' : s.ctr > 5 ? 'ojo' : '');
-  set('cpc', anFmt(s.cpc, 2));
-  set('cps', anFmt(s.cps, 2), s.cps !== null && s.cps > 15 ? 'mal' : '');
-  set('views', s.hay.views ? anFmt(s.views) : '');
-  set('comentarios', s.hay.comentarios ? anFmt(Math.round(s.comentarios)) : '');
-  set('seguidores_total', s.hay.seguidores_total ? anFmt(s.seguidores_total) : '');
-  set('conversaciones', s.hay.conversaciones ? anFmt(s.conversaciones) : '');
-  set('cotizaciones', s.hay.cotizaciones ? anFmt(s.cotizaciones) : '');
-  set('ventas', s.hay.ventas ? anFmt(s.ventas) : '');
-  return s;
+function anAnualHtml(){
+  const t = AN_TIPOS[anTipo], cols = t.anual;
+  return `
+    ${anKpisHtml()}
+    <div class="cv-note" style="margin:0 0 var(--s3)">Una fila por mes, sumando lo cargado en Día a día. Para cargar o corregir, pasá a Día a día.</div>
+    <div class="an-wrap"><table class="an-tbl" id="an-tabla">
+      ${anCabezaTablaHtml(cols, t.gruposAnual, 'Mes')}
+      <tbody>${anMesesDelAnio(anAnio).map((mes, i) =>
+        `<tr><th scope="row"><button type="button" class="an-ir-mes" data-mes="${mes}" title="Abrir ${AN_MESES[i]} día a día">${AN_MESES[i]}</button></th>${anCeldasHtml('m' + mes.slice(5), cols)}</tr>`).join('')}</tbody>
+      <tfoot><tr class="an-tot"><th scope="row">Total ${anAnio}</th>${anCeldasHtml('tot', cols)}</tr></tfoot>
+    </table></div>`;
 }
 
-// Rellena todo lo gris: filas, semanas, total, KPIs y tasas. Se llama al
-// dibujar y después de cada guardado, sin rehacer la tabla (el foco no se pierde).
+// Rellena todo lo que no es una celda de carga: filas, semanas o meses, total,
+// KPIs y tasas. Se llama al dibujar y después de cada guardado, sin rehacer la
+// tabla, así el foco no se pierde.
 function anPintar(){
   if(!el('an-tabla')) return;
-  const fechas = anFechasDelMes(anMes);
-  fechas.forEach(f => anPintarGrupo(f, [f], true));
-  anSemanas(fechas).forEach(w => anPintarGrupo(w.clave, w.fechas, false));
-  const t = anPintarGrupo('tot', fechas, false);
+  const t = AN_TIPOS[anTipo], anual = anVista === 'anual', cols = anual ? t.anual : t.dia;
+  const pintar = (clave, fechas, esDia) => {
+    const s = anSuma(fechas);
+    cols.forEach(c => {
+      const [txt, tono] = anTexto(s, c);
+      if(esDia && t.manual.includes(c)){
+        const inp = el(`an-in-${clave}-${c}`);
+        if(inp) inp.dataset.tono = tono;
+        return;
+      }
+      const e = el(`an-${clave}-${c}`);
+      if(e){ e.textContent = txt; e.dataset.tono = tono; }
+    });
+    return s;
+  };
+  let total;
+  if(anual){
+    const meses = anMesesDelAnio(anAnio);
+    meses.forEach(mes => pintar('m' + mes.slice(5), anFechasDelMes(mes), false));
+    total = pintar('tot', meses.flatMap(anFechasDelMes), false);
+  }else{
+    const fechas = anFechasDelMes(anMes);
+    fechas.forEach(f => pintar(f, [f], true));
+    anSemanas(fechas).forEach(w => pintar(w.clave, w.fechas, false));
+    total = pintar('tot', fechas, false);
+  }
   const k = (id, txt) => { const e = el(id); if(e) e.textContent = txt || '—'; };
-  const usd = (v, dec = 2) => v === null ? '' : 'USD ' + anFmt(v, dec);
-  const pct = (a, b) => b ? anFmt(a / b * 100, 1) + '%' : '';
-  k('an-k-inversion', t.hay.inversion ? usd(t.inversion, 0) : '');
-  k('an-k-seguidores', t.hay.seguidores ? anFmt(t.seguidores) : '');
-  k('an-k-cps', usd(t.cps));
-  k('an-k-cpm', usd(t.cpm));
-  k('an-k-conversaciones', t.hay.conversaciones ? anFmt(t.conversaciones) : '');
-  k('an-k-cotizaciones', t.hay.cotizaciones ? anFmt(t.cotizaciones) : '');
-  k('an-k-ventas', t.hay.ventas ? anFmt(t.ventas) : '');
-  k('an-t-cpm', usd(t.cpm));
-  k('an-t-cps', usd(t.cps));
-  k('an-t-comviews', t.views ? anFmt(t.comentarios / t.views * 1000, 1) : '');
-  k('an-t-comconv', pct(t.conversaciones_pieza, t.comentarios));
-  k('an-t-segconv', pct(t.conversaciones - t.conversaciones_pieza, t.seguidores_total));
-  k('an-t-convcot', pct(t.cotizaciones, t.conversaciones));
-  k('an-t-cotventa', pct(t.ventas, t.cotizaciones));
+  t.kpis.forEach(c => {
+    const [txt] = anTexto(total, c);
+    k('an-k-' + c, txt && (AN_FMT[c] || '').startsWith('usd') ? 'USD ' + txt : txt);
+  });
+  if(anTipo === 'follow' && !anual){
+    const usd = v => v === null ? '' : 'USD ' + anFmt(v, 2);
+    const pct = (a, b) => b ? anFmt(a / b * 100, 1) + '%' : '';
+    k('an-t-cpm', usd(total.cpm));
+    k('an-t-cps', usd(total.cps));
+    k('an-t-comviews', total.views ? anFmt(total.comentarios / total.views * 1000, 1) : '');
+    k('an-t-comconv', pct(total.conversaciones_pieza, total.comentarios));
+    k('an-t-segconv', pct(total.conversaciones - total.conversaciones_pieza, total.seguidores_total));
+    k('an-t-convcot', pct(total.cotizaciones, total.conversaciones));
+    k('an-t-cotventa', pct(total.ventas, total.cotizaciones));
+  }
 }
 
-function pfAnunciosWire(){
+function anWire(){
+  const cambiar = fn => { fn(); history.replaceState(null, '', rutaBase()); renderAnuncios(true); };
+  el('an-tipo-switch').querySelectorAll('button').forEach(b =>
+    b.addEventListener('click', () => cambiar(() => { anTipo = b.dataset.t; })));
+  el('an-vista-switch').querySelectorAll('button').forEach(b =>
+    b.addEventListener('click', () => cambiar(() => { anVista = b.dataset.v; anAnio = Number(anMes.slice(0, 4)); })));
+  const mover = d => cambiar(() => { if(anVista === 'anual') anAnio += d; else anMes = anMesMover(anMes, d); });
+  el('an-prev').addEventListener('click', () => mover(-1));
+  el('an-next').addEventListener('click', () => mover(1));
+
   const tabla = el('an-tabla');
-  const mover = d => { anMes = anMesMover(anMes, d); renderPerformance(); };
-  if(el('an-prev')) el('an-prev').addEventListener('click', () => mover(-1));
-  if(el('an-next')) el('an-next').addEventListener('click', () => mover(1));
   if(!tabla) return;
   anPintar();
+  tabla.querySelectorAll('.an-ir-mes').forEach(b =>
+    b.addEventListener('click', () => cambiar(() => { anMes = b.dataset.mes; anVista = 'dia'; })));
+  if(anVista === 'anual') return;
 
   tabla.addEventListener('change', async e => {
     const inp = e.target.closest('.an-in');
     if(!inp) return;
-    const f = inp.dataset.f, c = inp.dataset.c;
+    const f = inp.dataset.f, c = inp.dataset.c, tipo = anTipo, clave = anClave;
     const previo = anDatos[f] ? anDatos[f][c] : null;
     const v = anParse(inp.value);
     if(Number.isNaN(v)){
-      toast('Eso no es un número. Escribí solo la cifra, por ejemplo 12,50.');
+      toast('Eso no es un número. Escribí solo la cifra, por ejemplo 12,50.', { tipo: 'error' });
       inp.value = anValor(previo);
       return;
     }
     inp.dataset.estado = 'guardando';
     try{
-      const r = await api('/api/anuncios', { method: 'POST', body: JSON.stringify({ fecha: f, [c]: v }) });
+      const r = await api('/api/anuncios', { method: 'POST', body: JSON.stringify({ tipo, fecha: f, [c]: v }) });
+      if(anClave !== clave) return;   // ya se cambió de mes o de campaña: lo guardado queda, la pantalla es otra
       anDatos[f] = { ...(anDatos[f] || { fecha: f }), ...r.dia };
       if(document.activeElement !== inp) inp.value = anValor(anDatos[f][c]);
       inp.dataset.estado = '';
       anPintar();
     }catch(err){
       inp.dataset.estado = 'error';
-      if(err.message !== 'unauthorized') toast('No se guardó: ' + err.message);
+      if(err.message !== 'unauthorized') toast('No se guardó: ' + err.message, { tipo: 'error' });
     }
   });
   // Enter baja a la misma columna del día siguiente, como en una planilla.
@@ -9249,6 +9378,24 @@ function pfAnunciosWire(){
     const sig = el(`an-in-${fechas[i + (e.shiftKey ? -1 : 1)]}-${inp.dataset.c}`);
     if(sig){ sig.focus(); sig.select(); } else inp.blur();
   });
+}
+
+// `forzar` repinta aunque la planilla ya esté dibujada. El polling de leads
+// llama a render() cada pocos segundos: sin esto se rehacía la tabla y se
+// perdía la celda que se estaba escribiendo.
+function renderAnuncios(forzar){
+  const host = el('view-anuncios'), clave = anClaveActual(), root = el('an-root');
+  if(anClave !== clave){
+    if(!root || root.dataset.clave !== 'cargando:' + clave){
+      host.innerHTML = `<div id="an-root" data-clave="cargando:${clave}">${anCabeceraHtml()}<div class="ag-empty">Cargando planilla…</div></div>`;
+      anWire();
+    }
+    cargarAnuncios();
+    return;
+  }
+  if(!forzar && root && root.dataset.clave === clave) return;
+  host.innerHTML = `<div id="an-root" data-clave="${clave}">${anCabeceraHtml()}${anVista === 'anual' ? anAnualHtml() : anDiaHtml()}</div>`;
+  anWire();
 }
 
 function renderPerformance(){
@@ -9300,12 +9447,11 @@ function renderPerformance(){
     <div class="ag-sec-h"><h2>Dashboard de leads</h2><span class="hint">atribución por etiqueta ManyChat, período elegido arriba</span></div>
     ${pfDashboardHtml(subidas)}`;
 
-  const necesitaPeriodo = pfVista !== 'cuenta' && pfVista !== 'anuncios';
+  const necesitaPeriodo = pfVista !== 'cuenta';
 
   const bloques = {
     contenido: bloqueContenido, acumulado: bloqueAcumulado,
     leads: bloqueLeads, detalle: bloqueDetalle, cuenta: bloqueCuenta,
-    anuncios: pfAnunciosHtml,
   };
 
   el('view-performance').innerHTML = `
@@ -9317,7 +9463,6 @@ function renderPerformance(){
         <button data-v="leads" aria-current="${pfVista==='leads'}">Leads</button>
         <button data-v="detalle" aria-current="${pfVista==='detalle'}">Detalle</button>
         <button data-v="cuenta" aria-current="${pfVista==='cuenta'}">Cuenta</button>
-        <button data-v="anuncios" aria-current="${pfVista==='anuncios'}">Anuncios</button>
       </div>
       ${necesitaPeriodo ? `<div class="pz-toolbar-left pf2-per">
         <div class="cv-vswitch" id="pf-periodo-tipo">
@@ -9342,7 +9487,6 @@ function renderPerformance(){
   pzWireRows(el('view-performance'));
   pfWireModo();
   pzSinAsociarWire(el('view-performance'));
-  if(pfVista === 'anuncios') pfAnunciosWire();
 
   const rangoSel = el('pf-ig-rango');
   if(rangoSel) rangoSel.querySelectorAll('button').forEach(b => {
@@ -11484,6 +11628,7 @@ el('gate-btn').addEventListener('click', entrar);
 el('token-input').addEventListener('keydown', e => { if(e.key === 'Enter') entrar(); });
 
 el('ib-tabs').querySelectorAll('button[data-ib]').forEach(b => b.addEventListener('click', () => irA(b.dataset.ib)));
+el('subtab-agendas').addEventListener('click', () => irA('agendas'));
 document.querySelectorAll('[data-seccion]').forEach(b => {
   b.addEventListener('click', () => irA(b.dataset.seccion));
 });
@@ -11493,6 +11638,8 @@ document.querySelectorAll('[data-view]').forEach(b => {
     vista = b.dataset.view;
     document.querySelectorAll('[data-view]').forEach(x =>
       x.setAttribute('aria-current', String(x === b)));
+    // Desde Agendas & Setteo hay que volver a la sección Leads, no solo cambiar de vista.
+    if(seccion !== 'leads'){ irA('leads'); return; }
     location.hash = '#/leads/' + vista;
     render();
   });
