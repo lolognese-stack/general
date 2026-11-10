@@ -1340,12 +1340,11 @@ tr:hover .pz-link-edit,.pz-link-edit:focus-visible{opacity:1}
 .cvx-tip-row i{width:8px;height:8px;border-radius:3px;flex:none}
 .cvx-tip-row b{margin-left:auto;padding-left:var(--s3);color:var(--ink);font-variant-numeric:tabular-nums}
 .cv-toolbar-top{align-items:center;margin-bottom:var(--s4)}
-.ib-tabs-wrap{margin-bottom:var(--s4)}
 .ig-input{display:flex;align-items:center;border:1px solid var(--line);border-radius:var(--radius-sm,8px);background:var(--surface);overflow:hidden}
 .ig-input span{padding:0 2px 0 10px;color:var(--ink-3);font-weight:600}
 .ig-input input{border:none !important;box-shadow:none !important;padding-left:2px;flex:1;min-width:0;background:transparent}
 .card-ig{display:block;font-size:11px;color:var(--ink-3);font-weight:500}
-.ib-tabs-wrap .tally{margin-left:4px;color:var(--danger)}
+#ib-tabs .tally{margin-left:4px;color:var(--danger)}
 .cv-emb-ev{font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--ink-3);margin-left:4px}
 .cv-emb-pie{display:flex;flex-wrap:wrap;gap:6px var(--s4);margin-top:var(--s2);padding-top:var(--s3);border-top:1px solid var(--line);font-size:12px;color:var(--ink-3)}
 .cv-emb-pie b{color:var(--ink);font-variant-numeric:tabular-nums}
@@ -1867,7 +1866,7 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 
 
 /* ---------------- Inbox (setter de WhatsApp) ---------------- */
-.ib{display:grid;grid-template-columns:320px minmax(0,1fr) 290px;height:calc(100vh - 128px);min-height:460px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow);overflow:hidden}
+.ib{display:grid;grid-template-columns:320px minmax(0,1fr) 290px;height:calc(100vh - 84px);min-height:460px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow);overflow:hidden}
 .ib-col{display:flex;flex-direction:column;min-height:0;min-width:0}
 .ib-col + .ib-col{border-left:1px solid var(--line)}
 .ib-filtros{padding:0;border-bottom:1px solid var(--line);display:flex;flex-direction:column}
@@ -1978,12 +1977,19 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 .ib-sin{padding:var(--s6) var(--s4);text-align:center;color:var(--ink-3);font-size:13px;margin:auto}
 .wa-mini{display:flex;flex-direction:column;gap:5px;margin-bottom:var(--s3)}
 .wa-mini .ib-msj{max-width:88%;font-size:12px}
+.ib-ficha-btn[aria-pressed="true"]{background:var(--surface-sunk);color:var(--ink)}
+.ib-ficha-acc{display:flex;flex-wrap:wrap;gap:6px}
+@media (min-width:1181px){
+  .ib[data-ficha="0"]{grid-template-columns:320px minmax(0,1fr)}
+  .ib[data-ficha="0"] .ib-col-ficha{display:none}
+}
 @media (max-width:1180px){
   .ib{grid-template-columns:300px minmax(0,1fr)}
   .ib-col-ficha{display:none}
+  .ib-ficha-btn{display:none}
 }
 @media (max-width:760px){
-  .ib{grid-template-columns:1fr;height:calc(100dvh - 210px)}
+  .ib{grid-template-columns:1fr;height:calc(100dvh - 160px)}
   .ib[data-abierto="1"] .ib-col-lista{display:none}
   .ib:not([data-abierto="1"]) .ib-col-hilo{display:none}
   .ib-col + .ib-col{border-left:none}
@@ -2221,6 +2227,10 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
         <button data-vt-view="tabla">Tabla<span class="tally" data-vt-tally="total2">0</span></button>
         <button data-vt-view="salidas">Salidas<span class="tally" data-vt-tally="salidas">0</span></button>
       </nav>
+      <nav class="subtabs" id="ib-tabs" aria-label="Inbox" hidden>
+        <button type="button" data-ib="inbox">Inbox</button>
+        <button type="button" data-ib="setter">Setter IA<span class="tally" id="ib-tab-setter-tally"></span></button>
+      </nav>
       <div class="search" id="search-wrap">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/></svg>
         <input id="search" type="search" placeholder="Buscar en todo el CRM…" aria-label="Buscar en todo el CRM" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="gs-pop">
@@ -2242,12 +2252,6 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
     <section class="view" id="view-cotizador" hidden></section>
     <section class="view" id="view-formulario" hidden></section>
 
-    <div class="ag-sec-h ib-tabs-wrap" id="ib-tabs" hidden>
-      <div class="cv-vswitch" role="tablist" aria-label="Inbox">
-        <button type="button" data-ib="inbox">Inbox</button>
-        <button type="button" data-ib="setter">Setter IA <span class="tally" id="ib-tab-setter-tally"></span></button>
-      </div>
-    </div>
     <section class="view" id="view-inbox" hidden></section>
 
     <section class="view" id="view-setter" hidden></section>
@@ -2393,6 +2397,7 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
       <div class="field"><label for="f-whatsapp">WhatsApp</label><input id="f-whatsapp" type="tel" autocomplete="tel"></div>
       <div class="field"><label for="f-email">Mail</label><input id="f-email" type="email" autocomplete="email"></div>
       <div class="field" id="aviso-wrap" style="display:none"><button type="button" class="btn btn-ghost btn-sm" id="aviso-btn">Mandarme por mail para contactarla por WhatsApp</button></div>
+      <div class="field" id="mc-wrap" style="display:none"><a class="btn btn-ghost btn-sm" id="mc-btn" target="_blank" rel="noopener">Abrir chat en ManyChat</a></div>
     </fieldset>
 
     <fieldset class="fieldset">
@@ -10485,6 +10490,9 @@ function abrirDrawer(id){
   pintarItinerario(l);
   el('aviso-wrap').style.display = l ? '' : 'none';
   el('aviso-btn').onclick = l ? () => avisoPorMail(l.id) : null;
+  const mcId = l && l.manychat_id ? String(l.manychat_id).trim() : '';
+  el('mc-wrap').style.display = mcId ? '' : 'none';
+  if(mcId) el('mc-btn').href = MANYCHAT_CHAT(mcId);
 
   calSeleccionada = l ? (l.calificado || null) : null;
   pintarCalificacion();
@@ -13313,12 +13321,28 @@ function ibAbrir(id){
   ibCargarHilo(id);
 }
 
+const MANYCHAT_CHAT = id => 'https://app.manychat.com/fb5841618/chat/' + encodeURIComponent(String(id).trim());
+
+function ibFichaGet(){
+  try{ return localStorage.getItem('ib_ficha') === '0' ? '0' : '1'; }catch(e){ return '1'; }
+}
+
+function ibFichaToggle(){
+  const root = el('ib-root');
+  if(!root) return;
+  const abrir = root.dataset.ficha === '0';
+  root.dataset.ficha = abrir ? '1' : '0';
+  try{ localStorage.setItem('ib_ficha', root.dataset.ficha); }catch(e){}
+  const b = el('ib-ficha-btn');
+  if(b) b.setAttribute('aria-pressed', String(abrir));
+}
+
 function renderInbox(){
   const host = el('view-inbox');
   if(el('ib-root')) return;   // el esqueleto se arma una vez; los datos se pintan por partes
   const sel = (k, vacio, opciones) => `<select data-ibf="${k}" aria-label="${vacio}">
       <option value="">${vacio}</option>${opciones.map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select>`;
-  host.innerHTML = `<div class="ib" id="ib-root">
+  host.innerHTML = `<div class="ib" id="ib-root" data-ficha="${ibFichaGet()}">
     <div class="ib-col ib-col-lista">
       <div class="ib-filtros">
         <div class="ib-barra">
@@ -13569,7 +13593,9 @@ function ibPintarHilo(){
     <button type="button" class="btn btn-ghost btn-sm" id="ib-ia-btn">${c.ia_activa ? 'Tomar control' : 'Devolver a la IA'}</button>
     <details class="ib-mas"><summary class="btn btn-ghost btn-sm">Más</summary><div class="ib-mas-menu">
     <button type="button" class="btn btn-ghost btn-sm" id="ib-asig-btn">${c.asignada_a && c.asignada_a === ibYo() ? 'Desasignarme' : 'Asignarme'}</button>
-    <button type="button" class="btn btn-ghost btn-sm" id="ib-aprender-btn" title="La IA lee este chat y propone qué aprender (queda en Setter IA › Para aprobar)">Aprender de este chat</button></div></details>`;
+    <button type="button" class="btn btn-ghost btn-sm" id="ib-aprender-btn" title="La IA lee este chat y propone qué aprender (queda en Setter IA › Para aprobar)">Aprender de este chat</button></div></details>
+    <button type="button" class="btn btn-ghost btn-sm ib-ficha-btn" id="ib-ficha-btn" aria-pressed="${ibFichaGet() === '1'}" aria-controls="ib-ficha" title="Mostrar u ocultar la ficha del lead">Ficha</button>`;
+  el('ib-ficha-btn').addEventListener('click', ibFichaToggle);
   el('ib-volver').addEventListener('click', () => { ibSel = null; el('ib-root').dataset.abierto = '0'; sincronizarHash(); ibPintarLista(); });
   el('ib-ia-btn').addEventListener('click', () => ibAccion({ accion: c.ia_activa ? 'tomar_control' : 'devolver_ia' }));
   const calif = el('ib-calif');
@@ -13755,7 +13781,7 @@ function ibPintarFicha(){
       ${fila('Código web', l.codigo_web)}${fila('Abrió', c.abierta_por === 'nosotros' ? 'Nosotros' : 'El lead')}
     </dl>
     ${l.ia_resumen ? `<h3>Resumen de la IA</h3><p>${esc(l.ia_resumen)}</p>` : ''}
-    <button type="button" class="btn btn-ghost btn-sm" id="ib-abrir-lead">Abrir la ficha completa</button>
+    <div class="ib-ficha-acc"><button type="button" class="btn btn-ghost btn-sm" id="ib-abrir-lead">Abrir la ficha completa</button>${l.manychat_id ? `<a class="btn btn-ghost btn-sm" href="${esc(MANYCHAT_CHAT(l.manychat_id))}" target="_blank" rel="noopener">Abrir chat en ManyChat</a>` : ''}</div>
     <h3 style="margin-top:var(--s5)">Análisis</h3>
     ${a ? `<dl>
       ${fila('Intención', a.intencion_inicial)}${fila('Tipo', a.tipo_lead)}${fila('Próxima acción', a.proxima_accion)}${fila('Prioridad', a.prioridad)}

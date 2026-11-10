@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS leads (
   salida TEXT,
   dias INTEGER,
   itinerario TEXT,
+  manychat_id TEXT,
   creado_en TEXT NOT NULL,
   actualizado_en TEXT NOT NULL
 );

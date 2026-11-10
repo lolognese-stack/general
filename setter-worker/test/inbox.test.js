@@ -207,3 +207,12 @@ describe('nota interna', () => {
     expect((await nota({ whatsapp: 'abc', texto: 'x' })).status).toBe(400);
   });
 });
+
+describe('manychat_id en el chat', () => {
+  it('el chat trae el manychat_id del lead para el botón de ManyChat', async () => {
+    const c = await uno('SELECT id, lead_id FROM wa_conversaciones WHERE wa_id = ?', '51911111111');
+    await env.DB.prepare('UPDATE leads SET manychat_id = ? WHERE id = ?').bind('1234567890', c.lead_id).run();
+    const r = await chat.onRequestGet({ request: pedido('/api/setter/conversaciones/' + c.id), env: envCrm(), params: { id: String(c.id) } });
+    expect((await r.json()).lead.manychat_id).toBe('1234567890');
+  });
+});
