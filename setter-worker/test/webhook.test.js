@@ -176,6 +176,17 @@ describe('envío interno', () => {
     expect(await uno('SELECT count(*) n FROM leads')).toEqual({ n: 1 });
   });
 
+  it('el error de Kapso por ventana cerrada llega entendible, no como "error desconocido"', async () => {
+    await webhookFirmado(W(), payloadMensaje());
+    mockMeta(() => Response.json({ error: 'Cannot send non-template messages outside the 24-hour window.', next_steps: 'Send a WhatsApp template message to reopen the session.' }, { status: 422 }));
+    const r = await pedir({ wa_id: '51930299443', texto: 'Hola' });
+    expect(r.status).toBe(502);
+    const { error } = await r.json();
+    expect(error).toContain('Cannot send non-template messages outside the 24-hour window.');
+    expect(error).toContain('plantilla aprobada');
+    expect(error).not.toContain('error desconocido');
+  });
+
   it('si Meta falla, devuelve 502 y lo deja en setter_eventos', async () => {
     await webhookFirmado(W(), payloadMensaje());
     mockMeta(() => Response.json({ error: { message: 'Recipient not in allowed list' } }, { status: 400 }));

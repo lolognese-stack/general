@@ -95,7 +95,13 @@ export class MetaCloudAdapter {
       body: JSON.stringify({ messaging_product: 'whatsapp', ...payload }),
     });
     const data = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(`${this.nombre} ${r.status}: ${data.error?.message || 'error desconocido'}`);
+    if (!r.ok) {
+      // Meta manda { error: { message } }; Kapso a veces manda { error: "texto" }.
+      const motivo = data.error?.message || (typeof data.error === 'string' ? data.error : null) || data.message || 'error desconocido';
+      const sinVentana = /24-hour window|outside the (24|twenty)/i.test(motivo)
+        ? ': fuera de la ventana de 24 h solo se puede mandar una plantilla aprobada (o escribirle desde el celular)' : '';
+      throw new Error(`${this.nombre} ${r.status}: ${motivo}${sinVentana}`);
+    }
     return data;
   }
 
