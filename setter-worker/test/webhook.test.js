@@ -164,14 +164,14 @@ describe('envío interno', () => {
     expect(await uno(`SELECT direccion, autor, estado FROM wa_mensajes WHERE provider_id = 'wamid.OUT2'`)).toEqual({ direccion: 'out', autor: 'asesora_web', estado: 'sent' });
   });
 
-  it('con la ventana cerrada rechaza texto y acepta plantilla', async () => {
+  it('con la ventana cerrada el equipo manda texto igual (Meta decide) y también plantilla', async () => {
     const f = mockMeta(() => Response.json({ messages: [{ id: 'wamid.T1' }] }));
     const r1 = await pedir({ wa_id: '+51 930 299 443', texto: 'Hola' });
-    expect(r1.status).toBe(409);
-    expect(f).not.toHaveBeenCalled();
+    expect(r1.status).toBe(200);
+    expect(JSON.parse(f.mock.calls[0][1].body)).toMatchObject({ type: 'text', text: { body: 'Hola' } });
     const r2 = await pedir({ wa_id: '930299443', plantilla: { nombre: 'hello_world', idioma: 'en_US' } });
     expect(r2.status).toBe(200);
-    expect(JSON.parse(f.mock.calls[0][1].body)).toMatchObject({ type: 'template', template: { name: 'hello_world', language: { code: 'en_US' } } });
+    expect(JSON.parse(f.mock.calls[1][1].body)).toMatchObject({ type: 'template', template: { name: 'hello_world', language: { code: 'en_US' } } });
     expect(await uno('SELECT abierta_por FROM wa_conversaciones')).toEqual({ abierta_por: 'nosotros' });
     expect(await uno('SELECT count(*) n FROM leads')).toEqual({ n: 1 });
   });

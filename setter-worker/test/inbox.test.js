@@ -6,6 +6,7 @@ import * as lista from '../../functions/api/setter/conversaciones.js';
 import * as chat from '../../functions/api/setter/conversaciones/[id].js';
 import * as enviar from '../../functions/api/setter/conversaciones/[id]/enviar.js';
 import * as contactos from '../../functions/api/setter/contactos.js';
+import { enviar as enviarWorker } from '../src/enviar.js';
 import * as pulso from '../../functions/api/setter/pulso.js';
 import * as estado from '../../functions/api/setter/estado.js';
 import { prepararDb, webhookFirmado, payloadMensaje } from './ayuda.js';
@@ -114,11 +115,35 @@ describe('responder desde el CRM', () => {
     vi.restoreAllMocks();
   });
 
-  it('si el Worker rechaza (ventana cerrada), no pausa la IA', async () => {
+  it('con la ventana cerrada el equipo manda igual: el pedido sale a Meta', async () => {
     const { id } = await uno(`SELECT id FROM wa_conversaciones WHERE wa_id = '51922222222'`);
+    const original = globalThis.fetch;
+    const meta = vi.spyOn(globalThis, 'fetch').mockImplementation((url, init) =>
+      String(url).startsWith('https://graph.facebook.com/') ? Promise.resolve(Response.json({ messages: [{ id: 'wamid.CERR1' }] })) : original(url, init));
     const r = await enviar.onRequestPost({ request: pedido('/x', { method: 'POST', body: JSON.stringify({ texto: 'Hola' }) }), env: envCrm(), params: { id } });
-    expect(r.status).toBe(409);
+    expect(r.status).toBe(200);
+    expect(meta.mock.calls.some(([u]) => String(u).startsWith('https://graph.facebook.com/'))).toBe(true);
+    expect(await uno(`SELECT autor, texto FROM wa_mensajes WHERE provider_id = 'wamid.CERR1'`)).toEqual({ autor: 'asesora_web', texto: 'Hola' });
+    vi.restoreAllMocks();
+  });
+
+  it('si Meta rechaza el mensaje, vuelve su error y la IA no se pausa', async () => {
+    const { id } = await uno(`SELECT id FROM wa_conversaciones WHERE wa_id = '51922222222'`);
+    const original = globalThis.fetch;
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url, init) =>
+      String(url).startsWith('https://graph.facebook.com/')
+        ? Promise.resolve(Response.json({ error: { message: 'Re-engagement message', code: 131047 } }, { status: 400 }))
+        : original(url, init));
+    const r = await enviar.onRequestPost({ request: pedido('/x', { method: 'POST', body: JSON.stringify({ texto: 'Hola' }) }), env: envCrm(), params: { id } });
+    expect(r.status).toBe(502);
+    expect((await r.json()).error).toContain('Re-engagement');
     expect(await uno('SELECT ia_activa FROM wa_conversaciones WHERE id = ?', id)).toEqual({ ia_activa: 1 });
+    vi.restoreAllMocks();
+  });
+
+  it('los envíos automáticos (IA) siguen sin poder salir con la ventana cerrada', async () => {
+    const { id } = await uno(`SELECT id FROM wa_conversaciones WHERE wa_id = '51922222222'`);
+    await expect(enviarWorker(env, {}, { conversacionId: id, texto: 'x', autor: 'ia' })).rejects.toMatchObject({ status: 409 });
   });
 });
 

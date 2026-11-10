@@ -74,6 +74,7 @@ async function enviarInterno(request, env) {
     const r = await enviar(env, canalDe(env), {
       conversacionId: b.conversacion_id, waId: b.wa_id, texto: b.texto, media: b.media,
       plantilla: b.plantilla, autor: b.autor || 'asesora_web',
+      forzar: true,   // desde el panel el equipo manda aunque la ventana esté cerrada
     });
     return json({ ok: true, conversacion_id: r.conversacionId, provider_id: r.providerId });
   } catch (e) {
