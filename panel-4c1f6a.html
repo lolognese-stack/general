@@ -2054,6 +2054,31 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 .st-barras b{text-align:right;font-variant-numeric:tabular-nums}
 @media (max-width:1180px){ .st{grid-template-columns:200px minmax(0,1fr);height:auto} .st > div:last-child{grid-column:1 / -1;border-left:none;border-top:1px solid var(--line);min-height:420px} .st-con{grid-template-columns:1fr} }
 @media (max-width:760px){ .st{grid-template-columns:1fr} .st > div + div{border-left:none;border-top:1px solid var(--line)} .st-ed{min-height:320px} }
+
+/* Performance > Anuncios: planilla diaria. Blanco se carga, gris se calcula. */
+.an-mes{display:flex;align-items:center;gap:10px;font-size:13px}
+.an-mes strong{min-width:140px;text-align:center;text-transform:capitalize}
+.an-nav{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:var(--radius-sm);width:30px;height:30px;font-size:17px;line-height:1;cursor:pointer}
+.an-nav:hover{border-color:var(--ink-2)}
+.an-kpis{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin-bottom:var(--s3)}
+.an-wrap{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow-x:auto;box-shadow:var(--shadow)}
+.an-tbl{border-collapse:separate;border-spacing:0;font-size:12.5px;font-variant-numeric:tabular-nums;width:100%}
+.an-tbl th,.an-tbl td{border-bottom:1px solid var(--line-soft);border-right:1px solid var(--line-soft);white-space:nowrap;text-align:right;padding:7px 10px}
+.an-tbl thead th{background:var(--surface-2);font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);white-space:normal;min-width:86px;vertical-align:bottom}
+.an-tbl thead tr.an-grupos th{text-align:left;color:var(--ink-2);border-bottom:1px solid var(--line)}
+.an-tbl thead th.an-h-m{color:var(--ink)}
+.an-tbl tr > th:first-child{position:sticky;left:0;z-index:1;background:var(--surface-2);text-align:left;font-weight:600;color:var(--ink-2);min-width:96px}
+.an-tbl td.an-m{background:var(--surface);padding:0}
+.an-tbl td.an-g{background:var(--surface-sunk);color:var(--ink-2)}
+.an-in{display:block;width:100%;min-width:86px;border:0;background:transparent;font:inherit;color:var(--ink);text-align:right;padding:7px 10px;font-variant-numeric:tabular-nums}
+.an-in:focus{outline:2px solid var(--glacier);outline-offset:-2px}
+.an-in[data-estado="guardando"]{opacity:.55}
+.an-in[data-estado="error"]{box-shadow:inset 0 0 0 2px var(--danger)}
+.an-tbl tr.an-lunes > *{border-top:2px solid var(--ink-3)}
+.an-tbl tr.an-sem > *{background:var(--surface-2);font-weight:700;color:var(--ink)}
+.an-tbl tr.an-tot > *{background:var(--surface-sunk);font-weight:700;color:var(--ink);border-top:2px solid var(--ink);border-bottom:0}
+.an-tbl [data-tono="ojo"]{color:var(--masomenos);font-weight:700}
+.an-tbl [data-tono="mal"]{color:var(--danger);font-weight:700}
 </style>
 </head>
 <body>
@@ -3480,7 +3505,7 @@ function parseHash(){
     }
     return;
   }
-  const m = location.hash.match(/^#\/(leads|agendas|conversacion|planificador|historias|performance|objetivos|web|formulario|inbox|setter|cotizador)(?:\/(pipeline|calificacion|tabla|cuenta|contenido|ranking|acumulado|detalle|calendario|leads|resumen|config|semana|weekly|agentes|analiticas|recursos|conocimiento|aprobar|simulador|salud|ajustes))?/);
+  const m = location.hash.match(/^#\/(leads|agendas|conversacion|planificador|historias|performance|objetivos|web|formulario|inbox|setter|cotizador)(?:\/(pipeline|calificacion|tabla|cuenta|anuncios|contenido|ranking|acumulado|detalle|calendario|leads|resumen|config|semana|weekly|agentes|analiticas|recursos|conocimiento|aprobar|simulador|salud|ajustes))?/);
   if(!m) return;
   if(m[1] === 'leads' && m[2]){
     vista = m[2];
@@ -8964,6 +8989,268 @@ function pfAudienciaHtml(){
 // todo apilado). El selector de período (semana/mes/total) es compartido por
 // Contenido/Ranking/Leads -- Cuenta usa su propio corte (rango de
 // metricasCuenta), por eso no lo muestra.
+/* ---------------- Performance > Anuncios (planilla diaria de Follow Me Ads) ---------------- */
+// Una fila por día. Celdas blancas: se cargan a mano desde Ads Manager y se
+// guardan al salir de la celda. Celdas grises: se calculan (CPM, CTR, costos)
+// o salen de lo que el CRM ya tiene de ese día (cuenta de Instagram, Sheet de
+// setting, ventas). Datos: /api/anuncios (functions/api/anuncios.js).
+let anMes = new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 7); // mes en curso, hora de Perú
+let anDatos = {};        // fecha -> fila
+let anMesCargado = null;
+let anCargando = false;
+
+// [campo, título, tipo]  m = manual · c = calculada · a = automática del CRM
+const AN_COLS = [
+  ['inversion', 'Inversión USD', 'm'], ['impresiones', 'Impresiones', 'm'], ['cpm', 'CPM', 'c'],
+  ['clicks', 'Clics', 'm'], ['ctr', 'CTR', 'c'], ['cpc', 'Costo por clic', 'c'],
+  ['seguidores', 'Seguidores por anuncios', 'm'], ['cps', 'Costo por seguidor', 'c'], ['frecuencia', 'Frecuencia', 'm'],
+  ['views', 'Views totales', 'a'], ['comentarios', 'Comentarios', 'a'], ['seguidores_total', 'Seguidores totales', 'a'],
+  ['conversaciones', 'Conversaciones', 'a'], ['cotizaciones', 'Cotizaciones', 'a'], ['ventas', 'Ventas', 'a'],
+];
+const AN_DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+const AN_MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+function anFechasDelMes(mes){
+  const [y, m] = mes.split('-').map(Number);
+  const n = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  return Array.from({ length: n }, (_, i) => `${mes}-${String(i + 1).padStart(2, '0')}`);
+}
+function anMesMover(mes, d){
+  const [y, m] = mes.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1 + d, 1)).toISOString().slice(0, 7);
+}
+function anDiaSemana(f){ return new Date(f + 'T00:00:00Z').getUTCDay(); }
+// Semanas de lunes a domingo, recortadas al mes.
+function anSemanas(fechas){
+  const out = [];
+  let actual = [];
+  fechas.forEach((f, i) => {
+    actual.push(f);
+    if(anDiaSemana(f) === 0 || i === fechas.length - 1){ out.push({ clave: 'w' + out.length, fechas: actual }); actual = []; }
+  });
+  return out;
+}
+function anN(v){ return v === null || v === undefined || v === '' ? null : Number(v); }
+function anFmt(v, dec = 0){
+  return v === null || !isFinite(v) ? '' : v.toLocaleString('es-AR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+function anValor(v){ return v === null || v === undefined ? '' : String(v).replace('.', ','); }
+// "1.250" = mil doscientos cincuenta, "12,5" y "12.5" = doce y medio.
+function anParse(txt){
+  let s = String(txt).trim().replace(/\s|USD|\$|%/gi, '');
+  if(s === '') return null;
+  if(s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+  else if(/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
+  const n = Number(s);
+  return isFinite(n) && n >= 0 ? n : NaN;
+}
+
+function anSuma(fechas){
+  const s = { inversion: 0, impresiones: 0, clicks: 0, seguidores: 0, views: 0, comentarios: 0, seguidores_total: 0,
+    conversaciones: 0, conversaciones_pieza: 0, cotizaciones: 0, ventas: 0, frecSum: 0, frecN: 0, hay: {} };
+  fechas.forEach(f => {
+    const d = anDatos[f];
+    if(!d) return;
+    ['inversion', 'impresiones', 'clicks', 'seguidores', 'views', 'seguidores_total', 'conversaciones', 'conversaciones_pieza', 'cotizaciones', 'ventas'].forEach(k => {
+      const v = anN(d[k]);
+      if(v !== null){ s[k] += v; s.hay[k] = true; }
+    });
+    // Instagram cuenta también la respuesta automática de ManyChat: la mitad
+    // son personas. Mismo criterio que las tasas de comentarios de Contenido.
+    const c = anN(d.comentarios_ig);
+    if(c !== null){ s.comentarios += c / 2; s.hay.comentarios = true; }
+    const fr = anN(d.frecuencia);
+    if(fr !== null){ s.frecSum += fr; s.frecN++; }
+  });
+  s.cpm = s.impresiones ? s.inversion / s.impresiones * 1000 : null;
+  s.ctr = s.impresiones && s.hay.clicks ? s.clicks / s.impresiones * 100 : null;
+  s.cpc = s.clicks ? s.inversion / s.clicks : null;
+  s.cps = s.seguidores ? s.inversion / s.seguidores : null;
+  s.frec = s.frecN ? s.frecSum / s.frecN : null;
+  return s;
+}
+
+async function cargarAnuncios(){
+  if(anCargando) return;
+  anCargando = true;
+  const mes = anMes, fs = anFechasDelMes(mes);
+  try{
+    const r = await api(`/api/anuncios?desde=${fs[0]}&hasta=${fs[fs.length - 1]}`);
+    anDatos = {};
+    (r.dias || []).forEach(d => { anDatos[d.fecha] = d; });
+  }catch(e){
+    anDatos = {};
+    if(e.message !== 'unauthorized') toast('No se pudo cargar la planilla de anuncios: ' + e.message);
+  }
+  anMesCargado = mes;
+  anCargando = false;
+  if(seccion === 'performance' && pfVista === 'anuncios') renderPerformance();
+}
+
+function pfAnunciosHtml(){
+  if(anMesCargado !== anMes){
+    cargarAnuncios();
+    return `<div class="ag-empty">Cargando planilla de anuncios…</div>`;
+  }
+  const fechas = anFechasDelMes(anMes);
+  const [y, m] = anMes.split('-').map(Number);
+  const nombreMes = `${AN_MESES[m - 1]} de ${y}`;
+  const fin = {};   // última fecha de cada semana -> semana
+  anSemanas(fechas).forEach(w => { fin[w.fechas[w.fechas.length - 1]] = w; });
+
+  const celdasGrupo = clave => AN_COLS.map(([c]) => `<td id="an-${clave}-${c}"></td>`).join('');
+  const filaDia = f => {
+    const d = anDatos[f] || {}, ds = anDiaSemana(f);
+    return `<tr class="${ds === 1 ? 'an-lunes' : ''}"><th scope="row">${AN_DIAS[ds]} ${Number(f.slice(8))}</th>${AN_COLS.map(([c, titulo, tipo]) => tipo === 'm'
+      ? `<td class="an-m"><input class="an-in" id="an-in-${f}-${c}" data-f="${f}" data-c="${c}" inputmode="decimal" autocomplete="off" value="${esc(anValor(d[c]))}" aria-label="${esc(titulo)}, ${Number(f.slice(8))} de ${AN_MESES[m - 1]}"></td>`
+      : `<td class="an-g" id="an-${f}-${c}"></td>`).join('')}</tr>`;
+  };
+  const filaSemana = w => {
+    const a = Number(w.fechas[0].slice(8)), b = Number(w.fechas[w.fechas.length - 1].slice(8));
+    return `<tr class="an-sem"><th scope="row">Semana ${a === b ? a : a + ' al ' + b}</th>${celdasGrupo(w.clave)}</tr>`;
+  };
+
+  return `
+    <div class="ag-sec-h" style="margin-top:var(--s4)">
+      <h2>Planilla de anuncios</h2>
+      <div class="an-mes">
+        <button type="button" class="an-nav" id="an-prev" aria-label="Mes anterior">‹</button>
+        <strong id="an-mes-nombre">${nombreMes}</strong>
+        <button type="button" class="an-nav" id="an-next" aria-label="Mes siguiente">›</button>
+      </div>
+    </div>
+    <dl class="kpis an-kpis">
+      <div class="kpi"><dt>Inversión</dt><dd id="an-k-inversion"></dd></div>
+      <div class="kpi"><dt>Seguidores por anuncios</dt><dd id="an-k-seguidores"></dd></div>
+      <div class="kpi" data-tone="brand"><dt>Costo por seguidor</dt><dd id="an-k-cps"></dd></div>
+      <div class="kpi"><dt>CPM</dt><dd id="an-k-cpm"></dd></div>
+      <div class="kpi"><dt>Conversaciones</dt><dd id="an-k-conversaciones"></dd></div>
+      <div class="kpi"><dt>Cotizaciones</dt><dd id="an-k-cotizaciones"></dd></div>
+      <div class="kpi"><dt>Ventas</dt><dd id="an-k-ventas"></dd></div>
+    </dl>
+    <div class="cv-note" style="margin:0 0 var(--s3)">Las celdas claras se cargan desde Ads Manager y se guardan al salir de la celda. Las oscuras se calculan solas o vienen del CRM: cuenta de Instagram, Sheet de setting y ventas.</div>
+    <div class="an-wrap"><table class="an-tbl" id="an-tabla">
+      <thead>
+        <tr class="an-grupos"><th></th><th colspan="9">Ads Manager</th><th colspan="6">Embudo del día, desde el CRM</th></tr>
+        <tr><th scope="col">Día</th>${AN_COLS.map(([, titulo, tipo]) => `<th scope="col" class="an-h-${tipo}">${titulo}</th>`).join('')}</tr>
+      </thead>
+      <tbody>${fechas.map(f => filaDia(f) + (fin[f] ? filaSemana(fin[f]) : '')).join('')}</tbody>
+      <tfoot><tr class="an-tot"><th scope="row">Total ${AN_MESES[m - 1]}</th>${celdasGrupo('tot')}</tr></tfoot>
+    </table></div>
+    <div class="ag-sec-h" style="margin-top:var(--s5)"><h2>Tasas reales del mes</h2><span class="hint">para reemplazar los supuestos de la proyección de Follow Me Ads</span></div>
+    <dl class="kpis an-kpis">
+      <div class="kpi"><dt>Costo por mil impresiones</dt><dd id="an-t-cpm"></dd></div>
+      <div class="kpi"><dt>Costo por seguidor</dt><dd id="an-t-cps"></dd></div>
+      <div class="kpi"><dt>Comentarios cada 1.000 views</dt><dd id="an-t-comviews"></dd></div>
+      <div class="kpi"><dt>Comentario a conversación</dt><dd id="an-t-comconv"></dd></div>
+      <div class="kpi"><dt>Seguidor nuevo a conversación</dt><dd id="an-t-segconv"></dd></div>
+      <div class="kpi"><dt>Conversación a cotización</dt><dd id="an-t-convcot"></dd></div>
+      <div class="kpi"><dt>Cotización a venta</dt><dd id="an-t-cotventa"></dd></div>
+    </dl>
+    <div class="cv-note">Comentarios: la mitad de los que muestra Instagram, porque la otra mitad son respuestas de ManyChat. Conversación = persona que entró al Sheet de setting ese día; las que entraron por una pieza cuentan como venidas de un comentario y el resto como venidas de seguir la cuenta. Cotización = persona que llegó al formulario. Con pocos casos las tasas se mueven mucho.</div>`;
+}
+
+function anPintarGrupo(clave, fechas, esDia){
+  const s = anSuma(fechas);
+  const set = (col, txt, tono) => {
+    const e = el(`an-${clave}-${col}`);
+    if(!e) return;
+    e.textContent = txt;
+    e.dataset.tono = tono || '';
+  };
+  if(!esDia){
+    set('inversion', s.hay.inversion ? anFmt(s.inversion, 2) : '');
+    set('impresiones', s.hay.impresiones ? anFmt(s.impresiones) : '');
+    set('clicks', s.hay.clicks ? anFmt(s.clicks) : '');
+    set('seguidores', s.hay.seguidores ? anFmt(s.seguidores) : '');
+    set('frecuencia', anFmt(s.frec, 2), s.frec === null ? '' : s.frec >= 2 ? 'mal' : s.frec >= 1.6 ? 'ojo' : '');
+  }else{
+    const inp = el(`an-in-${clave}-frecuencia`);
+    if(inp) inp.dataset.tono = s.frec === null ? '' : s.frec >= 2 ? 'mal' : s.frec >= 1.6 ? 'ojo' : '';
+  }
+  set('cpm', anFmt(s.cpm, 2));
+  set('ctr', s.ctr === null ? '' : anFmt(s.ctr, 2) + '%', s.ctr === null ? '' : s.ctr < 0.5 ? 'mal' : s.ctr > 5 ? 'ojo' : '');
+  set('cpc', anFmt(s.cpc, 2));
+  set('cps', anFmt(s.cps, 2), s.cps !== null && s.cps > 15 ? 'mal' : '');
+  set('views', s.hay.views ? anFmt(s.views) : '');
+  set('comentarios', s.hay.comentarios ? anFmt(Math.round(s.comentarios)) : '');
+  set('seguidores_total', s.hay.seguidores_total ? anFmt(s.seguidores_total) : '');
+  set('conversaciones', s.hay.conversaciones ? anFmt(s.conversaciones) : '');
+  set('cotizaciones', s.hay.cotizaciones ? anFmt(s.cotizaciones) : '');
+  set('ventas', s.hay.ventas ? anFmt(s.ventas) : '');
+  return s;
+}
+
+// Rellena todo lo gris: filas, semanas, total, KPIs y tasas. Se llama al
+// dibujar y después de cada guardado, sin rehacer la tabla (el foco no se pierde).
+function anPintar(){
+  if(!el('an-tabla')) return;
+  const fechas = anFechasDelMes(anMes);
+  fechas.forEach(f => anPintarGrupo(f, [f], true));
+  anSemanas(fechas).forEach(w => anPintarGrupo(w.clave, w.fechas, false));
+  const t = anPintarGrupo('tot', fechas, false);
+  const k = (id, txt) => { const e = el(id); if(e) e.textContent = txt || '—'; };
+  const usd = (v, dec = 2) => v === null ? '' : 'USD ' + anFmt(v, dec);
+  const pct = (a, b) => b ? anFmt(a / b * 100, 1) + '%' : '';
+  k('an-k-inversion', t.hay.inversion ? usd(t.inversion, 0) : '');
+  k('an-k-seguidores', t.hay.seguidores ? anFmt(t.seguidores) : '');
+  k('an-k-cps', usd(t.cps));
+  k('an-k-cpm', usd(t.cpm));
+  k('an-k-conversaciones', t.hay.conversaciones ? anFmt(t.conversaciones) : '');
+  k('an-k-cotizaciones', t.hay.cotizaciones ? anFmt(t.cotizaciones) : '');
+  k('an-k-ventas', t.hay.ventas ? anFmt(t.ventas) : '');
+  k('an-t-cpm', usd(t.cpm));
+  k('an-t-cps', usd(t.cps));
+  k('an-t-comviews', t.views ? anFmt(t.comentarios / t.views * 1000, 1) : '');
+  k('an-t-comconv', pct(t.conversaciones_pieza, t.comentarios));
+  k('an-t-segconv', pct(t.conversaciones - t.conversaciones_pieza, t.seguidores_total));
+  k('an-t-convcot', pct(t.cotizaciones, t.conversaciones));
+  k('an-t-cotventa', pct(t.ventas, t.cotizaciones));
+}
+
+function pfAnunciosWire(){
+  const tabla = el('an-tabla');
+  const mover = d => { anMes = anMesMover(anMes, d); renderPerformance(); };
+  if(el('an-prev')) el('an-prev').addEventListener('click', () => mover(-1));
+  if(el('an-next')) el('an-next').addEventListener('click', () => mover(1));
+  if(!tabla) return;
+  anPintar();
+
+  tabla.addEventListener('change', async e => {
+    const inp = e.target.closest('.an-in');
+    if(!inp) return;
+    const f = inp.dataset.f, c = inp.dataset.c;
+    const previo = anDatos[f] ? anDatos[f][c] : null;
+    const v = anParse(inp.value);
+    if(Number.isNaN(v)){
+      toast('Eso no es un número. Escribí solo la cifra, por ejemplo 12,50.');
+      inp.value = anValor(previo);
+      return;
+    }
+    inp.dataset.estado = 'guardando';
+    try{
+      const r = await api('/api/anuncios', { method: 'POST', body: JSON.stringify({ fecha: f, [c]: v }) });
+      anDatos[f] = { ...(anDatos[f] || { fecha: f }), ...r.dia };
+      if(document.activeElement !== inp) inp.value = anValor(anDatos[f][c]);
+      inp.dataset.estado = '';
+      anPintar();
+    }catch(err){
+      inp.dataset.estado = 'error';
+      if(err.message !== 'unauthorized') toast('No se guardó: ' + err.message);
+    }
+  });
+  // Enter baja a la misma columna del día siguiente, como en una planilla.
+  tabla.addEventListener('keydown', e => {
+    if(e.key !== 'Enter') return;
+    const inp = e.target.closest('.an-in');
+    if(!inp) return;
+    e.preventDefault();
+    const fechas = anFechasDelMes(anMes), i = fechas.indexOf(inp.dataset.f);
+    const sig = el(`an-in-${fechas[i + (e.shiftKey ? -1 : 1)]}-${inp.dataset.c}`);
+    if(sig){ sig.focus(); sig.select(); } else inp.blur();
+  });
+}
+
 function renderPerformance(){
   if(pfVista === 'calendario') return renderPfCalendario();
   pfVistaTabla = pfVista;
@@ -9013,11 +9300,12 @@ function renderPerformance(){
     <div class="ag-sec-h"><h2>Dashboard de leads</h2><span class="hint">atribución por etiqueta ManyChat, período elegido arriba</span></div>
     ${pfDashboardHtml(subidas)}`;
 
-  const necesitaPeriodo = pfVista !== 'cuenta';
+  const necesitaPeriodo = pfVista !== 'cuenta' && pfVista !== 'anuncios';
 
   const bloques = {
     contenido: bloqueContenido, acumulado: bloqueAcumulado,
     leads: bloqueLeads, detalle: bloqueDetalle, cuenta: bloqueCuenta,
+    anuncios: pfAnunciosHtml,
   };
 
   el('view-performance').innerHTML = `
@@ -9029,6 +9317,7 @@ function renderPerformance(){
         <button data-v="leads" aria-current="${pfVista==='leads'}">Leads</button>
         <button data-v="detalle" aria-current="${pfVista==='detalle'}">Detalle</button>
         <button data-v="cuenta" aria-current="${pfVista==='cuenta'}">Cuenta</button>
+        <button data-v="anuncios" aria-current="${pfVista==='anuncios'}">Anuncios</button>
       </div>
       ${necesitaPeriodo ? `<div class="pz-toolbar-left pf2-per">
         <div class="cv-vswitch" id="pf-periodo-tipo">
@@ -9053,6 +9342,7 @@ function renderPerformance(){
   pzWireRows(el('view-performance'));
   pfWireModo();
   pzSinAsociarWire(el('view-performance'));
+  if(pfVista === 'anuncios') pfAnunciosWire();
 
   const rangoSel = el('pf-ig-rango');
   if(rangoSel) rangoSel.querySelectorAll('button').forEach(b => {
