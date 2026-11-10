@@ -1,7 +1,7 @@
 import { env, exports } from 'cloudflare:workers';
 import { runDurableObjectAlarm, runInDurableObject } from 'cloudflare:test';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { normalizarWa, codigoWebDe } from '../src/leads.js';
+import { normalizarWa, codigoWebDe, variantes } from '../src/leads.js';
 import { prepararDb, webhookFirmado, payloadMensaje, payloadEstado, payloadEcho } from './ayuda.js';
 
 const W = () => exports.default;
@@ -223,5 +223,31 @@ describe('normalización', () => {
   it('saca el código de la web en mayúsculas', () => {
     expect(codigoWebDe('hola (ref ll-000123)')).toBe('LL-000123');
     expect(codigoWebDe('hola')).toBe(null);
+  });
+});
+
+describe('mismo número, distinta forma (México 52/521, Argentina 54/549)', () => {
+  it('variantes() devuelve las dos formas', () => {
+    expect(variantes('5217122164668').sort()).toEqual(['5217122164668', '527122164668']);
+    expect(variantes('527122164668').sort()).toEqual(['5217122164668', '527122164668']);
+    expect(variantes('5491123456789').sort()).toEqual(['541123456789', '5491123456789']);
+    expect(variantes('51930299443')).toEqual(['51930299443']);
+  });
+
+  it('el eco de lo que mandás desde el celular (521…) cae en el chat del lead cargado como 52…', async () => {
+    await env.DB.prepare(`INSERT INTO leads (nombre, whatsapp, etapa, creado_en, actualizado_en) VALUES ('Ulises', '+52 712 216 4668', 'lead_nuevo', ?1, ?1)`).bind(new Date().toISOString()).run();
+    await webhookFirmado(W(), payloadEcho({ waId: '5217122164668', id: 'wamid.MX1', texto: 'Hola Ulises' }));
+    expect(await uno('SELECT count(*) n FROM leads')).toEqual({ n: 1 });
+    const conv = await uno('SELECT c.wa_id, l.nombre FROM wa_conversaciones c JOIN leads l ON l.id = c.lead_id');
+    expect(conv.nombre).toBe('Ulises');
+    expect(await uno(`SELECT count(*) n FROM wa_mensajes WHERE provider_id = 'wamid.MX1'`)).toEqual({ n: 1 });
+  });
+
+  it('un segundo mensaje con la otra forma del número usa el mismo chat', async () => {
+    await webhookFirmado(W(), payloadMensaje({ waId: '527122164668', id: 'wamid.MX2', texto: 'Hola' }));
+    await webhookFirmado(W(), payloadEcho({ waId: '5217122164668', id: 'wamid.MX3', texto: 'Te contesto' }));
+    expect(await uno('SELECT count(*) n FROM wa_conversaciones')).toEqual({ n: 1 });
+    expect(await uno('SELECT count(*) n FROM leads')).toEqual({ n: 1 });
+    expect(await uno('SELECT count(*) n FROM wa_mensajes')).toEqual({ n: 2 });
   });
 });
