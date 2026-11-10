@@ -118,7 +118,7 @@ export async function aprenderDeChat(env, { conversacion_id, nota = '' }, { clau
 
 async function textoDelChat(db, convId, hasta, max, desde = null) {
   const msgs = (await db.prepare(
-    `SELECT * FROM (SELECT autor, tipo, texto, transcripcion, creado_en FROM wa_mensajes WHERE conversacion_id = ? AND creado_en <= ? ORDER BY creado_en DESC LIMIT ${max}) ORDER BY creado_en`
+    `SELECT * FROM (SELECT autor, tipo, texto, transcripcion, creado_en FROM wa_mensajes WHERE conversacion_id = ? AND creado_en <= ? AND tipo <> 'nota' ORDER BY creado_en DESC LIMIT ${max}) ORDER BY creado_en`
   ).bind(convId, hasta).all()).results;
   return msgs.map((m) => {
     const t = m.tipo === 'audio' ? '[nota de voz] ' + (m.transcripcion || '') : (m.texto || `[${m.tipo}]`);
