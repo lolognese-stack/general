@@ -1870,12 +1870,25 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 .ib{display:grid;grid-template-columns:320px minmax(0,1fr) 290px;height:calc(100vh - 128px);min-height:460px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow);overflow:hidden}
 .ib-col{display:flex;flex-direction:column;min-height:0;min-width:0}
 .ib-col + .ib-col{border-left:1px solid var(--line)}
-.ib-filtros{padding:var(--s3);border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.ib-filtros{padding:0;border-bottom:1px solid var(--line);display:flex;flex-direction:column}
+.ib-barra{display:flex;align-items:center;gap:8px;padding:10px var(--s3);min-height:48px}
+.ib-barra .ib-cuenta{flex:1;min-width:0;font-size:12px;font-weight:600;color:var(--ink-2)}
+.ib-barra .ib-limpiar{border:none;background:none;color:var(--ink-3);font:inherit;font-size:11.5px;text-decoration:underline;cursor:pointer;padding:6px 4px}
+.ib-barra .ib-limpiar[hidden]{display:none}
+.ib-filtro-btn{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 10px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink-2);font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+.ib-filtro-btn:hover{background:var(--surface-2)}
+.ib-filtro-btn[data-on="1"]{color:var(--ink);border-color:var(--ink-3)}
+.ib-filtro-btn svg{width:12px;height:12px;transition:transform .16s ease-out}
+.ib-filtro-btn[aria-expanded="true"] svg{transform:rotate(180deg)}
+.ib-filtro-n{display:inline-grid;place-items:center;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--brand);color:var(--brand-on);font-size:10px;font-style:normal;font-weight:700}
+.ib-filtro-n[hidden]{display:none}
+.ib-filtro-panel{display:flex;flex-direction:column;gap:8px;padding:0 var(--s3) var(--s3)}
+.ib-filtro-panel[hidden]{display:none}
+.ib-filtro-panel:not([hidden]),.ib-nuevo:not([hidden]){animation:ib-in .16s ease-out}
+@keyframes ib-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.ib-filtro-panel:not([hidden]),.ib-nuevo:not([hidden]){animation:none}.ib-filtro-btn svg{transition:none}}
 .ib-filtros input[type=search]{width:100%;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);font:inherit;font-size:12.5px;padding:7px 9px}
-.ib-busca{display:flex;gap:6px;align-items:center}
-.ib-busca input[type=search]{flex:1;min-width:0}
-.ib-busca .btn{white-space:nowrap}
-.ib-nuevo{display:flex;flex-direction:column;gap:6px;padding:8px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-2,var(--surface))}
+.ib-nuevo{display:flex;flex-direction:column;gap:6px;margin:0 var(--s3) var(--s3);padding:8px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-2,var(--surface))}
 .ib-nuevo[hidden]{display:none}
 .ib-nuevo input{width:100%;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);font:inherit;font-size:12.5px;padding:7px 9px}
 .ib-nuevo-acc{display:flex;gap:6px;justify-content:flex-end}
@@ -1886,7 +1899,7 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 .ib-cuenta{font-size:11px;color:var(--ink-3);display:flex;justify-content:space-between;gap:8px}
 .ib-cuenta button{border:none;background:none;color:var(--ink-3);font:inherit;font-size:11px;text-decoration:underline;cursor:pointer;padding:0}
 .ib-lista{flex:1;overflow-y:auto}
-.ib-item{display:block;width:100%;text-align:left;border:none;border-bottom:1px solid var(--line-soft);background:none;padding:10px var(--s3) 10px calc(var(--s3) + 3px);cursor:pointer;font:inherit;color:var(--ink);position:relative}
+.ib-item{display:block;width:100%;text-align:left;border:none;border-bottom:1px solid var(--line-soft);background:none;padding:12px var(--s3) 12px calc(var(--s3) + 3px);cursor:pointer;font:inherit;color:var(--ink);position:relative}
 .ib-item:hover{background:var(--surface-2)}
 .ib-item[aria-current="true"]{background:var(--surface-sunk)}
 .ib-item[data-urgente="1"]::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--danger)}
@@ -1897,10 +1910,16 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 .ib-prev span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ib-item[data-noleido="1"] .ib-prev span{color:var(--ink);font-weight:600}
 .ib-nl{flex:none;min-width:18px;height:18px;padding:0 5px;border-radius:4px;background:var(--brand);color:var(--brand-on);font-size:10.5px;font-weight:700;display:grid;place-items:center;font-variant-numeric:tabular-nums}
-.ib-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
-.ib-tag{font-size:10.5px;font-weight:600;color:var(--ink-3);border:1px solid var(--line);border-radius:4px;padding:1px 6px;white-space:nowrap}
-.ib-tag[data-t="urgente"]{color:var(--danger);border-color:var(--danger)}
-.ib-tag[data-t="humano"]{color:var(--ink);border-color:var(--ink-3)}
+.ib-meta{margin-top:4px;font-size:11px;line-height:1.4;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ib-meta .ib-urg{color:var(--danger);font-weight:700}
+.ib-mas{position:relative}
+.ib-mas>summary{list-style:none;cursor:pointer;display:inline-flex}
+.ib-mas>summary::-webkit-details-marker{display:none}
+.ib-mas-menu{position:absolute;right:0;top:calc(100% + 4px);z-index:20;display:flex;flex-direction:column;align-items:stretch;gap:2px;min-width:200px;padding:6px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);box-shadow:var(--shadow-lift)}
+.ib-mas-menu .btn{justify-content:flex-start;text-align:left}
+.ib-sug{margin-top:8px;padding:8px 10px;border-left:3px solid var(--ink-3);background:var(--surface);border-radius:0 6px 6px 0}
+.ib-sug-t{display:block;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);margin-bottom:2px}
+.ib-sug-m{display:block;white-space:pre-wrap;margin-bottom:6px}
 .ib-vacio{padding:var(--s5) var(--s4);text-align:center;color:var(--ink-3);font-size:12.5px;line-height:1.5}
 .ib-head{display:flex;align-items:center;gap:var(--s3);padding:10px var(--s4);border-bottom:1px solid var(--line);flex-wrap:wrap}
 .ib-head-quien{flex:1;min-width:160px}
@@ -1924,7 +1943,6 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 .ib-msj[data-dir="out"]{align-self:flex-end;background:var(--glacier-soft);border-color:transparent}
 .ib-msj[data-tipo="nota"]{align-self:stretch;max-width:100%;background:var(--masomenos-bg);border:1px dashed var(--masomenos)}
 .ib-msj[data-tipo="nota"] .ib-txt{white-space:pre-line}
-.ib-nota-wa{display:inline-block;margin:2px 0;padding:7px 12px;border-radius:6px;background:#25D366;color:#fff;font-weight:700;text-decoration:none}
 .ib-msj[data-autor="ia"]{background:var(--surface-sunk)}
 .ib-msj-autor{display:block;font-size:10.5px;font-weight:700;color:var(--ink-3);margin-bottom:2px;white-space:normal}
 .ib-ensenar{border:none;background:none;padding:0;font:inherit;font-size:10.5px;color:var(--ink-3);text-decoration:underline;cursor:pointer;margin-right:auto}
@@ -13299,13 +13317,20 @@ function renderInbox(){
   host.innerHTML = `<div class="ib" id="ib-root">
     <div class="ib-col ib-col-lista">
       <div class="ib-filtros">
-        <div class="ib-busca"><input type="search" id="ib-q" placeholder="Buscar por nombre, número o mensaje" autocomplete="off"><button type="button" class="btn btn-ghost btn-sm" id="ib-nuevo" aria-expanded="false" aria-controls="ib-nuevo-form">+ Contacto</button></div>
+        <div class="ib-barra">
+          <span class="ib-cuenta" id="ib-cuenta" aria-live="polite"></span>
+          <button type="button" class="ib-limpiar" id="ib-limpiar" hidden>Limpiar</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="ib-nuevo" aria-expanded="false" aria-controls="ib-nuevo-form">+ Contacto</button>
+          <button type="button" class="ib-filtro-btn" id="ib-filtro-btn" aria-expanded="false" aria-controls="ib-filtro-panel" data-on="0">Filtros<i class="ib-filtro-n" id="ib-filtro-n" hidden></i><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.5l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </div>
         <form class="ib-nuevo" id="ib-nuevo-form" hidden>
           <input type="text" id="ib-nuevo-nombre" placeholder="Nombre (opcional)" maxlength="80" autocomplete="off">
           <input type="tel" id="ib-nuevo-wa" placeholder="WhatsApp, con código de país: +51 982 360 927" required autocomplete="off">
           <div class="hint" id="ib-nuevo-res" aria-live="polite">La IA queda pausada en este chat. Para escribirle primero hace falta una plantilla aprobada por Meta.</div>
           <div class="ib-nuevo-acc"><button type="button" class="btn btn-ghost btn-sm" id="ib-nuevo-no">Cancelar</button><button type="submit" class="btn btn-primary btn-sm" id="ib-nuevo-ok">Agregar</button></div>
         </form>
+        <div class="ib-filtro-panel" id="ib-filtro-panel" hidden>
+        <input type="search" id="ib-q" placeholder="Buscar por nombre, número o mensaje" autocomplete="off" aria-label="Buscar chats">
         <div class="ib-sel">
           ${sel('estado', 'Estado: todos', IB_ESTADOS)}
           ${sel('responde', 'Responde: todos', [['ia','Con IA'], ['humano','Humano']])}
@@ -13319,7 +13344,7 @@ function renderInbox(){
         <div class="ib-sel" id="ib-rango" hidden>
           <input type="date" data-ibf="desde" aria-label="Desde"><input type="date" data-ibf="hasta" aria-label="Hasta">
         </div>
-        <div class="ib-cuenta"><span id="ib-cuenta"></span><button type="button" id="ib-limpiar" hidden>Limpiar filtros</button></div>
+        </div>
       </div>
       <div class="ib-lista" id="ib-lista"><div class="ib-vacio">Cargando…</div></div>
     </div>
@@ -13363,6 +13388,15 @@ function renderInbox(){
     clearTimeout(t);
     t = setTimeout(() => { ibFiltros.q = e.target.value.trim(); ibFiltrosCambiaron(); }, 250);
   });
+  const filtroAbrir = abrir => {
+    el('ib-filtro-panel').hidden = !abrir;
+    el('ib-filtro-btn').setAttribute('aria-expanded', String(abrir));
+    try{ localStorage.setItem('ib_filtros_abiertos', abrir ? '1' : '0'); }catch(e){}
+  };
+  let abiertos = false;
+  try{ abiertos = localStorage.getItem('ib_filtros_abiertos') === '1'; }catch(e){}
+  filtroAbrir(abiertos);
+  el('ib-filtro-btn').addEventListener('click', () => filtroAbrir(el('ib-filtro-panel').hidden));
   el('ib-nuevo').addEventListener('click', () => {
     const f = el('ib-nuevo-form');
     f.hidden = !f.hidden;
@@ -13408,8 +13442,13 @@ function ibFiltrosPintados(){
   const host = el('view-inbox');
   host.querySelectorAll('select[data-ibf]').forEach(s => s.classList.toggle('on', !!s.value));
   el('ib-rango').hidden = ibFiltros.actividad !== 'rango';
-  const hay = Object.keys(IB_FILTROS_VACIOS).some(k => ibFiltros[k] && !(k === 'desde' || k === 'hasta'));
-  el('ib-limpiar').hidden = !hay;
+  const activos = Object.keys(IB_FILTROS_VACIOS).filter(k => ibFiltros[k] && !(k === 'desde' || k === 'hasta')).length;
+  el('ib-limpiar').hidden = !activos;
+  const n = el('ib-filtro-n');
+  n.hidden = !activos;
+  n.textContent = String(activos);
+  el('ib-filtro-btn').dataset.on = activos ? '1' : '0';
+  el('ib-filtro-btn').setAttribute('aria-label', activos ? `Filtros, ${activos} activo${activos > 1 ? 's' : ''}` : 'Filtros');
 }
 
 function ibFiltrosCambiaron(){
@@ -13435,16 +13474,18 @@ function ibPintarLista(){
   }
   const autorPrev = a => a === 'lead' ? '' : a === 'ia' ? 'IA: ' : a === 'sistema' ? '' : 'Tú: ';
   box.innerHTML = ibLista.map(c => {
-    const tags = [];
-    if(c.espera_persona) tags.push(`<span class="ib-tag" data-t="urgente">Espera a una persona</span>`);
-    if(c.ia_estado) tags.push(`<span class="ib-tag">${esc(IB_ESTADO_LBL[c.ia_estado] || c.ia_estado)}</span>`);
-    if(!c.ia_activa) tags.push(`<span class="ib-tag" data-t="humano">Humano</span>`);
-    if(c.asignada_a) tags.push(`<span class="ib-tag">${esc(c.asignada_a)}</span>`);
-    if(c.visto_por_lead === 'vio_no_contesto') tags.push(`<span class="ib-tag">Vio y no contestó</span>`);
+    // Una sola línea de contexto, sin chips: lo urgente va con ícono y texto, el resto en gris.
+    const meta = [];
+    if(c.espera_persona) meta.push(`<span class="ib-urg">● Espera a una persona</span>`);
+    if(c.ia_calificacion) meta.push(esc(ibCalifLbl(c.ia_calificacion)));
+    if(c.ia_estado) meta.push(esc(IB_ESTADO_LBL[c.ia_estado] || c.ia_estado));
+    if(!c.ia_activa) meta.push('Humano');
+    if(c.asignada_a) meta.push(esc(c.asignada_a));
+    if(c.visto_por_lead === 'vio_no_contesto') meta.push('Vio y no contestó');
     return `<button type="button" class="ib-item" data-ib="${c.id}" aria-current="${String(c.id === ibSel)}" data-urgente="${c.espera_persona ? 1 : 0}" data-noleido="${c.no_leidos > 0 ? 1 : 0}">
-      <div class="ib-item-top"><b>${esc(ibNombre(c))}</b>${c.ia_calificacion ? `<span class="ib-item-calif">${esc(ibCalifLbl(c.ia_calificacion))}</span>` : ''}<time>${ibCuando(c.ultimo_en)}</time></div>
+      <div class="ib-item-top"><b>${esc(ibNombre(c))}</b><time>${ibCuando(c.ultimo_en)}</time></div>
       <div class="ib-prev"><span>${esc(autorPrev(c.ultimo_autor) + (c.ultimo_texto || ''))}</span>${c.no_leidos > 0 ? `<i class="ib-nl">${c.no_leidos}</i>` : ''}</div>
-      ${tags.length ? `<div class="ib-tags">${tags.join('')}</div>` : ''}
+      ${meta.length ? `<div class="ib-meta">${meta.join(' · ')}</div>` : ''}
     </button>`;
   }).join('');
 }
@@ -13488,12 +13529,12 @@ function ibAbrirLeccion(tipo, id){
 
 function ibMensajeHtml(m, conv){
   if(m.tipo === 'nota'){
-    // Nota interna: solo la ve el equipo. El link de WhatsApp (mensaje armado) va como botón.
-    const html = esc(m.texto || '').replace(/https?:\/\/[^\s]+/g, u => /wa\.me\//.test(u)
-      ? `<a class="ib-nota-wa" href="${u}" target="_blank" rel="noopener">Abrir WhatsApp con el mensaje armado</a>`
-      : `<a href="${u}" target="_blank" rel="noopener">${u}</a>`);
+    // Nota interna: solo la ve el equipo. El mensaje sugerido se pasa a la caja de respuesta del CRM.
+    const [datos, sug] = String(m.texto || '').split('\nMensaje sugerido:\n');
+    const html = esc(datos).replace(/https?:\/\/[^\s]+/g, u => `<a href="${u}" target="_blank" rel="noopener">${u}</a>`);
+    const sugerido = sug ? `<div class="ib-sug"><span class="ib-sug-t">Mensaje sugerido</span><span class="ib-sug-m">${esc(sug)}</span><button type="button" class="btn btn-ghost btn-sm" data-usar="${m.id}">Usar en el chat</button></div>` : '';
     return `<div class="ib-msj" data-dir="out" data-autor="sistema" data-tipo="nota">
-    <span class="ib-msj-autor">Nota interna · solo el equipo</span><span class="ib-txt">${html}</span>
+    <span class="ib-msj-autor">Nota interna · solo el equipo</span><span class="ib-txt">${html}</span>${sugerido}
     <span class="ib-msj-pie">${ibHora(m.creado_en)}</span>
   </div>`;
   }
@@ -13521,8 +13562,9 @@ function ibPintarHilo(){
       </select>` : ''}</b><small>+${esc(c.wa_id)}${c.asignada_a ? ' · asignado a ' + esc(c.asignada_a) : ''}</small></div>
     <span class="ib-ia" data-on="${c.ia_activa ? 1 : 0}"><i></i>${c.ia_activa ? 'IA activa' + (c.agente_activo ? ' · ' + esc(c.agente_activo) : '') : 'IA pausada' + (c.ia_pausa_motivo ? ' · ' + esc(IB_PAUSA_LBL[c.ia_pausa_motivo] || c.ia_pausa_motivo) : '')}</span>
     <button type="button" class="btn btn-ghost btn-sm" id="ib-ia-btn">${c.ia_activa ? 'Tomar control' : 'Devolver a la IA'}</button>
+    <details class="ib-mas"><summary class="btn btn-ghost btn-sm">Más</summary><div class="ib-mas-menu">
     <button type="button" class="btn btn-ghost btn-sm" id="ib-asig-btn">${c.asignada_a && c.asignada_a === ibYo() ? 'Desasignarme' : 'Asignarme'}</button>
-    <button type="button" class="btn btn-ghost btn-sm" id="ib-aprender-btn" title="La IA lee este chat y propone qué aprender (queda en Setter IA › Para aprobar)">Aprender de este chat</button>`;
+    <button type="button" class="btn btn-ghost btn-sm" id="ib-aprender-btn" title="La IA lee este chat y propone qué aprender (queda en Setter IA › Para aprobar)">Aprender de este chat</button></div></details>`;
   el('ib-volver').addEventListener('click', () => { ibSel = null; el('ib-root').dataset.abierto = '0'; sincronizarHash(); ibPintarLista(); });
   el('ib-ia-btn').addEventListener('click', () => ibAccion({ accion: c.ia_activa ? 'tomar_control' : 'devolver_ia' }));
   const calif = el('ib-calif');
@@ -13550,6 +13592,7 @@ function ibPintarHilo(){
     return sep + ibMensajeHtml(m, { ...c, nombre: d.lead && d.lead.nombre });
   }).join('') : `<div class="ib-sin">Sin mensajes.</div>`;
   hilo.querySelectorAll('[data-media]').forEach(b => b.addEventListener('click', () => ibVerMedia(b)));
+  hilo.querySelectorAll('[data-usar]').forEach(b => b.addEventListener('click', () => ibUsarSugerido(Number(b.dataset.usar))));
   hilo.querySelectorAll('[data-ensenar]').forEach(b => b.addEventListener('click', () => ibAbrirLeccion(b.dataset.ensenar, Number(b.dataset.id))));
   const lec = el('ib-leccion'), apr = el('ib-aprender');
   if(lec.dataset.conv !== String(c.id)){ lec.hidden = true; apr.hidden = true; lec.dataset.conv = String(c.id); }
@@ -13598,24 +13641,38 @@ function ibPintarPie(){
   const c = ibHilo.conversacion, pie = el('ib-pie');
   const abierta = ibVentanaAbierta(c);
   if(pie.dataset.conv === String(c.id) && pie.dataset.abierta === String(abierta)) return;
+  const borrador = pie.dataset.conv === String(c.id) && el('ib-texto') ? el('ib-texto').value : '';
   pie.dataset.conv = String(c.id);
   pie.dataset.abierta = String(abierta);
   pie.innerHTML = (abierta ? '' : `<div class="ib-aviso">La ventana de 24 h está cerrada: WhatsApp solo deja mandar plantillas aprobadas hasta que el lead vuelva a escribir.</div>`) + `
     <form class="ib-comp" id="ib-form">
-      <textarea id="ib-texto" rows="2" placeholder="${abierta ? 'Escribe una respuesta… (Ctrl+Enter envía)' : 'Ventana cerrada'}" ${abierta ? '' : 'disabled'}></textarea>
+      <textarea id="ib-texto" rows="2" placeholder="${abierta ? 'Escribe una respuesta… (Ctrl+Enter envía)' : 'Escribe un borrador: se envía cuando el lead responda'}"></textarea>
       <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
         <button type="submit" class="btn btn-primary btn-sm" id="ib-enviar" ${abierta ? '' : 'disabled'}>Enviar</button>
         ${c.ia_activa ? `<span class="hint">Al enviar, la IA se pausa</span>` : ''}
       </div>
     </form>`;
   const ta = el('ib-texto');
+  ta.value = borrador;
   ta.addEventListener('keydown', e => { if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); ibEnviar(); } });
   el('ib-form').addEventListener('submit', e => { e.preventDefault(); ibEnviar(); });
 }
 
+// Pasa el mensaje sugerido de una nota a la caja de respuesta, para revisarlo y enviarlo desde acá.
+function ibUsarSugerido(id){
+  const m = ibHilo && ibHilo.mensajes.find(x => x.id === id);
+  const sug = m && String(m.texto || '').split('\nMensaje sugerido:\n')[1];
+  const ta = el('ib-texto');
+  if(!sug || !ta) return;
+  ta.value = sug;
+  ta.focus();
+  ta.setSelectionRange(sug.length, sug.length);
+  if(!ibVentanaAbierta(ibHilo.conversacion)) toast('Listo en la caja. WhatsApp deja enviarlo cuando el lead responda o con una plantilla aprobada.', { ms: 6000 });
+}
+
 async function ibEnviar(){
   const ta = el('ib-texto'), texto = ta.value.trim();
-  if(!texto || ibEnviando || !ibSel) return;
+  if(!texto || ibEnviando || !ibSel || !ibVentanaAbierta(ibHilo && ibHilo.conversacion)) return;
   ibEnviando = true;
   el('ib-enviar').disabled = true;
   try{

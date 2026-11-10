@@ -135,7 +135,7 @@ export function armarAvisoLead(lead, { manual = false } = {}) {
       <a href="${PANEL}" style="display:block;text-align:center;background:#161616;color:#fff;font:bold 15px/1 sans-serif;padding:14px;border-radius:6px;text-decoration:none;margin-top:20px">Abrir en el CRM</a>
     </div>`;
 
-  return { asunto, texto, html, faltan, waLink };
+  return { asunto, texto, html, faltan, waLink, mensaje: mensajeWhatsapp(lead, it) };
 }
 
 // La misma información del mail, como nota interna en el chat del Inbox: el
@@ -143,11 +143,11 @@ export function armarAvisoLead(lead, { manual = false } = {}) {
 // setter no está activo o el lead no tiene WhatsApp, no hace nada; nunca frena el mail.
 export async function notaAlInbox(env, lead, aviso) {
   if (!setterActivo(env) || !String(lead.whatsapp || '').replace(/\D/g, '')) return false;
-  const cuerpo = aviso.texto.split('\n').filter((l) => !l.startsWith('Abrir en el CRM')).join('\n').trim();
+  const cuerpo = aviso.texto.split('\n').filter((l) => !l.startsWith('Abrir en el CRM') && !l.startsWith('Confirmar por WhatsApp')).join('\n').trim();
   try {
     const r = await alWorker(env, 'interno/nota', {
       method: 'POST',
-      body: JSON.stringify({ whatsapp: lead.whatsapp, nombre: lead.nombre, texto: `Aviso de lead: contactar por WhatsApp\n${cuerpo}` }),
+      body: JSON.stringify({ whatsapp: lead.whatsapp, nombre: lead.nombre, texto: `Aviso de lead: contactar por WhatsApp\n${cuerpo}\n\nMensaje sugerido:\n${aviso.mensaje}` }),
     });
     return r.ok;
   } catch {
