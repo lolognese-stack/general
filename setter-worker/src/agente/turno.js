@@ -101,7 +101,7 @@ export async function correrTurno(env, canal, convId, { claude = null, dormir = 
   if (!conv.ia_activa && !retoma) return 'pausada';
 
   const mensajes = (await db.prepare(
-    `SELECT * FROM (SELECT * FROM wa_mensajes WHERE conversacion_id = ? ORDER BY creado_en DESC, id DESC LIMIT 60) ORDER BY creado_en, id`
+    `SELECT * FROM (SELECT * FROM wa_mensajes WHERE conversacion_id = ? AND tipo <> 'nota' ORDER BY creado_en DESC, id DESC LIMIT 60) ORDER BY creado_en, id`
   ).bind(conv.id).all()).results;
   const ultimo = mensajes[mensajes.length - 1];
   if (!ultimo || ultimo.direccion !== 'in') return 'nada_que_responder';

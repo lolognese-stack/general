@@ -34,7 +34,7 @@ export async function analizarConversacion(env, convId, { claude = null, ahora =
   if (!conv) return null;
   const lead = conv.lead_id ? await db.prepare('SELECT nombre, etapa, calificado, ia_estado, destinos, fecha_viaje, personas FROM leads WHERE id = ?').bind(conv.lead_id).first() : null;
   const mensajes = (await db.prepare(
-    `SELECT * FROM (SELECT autor, tipo, texto, transcripcion, creado_en FROM wa_mensajes WHERE conversacion_id = ? ORDER BY creado_en DESC LIMIT 80) ORDER BY creado_en`
+    `SELECT * FROM (SELECT autor, tipo, texto, transcripcion, creado_en FROM wa_mensajes WHERE conversacion_id = ? AND tipo <> 'nota' ORDER BY creado_en DESC LIMIT 80) ORDER BY creado_en`
   ).bind(convId).all()).results;
   if (!mensajes.length) return null;
   const chat = mensajes.map((m) => `${AUTOR[m.autor] || m.autor}: ${m.tipo === 'audio' ? '[nota de voz] ' + (m.transcripcion || '') : m.texto || '[' + m.tipo + ']'}`).join('\n');

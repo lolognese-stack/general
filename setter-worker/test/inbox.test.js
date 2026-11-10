@@ -173,3 +173,37 @@ describe('agregar contacto a mano', () => {
     expect(n.n).toBe(1);
   });
 });
+
+describe('nota interna', () => {
+  const nota = (body, secreto = env.SETTER_INTERNAL_SECRET) => exports.default.fetch('https://setter-worker/interno/nota', {
+    method: 'POST', body: JSON.stringify(body), headers: { 'x-setter-secret': secreto, 'content-type': 'application/json' },
+  });
+
+  it('sin secreto, 401', async () => {
+    expect((await nota({ whatsapp: '51930299443', texto: 'x' }, 'malo')).status).toBe(401);
+  });
+
+  it('crea el chat, guarda la nota, sube como urgente y no sale a WhatsApp', async () => {
+    const r = await nota({ nombre: 'Ana', whatsapp: '+51 930 299 443', texto: 'Aviso de lead\nFALTA: Mail' });
+    expect(r.status).toBe(200);
+    const d = await r.json();
+    const conv = await uno('SELECT * FROM wa_conversaciones WHERE id = ?', d.conversacion_id);
+    expect(conv).toMatchObject({ wa_id: '51930299443', ia_activa: 0, espera_persona: 1, no_leidos: 1, ultimo_texto: 'Aviso de lead', ultimo_autor: 'sistema' });
+    const m = await uno('SELECT autor, tipo, direccion, texto FROM wa_mensajes WHERE conversacion_id = ?', d.conversacion_id);
+    expect(m).toMatchObject({ autor: 'sistema', tipo: 'nota', direccion: 'out' });
+    expect(m.texto).toContain('FALTA: Mail');
+  });
+
+  it('en un chat existente no toca la IA y suma la nota', async () => {
+    const antes = await uno('SELECT id, ia_activa FROM wa_conversaciones WHERE wa_id = ?', '51911111111');
+    const r = await nota({ whatsapp: '51911111111', texto: 'Otra nota' });
+    expect(await r.json()).toMatchObject({ creado: false, conversacion_id: antes.id });
+    const despues = await uno('SELECT ia_activa, espera_persona FROM wa_conversaciones WHERE id = ?', antes.id);
+    expect(despues).toMatchObject({ ia_activa: antes.ia_activa, espera_persona: 1 });
+  });
+
+  it('nota vacía o número inválido, 400', async () => {
+    expect((await nota({ whatsapp: '51930299443', texto: '  ' })).status).toBe(400);
+    expect((await nota({ whatsapp: 'abc', texto: 'x' })).status).toBe(400);
+  });
+});

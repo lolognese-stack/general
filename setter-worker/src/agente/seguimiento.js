@@ -95,7 +95,7 @@ export async function correrSeguimientos(env, canal, { claude = null, ahora = ne
       } else {
         if (!ventana) continue;
         const mensajes = (await db.prepare(
-          `SELECT * FROM (SELECT * FROM wa_mensajes WHERE conversacion_id = ? ORDER BY creado_en DESC, id DESC LIMIT 60) ORDER BY creado_en, id`
+          `SELECT * FROM (SELECT * FROM wa_mensajes WHERE conversacion_id = ? AND tipo <> 'nota' ORDER BY creado_en DESC, id DESC LIMIT 60) ORDER BY creado_en, id`
         ).bind(conv.id).all()).results;
         const [recursos, conocimiento] = await Promise.all([
           db.prepare('SELECT * FROM setter_recursos WHERE activo = 1 ORDER BY etiqueta').all().then((r) => r.results),

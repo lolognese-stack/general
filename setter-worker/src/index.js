@@ -4,6 +4,7 @@
 //   POST /webhook          valida firma (Meta o Kapso, ver canal/adapter.js), guarda en D1 (idempotente), avisa al DO y responde 200
 //   POST /interno/enviar   envío desde el panel (Service Binding) con x-setter-secret
 //   POST /interno/contacto alta manual de un contacto (lead + conversación, IA pausada)
+//   POST /interno/nota     nota interna en el chat (solo el equipo la ve; la IA no la lee)
 //   GET  /interno/media/<id>  stream de una nota de voz o foto de WhatsApp (mismo secreto)
 //   POST /interno/playground | puntuar | asistente   editor de prompts (Setter IA)
 //
@@ -11,7 +12,7 @@
 // webhook tarda o no devuelve 200.
 
 import { canalDe } from './canal/adapter.js';
-import { guardarEventos, conversacionDe } from './ingesta.js';
+import { guardarEventos, conversacionDe, insertarMensaje, ultimoSql } from './ingesta.js';
 import { normalizarWa } from './leads.js';
 import { enviar, ErrorEnvio } from './enviar.js';
 import { playground, puntuar, asistente } from './agente/playground.js';
@@ -88,16 +89,41 @@ async function contactoInterno(request, env) {
   if (!secretoOk(request, env)) return json({ error: 'unauthorized' }, 401);
   let b;
   try { b = await request.json(); } catch { return json({ error: 'body no es json' }, 400); }
+  const a = await abrirConversacion(env, b);
+  if (a.error) return json({ error: a.error }, 400);
+  return json({ ok: true, conversacion_id: a.conv.id, lead_id: a.conv.lead_id, creado: !a.previa });
+}
+
+// Cruza el número con los leads y abre la conversación si no existía; en ese
+// caso la IA queda pausada, porque la abrió una persona y no escribió el lead.
+async function abrirConversacion(env, b, ahora = new Date().toISOString()) {
   const waId = normalizarWa(b.whatsapp);
-  if (!waId) return json({ error: 'número de WhatsApp inválido' }, 400);
+  if (!waId) return { error: 'número de WhatsApp inválido' };
   const nombre = typeof b.nombre === 'string' ? b.nombre.trim().slice(0, 80) || null : null;
-  const ahora = new Date().toISOString();
   const previa = await env.DB.prepare('SELECT id FROM wa_conversaciones WHERE wa_id = ?').bind(waId).first();
   const conv = await conversacionDe(env.DB, { waId, nombre, abiertaPor: 'nosotros', codigoWeb: null, origen: null }, ahora);
   if (!previa) {
     await env.DB.prepare(`UPDATE wa_conversaciones SET ia_activa = 0, ia_pausa_motivo = 'manual' WHERE id = ?`).bind(conv.id).run();
   }
-  return json({ ok: true, conversacion_id: conv.id, lead_id: conv.lead_id, creado: !previa });
+  return { conv, previa };
+}
+
+// Nota interna: queda en el chat para el equipo (p. ej. el aviso de un lead que
+// hay que contactar a mano). No sale a WhatsApp, la IA no la lee y el chat sube
+// como "espera a una persona".
+async function notaInterna(request, env) {
+  if (!secretoOk(request, env)) return json({ error: 'unauthorized' }, 401);
+  let b;
+  try { b = await request.json(); } catch { return json({ error: 'body no es json' }, 400); }
+  const texto = typeof b.texto === 'string' ? b.texto.trim().slice(0, 4000) : '';
+  if (!texto) return json({ error: 'nota vacía' }, 400);
+  const ahora = new Date().toISOString();
+  const a = await abrirConversacion(env, b, ahora);
+  if (a.error) return json({ error: a.error }, 400);
+  await insertarMensaje(env.DB, { conversacionId: a.conv.id, direccion: 'out', autor: 'sistema', tipo: 'nota', texto, creadoEn: ahora });
+  await ultimoSql(env.DB, a.conv.id, { autor: 'sistema', texto: texto.split('\n')[0], tipo: 'nota', en: ahora }, ahora,
+    ', espera_persona = 1, no_leidos = no_leidos + 1').run();
+  return json({ ok: true, conversacion_id: a.conv.id, lead_id: a.conv.lead_id, creado: !a.previa });
 }
 
 async function mediaInterna(request, env, mediaId) {
@@ -133,6 +159,7 @@ export default {
     if (pathname === '/webhook' && (request.method === 'GET' || request.method === 'POST')) return webhook(request, env, ctx);
     if (pathname === '/interno/enviar' && request.method === 'POST') return enviarInterno(request, env);
     if (pathname === '/interno/contacto' && request.method === 'POST') return contactoInterno(request, env);
+    if (pathname === '/interno/nota' && request.method === 'POST') return notaInterna(request, env);
     const ed = pathname.match(/^\/interno\/(playground|puntuar|asistente|aprender|aprender_chat|simular)$/);
     if (ed && request.method === 'POST') return editor(request, env, ed[1]);
     const media = pathname.match(/^\/interno\/media\/([\w.-]+)$/);
