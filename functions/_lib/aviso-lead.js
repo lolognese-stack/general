@@ -11,6 +11,8 @@
 // remitente de prueba de Resend (onboarding@resend.dev) solo llega a la casilla
 // dueña de la cuenta, que es esta. Si se verifica un dominio, setear LEADS_FROM.
 
+import { setterActivo, alWorker } from './setter.js';
+
 const NOTIFICAR_A = 'lolognese@gmail.com';
 const FROM = 'Luna Llena Travel <onboarding@resend.dev>';
 const PANEL = 'https://crm-plantilla.pages.dev/panel-4c1f6a#/leads';
@@ -136,9 +138,27 @@ export function armarAvisoLead(lead, { manual = false } = {}) {
   return { asunto, texto, html, faltan, waLink };
 }
 
+// La misma información del mail, como nota interna en el chat del Inbox: el
+// equipo ve qué falta y tiene el link de WhatsApp con el mensaje armado. Si el
+// setter no está activo o el lead no tiene WhatsApp, no hace nada; nunca frena el mail.
+export async function notaAlInbox(env, lead, aviso) {
+  if (!setterActivo(env) || !String(lead.whatsapp || '').replace(/\D/g, '')) return false;
+  const cuerpo = aviso.texto.split('\n').filter((l) => !l.startsWith('Abrir en el CRM')).join('\n').trim();
+  try {
+    const r = await alWorker(env, 'interno/nota', {
+      method: 'POST',
+      body: JSON.stringify({ whatsapp: lead.whatsapp, nombre: lead.nombre, texto: `Aviso de lead: contactar por WhatsApp\n${cuerpo}` }),
+    });
+    return r.ok;
+  } catch {
+    return false;
+  }
+}
+
 export async function enviarAvisoLead(env, lead, opts = {}) {
   const aviso = armarAvisoLead(lead, opts);
-  if (!env.RESEND_API_KEY) return { ok: false, error: 'falta RESEND_API_KEY', faltan: aviso.faltan };
+  const inbox = await notaAlInbox(env, lead, aviso);
+  if (!env.RESEND_API_KEY) return { ok: false, error: 'falta RESEND_API_KEY', faltan: aviso.faltan, inbox };
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' },
@@ -152,6 +172,6 @@ export async function enviarAvisoLead(env, lead, opts = {}) {
     }),
   });
   const body = await res.json().catch(() => ({}));
-  if (!res.ok) return { ok: false, error: `Resend ${res.status}: ${body.message || JSON.stringify(body)}`, faltan: aviso.faltan };
-  return { ok: true, id: body.id, faltan: aviso.faltan };
+  if (!res.ok) return { ok: false, error: `Resend ${res.status}: ${body.message || JSON.stringify(body)}`, faltan: aviso.faltan, inbox };
+  return { ok: true, id: body.id, faltan: aviso.faltan, inbox };
 }

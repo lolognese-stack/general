@@ -32,7 +32,7 @@ export async function cargarDatos(db, desde) {
     ).bind(desde).all().then((r) => r.results),
     db.prepare(
       `SELECT m.conversacion_id, m.direccion, m.autor, m.estado, m.es_followup, m.intento_followup, m.recurso_id, m.creado_en
-         FROM wa_mensajes m JOIN wa_conversaciones c ON c.id = m.conversacion_id WHERE c.creado_en >= ? ORDER BY m.creado_en, m.id`
+         FROM wa_mensajes m JOIN wa_conversaciones c ON c.id = m.conversacion_id WHERE c.creado_en >= ? AND m.tipo <> 'nota' ORDER BY m.creado_en, m.id`
     ).bind(desde).all().then((r) => r.results),
     db.prepare(`SELECT a.* FROM wa_analisis a JOIN wa_conversaciones c ON c.id = a.conversacion_id WHERE c.creado_en >= ?`).bind(desde).all().then((r) => r.results),
     db.prepare('SELECT clave, recurso_conversion_id FROM setter_agentes').all().then((r) => r.results),

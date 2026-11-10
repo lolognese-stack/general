@@ -1922,6 +1922,9 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 .ib-txt{white-space:pre-wrap}
 .ib-head:empty{display:none}
 .ib-msj[data-dir="out"]{align-self:flex-end;background:var(--glacier-soft);border-color:transparent}
+.ib-msj[data-tipo="nota"]{align-self:stretch;max-width:100%;background:var(--masomenos-bg);border:1px dashed var(--masomenos)}
+.ib-msj[data-tipo="nota"] .ib-txt{white-space:pre-line}
+.ib-nota-wa{display:inline-block;margin:2px 0;padding:7px 12px;border-radius:6px;background:#25D366;color:#fff;font-weight:700;text-decoration:none}
 .ib-msj[data-autor="ia"]{background:var(--surface-sunk)}
 .ib-msj-autor{display:block;font-size:10.5px;font-weight:700;color:var(--ink-3);margin-bottom:2px;white-space:normal}
 .ib-ensenar{border:none;background:none;padding:0;font:inherit;font-size:10.5px;color:var(--ink-3);text-decoration:underline;cursor:pointer;margin-right:auto}
@@ -13484,6 +13487,16 @@ function ibAbrirLeccion(tipo, id){
 }
 
 function ibMensajeHtml(m, conv){
+  if(m.tipo === 'nota'){
+    // Nota interna: solo la ve el equipo. El link de WhatsApp (mensaje armado) va como botón.
+    const html = esc(m.texto || '').replace(/https?:\/\/[^\s]+/g, u => /wa\.me\//.test(u)
+      ? `<a class="ib-nota-wa" href="${u}" target="_blank" rel="noopener">Abrir WhatsApp con el mensaje armado</a>`
+      : `<a href="${u}" target="_blank" rel="noopener">${u}</a>`);
+    return `<div class="ib-msj" data-dir="out" data-autor="sistema" data-tipo="nota">
+    <span class="ib-msj-autor">Nota interna · solo el equipo</span><span class="ib-txt">${html}</span>
+    <span class="ib-msj-pie">${ibHora(m.creado_en)}</span>
+  </div>`;
+  }
   const id = m.media_key && m.media_key.startsWith('meta:') ? m.media_key.slice(5) : null;
   let cuerpo = m.texto ? `<span class="ib-txt">${esc(m.texto)}</span>` : '';
   if(id && m.tipo === 'audio') cuerpo = `<button type="button" class="ib-media" data-media="${esc(id)}" data-tipo="audio">Escuchar nota de voz</button>`;

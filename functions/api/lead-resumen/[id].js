@@ -37,11 +37,11 @@ async function fuentes(db, lead) {
   const conv = await db.prepare('SELECT id, creado_en, ultimo_en, abierta_por FROM wa_conversaciones WHERE lead_id = ? ORDER BY ultimo_en DESC LIMIT 1').bind(lead.id).first();
   const mensajes = conv
     ? (await db.prepare(
-        `SELECT * FROM (SELECT autor, tipo, texto, transcripcion, creado_en FROM wa_mensajes WHERE conversacion_id = ? ORDER BY creado_en DESC LIMIT 80) ORDER BY creado_en`
+        `SELECT * FROM (SELECT autor, tipo, texto, transcripcion, creado_en FROM wa_mensajes WHERE conversacion_id = ? AND tipo <> 'nota' ORDER BY creado_en DESC LIMIT 80) ORDER BY creado_en`
       ).bind(conv.id).all()).results
     : [];
   const waAnalisis = conv ? await db.prepare('SELECT * FROM wa_analisis WHERE conversacion_id = ?').bind(conv.id).first() : null;
-  const waCuenta = conv ? await db.prepare('SELECT count(*) AS n, sum(direccion = \'in\') AS entrantes FROM wa_mensajes WHERE conversacion_id = ?').bind(conv.id).first() : null;
+  const waCuenta = conv ? await db.prepare('SELECT count(*) AS n, sum(direccion = \'in\') AS entrantes FROM wa_mensajes WHERE conversacion_id = ? AND tipo <> \'nota\'').bind(conv.id).first() : null;
 
   const sesiones = (lead.codigo_web || lead.manychat_id)
     ? (await db.prepare(
