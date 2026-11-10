@@ -11,6 +11,7 @@ import { setterActivo, evento } from '../../../_lib/setter.js';
 
 const CAMPOS_LEAD = `id, nombre, etapa, calificado, score, setter, closer, fuente, destinos, fecha_viaje, personas,
   presupuesto_pp, residencia, edades_menores, categoria_hotel, ocasion, codigo_web, notas,
+  whatsapp, email, pais, dias, pasajes, llegada, salida, itinerario,
   ia_estado, ia_resumen, ia_score_motivo, ia_origen, ia_primera_intencion, ia_calificacion, ia_calificacion_por`;
 
 const ETIQUETAS = ['interesado', 'curioso', 'no_califica', 'cotizado'];

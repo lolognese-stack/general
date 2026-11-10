@@ -1917,6 +1917,10 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 .ib-mas>summary::-webkit-details-marker{display:none}
 .ib-mas-menu{position:absolute;right:0;top:calc(100% + 4px);z-index:20;display:flex;flex-direction:column;align-items:stretch;gap:2px;min-width:200px;padding:6px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);box-shadow:var(--shadow-lift)}
 .ib-mas-menu .btn{justify-content:flex-start;text-align:left}
+.ib-falta{color:var(--danger);font-weight:700}
+.ib-itin{white-space:pre-line}
+.ib-faltan{margin:0 0 var(--s3);padding:8px 10px;border-left:3px solid var(--danger);background:var(--masomenos-bg);font-size:12px;line-height:1.45;color:var(--ink-2)}
+.ib-faltan b{display:block;color:var(--danger);font-size:11px;letter-spacing:.04em;text-transform:uppercase;margin-bottom:2px}
 .ib-sug{margin-top:8px;padding:8px 10px;border-left:3px solid var(--ink-3);background:var(--surface);border-radius:0 6px 6px 0}
 .ib-sug-t{display:block;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);margin-bottom:2px}
 .ib-sug-m{display:block;white-space:pre-wrap;margin-bottom:6px}
@@ -13529,10 +13533,11 @@ function ibAbrirLeccion(tipo, id){
 
 function ibMensajeHtml(m, conv){
   if(m.tipo === 'nota'){
-    // Nota interna: solo la ve el equipo. El mensaje sugerido se pasa a la caja de respuesta del CRM.
+    // Nota interna: solo la ve el equipo. Trae el mensaje armado para copiarlo y pegarlo a mano en WhatsApp;
+    // los datos del lead están en la ficha de la derecha.
     const [datos, sug] = String(m.texto || '').split('\nMensaje sugerido:\n');
-    const html = esc(datos).replace(/https?:\/\/[^\s]+/g, u => `<a href="${u}" target="_blank" rel="noopener">${u}</a>`);
-    const sugerido = sug ? `<div class="ib-sug"><span class="ib-sug-t">Mensaje sugerido</span><span class="ib-sug-m">${esc(sug)}</span><button type="button" class="btn btn-ghost btn-sm" data-usar="${m.id}">Usar en el chat</button></div>` : '';
+    const html = esc(datos.trim());
+    const sugerido = sug ? `<div class="ib-sug"><span class="ib-sug-t">Mensaje para copiar</span><span class="ib-sug-m">${esc(sug)}</span><button type="button" class="btn btn-ghost btn-sm" data-copiar="${m.id}">Copiar mensaje</button></div>` : '';
     return `<div class="ib-msj" data-dir="out" data-autor="sistema" data-tipo="nota">
     <span class="ib-msj-autor">Nota interna · solo el equipo</span><span class="ib-txt">${html}</span>${sugerido}
     <span class="ib-msj-pie">${ibHora(m.creado_en)}</span>
@@ -13592,7 +13597,7 @@ function ibPintarHilo(){
     return sep + ibMensajeHtml(m, { ...c, nombre: d.lead && d.lead.nombre });
   }).join('') : `<div class="ib-sin">Sin mensajes.</div>`;
   hilo.querySelectorAll('[data-media]').forEach(b => b.addEventListener('click', () => ibVerMedia(b)));
-  hilo.querySelectorAll('[data-usar]').forEach(b => b.addEventListener('click', () => ibUsarSugerido(Number(b.dataset.usar))));
+  hilo.querySelectorAll('[data-copiar]').forEach(b => b.addEventListener('click', () => ibCopiarSugerido(b)));
   hilo.querySelectorAll('[data-ensenar]').forEach(b => b.addEventListener('click', () => ibAbrirLeccion(b.dataset.ensenar, Number(b.dataset.id))));
   const lec = el('ib-leccion'), apr = el('ib-aprender');
   if(lec.dataset.conv !== String(c.id)){ lec.hidden = true; apr.hidden = true; lec.dataset.conv = String(c.id); }
@@ -13641,38 +13646,43 @@ function ibPintarPie(){
   const c = ibHilo.conversacion, pie = el('ib-pie');
   const abierta = ibVentanaAbierta(c);
   if(pie.dataset.conv === String(c.id) && pie.dataset.abierta === String(abierta)) return;
-  const borrador = pie.dataset.conv === String(c.id) && el('ib-texto') ? el('ib-texto').value : '';
   pie.dataset.conv = String(c.id);
   pie.dataset.abierta = String(abierta);
   pie.innerHTML = (abierta ? '' : `<div class="ib-aviso">La ventana de 24 h está cerrada: WhatsApp solo deja mandar plantillas aprobadas hasta que el lead vuelva a escribir.</div>`) + `
     <form class="ib-comp" id="ib-form">
-      <textarea id="ib-texto" rows="2" placeholder="${abierta ? 'Escribe una respuesta… (Ctrl+Enter envía)' : 'Escribe un borrador: se envía cuando el lead responda'}"></textarea>
+      <textarea id="ib-texto" rows="2" placeholder="${abierta ? 'Escribe una respuesta… (Ctrl+Enter envía)' : 'Ventana cerrada'}" ${abierta ? '' : 'disabled'}></textarea>
       <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
         <button type="submit" class="btn btn-primary btn-sm" id="ib-enviar" ${abierta ? '' : 'disabled'}>Enviar</button>
         ${c.ia_activa ? `<span class="hint">Al enviar, la IA se pausa</span>` : ''}
       </div>
     </form>`;
   const ta = el('ib-texto');
-  ta.value = borrador;
   ta.addEventListener('keydown', e => { if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); ibEnviar(); } });
   el('ib-form').addEventListener('submit', e => { e.preventDefault(); ibEnviar(); });
 }
 
-// Pasa el mensaje sugerido de una nota a la caja de respuesta, para revisarlo y enviarlo desde acá.
-function ibUsarSugerido(id){
-  const m = ibHilo && ibHilo.mensajes.find(x => x.id === id);
+// Copia el mensaje del aviso para pegarlo a mano en WhatsApp.
+async function ibCopiarSugerido(btn){
+  const m = ibHilo && ibHilo.mensajes.find(x => x.id === Number(btn.dataset.copiar));
   const sug = m && String(m.texto || '').split('\nMensaje sugerido:\n')[1];
-  const ta = el('ib-texto');
-  if(!sug || !ta) return;
-  ta.value = sug;
-  ta.focus();
-  ta.setSelectionRange(sug.length, sug.length);
-  if(!ibVentanaAbierta(ibHilo.conversacion)) toast('Listo en la caja. WhatsApp deja enviarlo cuando el lead responda o con una plantilla aprobada.', { ms: 6000 });
+  if(!sug) return;
+  try{
+    await navigator.clipboard.writeText(sug);
+  }catch(e){
+    const t = document.createElement('textarea');   // sin permiso del portapapeles: vía selección
+    t.value = sug; t.style.position = 'fixed'; t.style.opacity = '0';
+    document.body.appendChild(t); t.select();
+    try{ document.execCommand('copy'); }catch(e2){ toast('No se pudo copiar: seleccioná el texto a mano.', { tipo:'error' }); }
+    t.remove();
+  }
+  const txt = btn.textContent;
+  btn.textContent = 'Copiado ✓';
+  setTimeout(() => { btn.textContent = txt; }, 2000);
 }
 
 async function ibEnviar(){
   const ta = el('ib-texto'), texto = ta.value.trim();
-  if(!texto || ibEnviando || !ibSel || !ibVentanaAbierta(ibHilo && ibHilo.conversacion)) return;
+  if(!texto || ibEnviando || !ibSel) return;
   ibEnviando = true;
   el('ib-enviar').disabled = true;
   try{
@@ -13724,13 +13734,24 @@ function ibPintarFicha(){
   const cal = l.calificado ? (CALIFICACIONES.find(x => x.key === l.calificado) || { label: l.calificado }).label : '—';
   const fila = (k, v) => v || v === 0 ? `<dt>${k}</dt><dd>${esc(String(v))}</dd>` : '';
   const lista = j => { try{ const x = JSON.parse(j || '[]'); return Array.isArray(x) ? x : []; }catch(e){ return []; } };
+  // Datos del aviso de lead (los mismos del mail): si el chat tiene un aviso, lo que falta se marca en rojo.
+  const hayAviso = ibHilo.mensajes.some(m => m.tipo === 'nota');
+  const it = (() => { try{ const x = JSON.parse(l.itinerario || 'null'); return Array.isArray(x) && x.some(t => t && Array.isArray(t.dias) && t.dias.length) ? x : null; }catch(e){ return null; } })();
+  const fecha = l.fecha_viaje || (l.llegada ? l.llegada + (l.salida ? ' al ' + l.salida : '') : '');
+  const diasTot = l.dias || (it ? it.reduce((n, t) => n + t.dias.length, 0) : '');
+  const itTxt = it ? it.map((t, i) => `${i + 1}. ${t.titulo || ''} (${t.dias.length} día${t.dias.length > 1 ? 's' : ''})`).join('\n') : '';
+  const req = (k, v) => v || v === 0 ? fila(k, v) : (hayAviso ? `<dt>${k}</dt><dd class="ib-falta">⚠ Falta</dd>` : '');
+  const faltan = hayAviso ? [['Personas', l.personas], ['Mail', l.email], ['País', l.pais], ['Fecha', fecha], ['Días', diasTot], ['Destinos', l.destinos || itTxt], ['Pasajes', l.pasajes], ['Presupuesto por persona', l.presupuesto_pp]]
+    .filter(([, v]) => !(v || v === 0)).map(([k]) => k) : [];
   box.innerHTML = `
     <h3>Lead</h3>
+    ${faltan.length ? `<div class="ib-faltan"><b>Faltan para cotizar</b>${faltan.map(esc).join(' · ')}</div>` : ''}
     <dl>
       ${fila('Nombre', l.nombre)}${fila('Etapa', etapa)}${fila('Calificación', cal + (l.score ? ` · ${l.score}/10` : ''))}
       ${fila('Estado IA', IB_ESTADO_LBL[l.ia_estado] || l.ia_estado)}${fila('Origen', IB_ORIGEN_LBL[l.ia_origen] || l.ia_origen)}
-      ${fila('Destinos', l.destinos)}${fila('Fecha', l.fecha_viaje)}${fila('Personas', l.personas)}
-      ${fila('Presupuesto', l.presupuesto_pp)}${fila('Residencia', l.residencia)}${fila('Ocasión', l.ocasion)}
+      ${fila('WhatsApp', l.whatsapp)}${req('Mail', l.email)}${req('País', l.pais)}
+      ${itTxt ? `<dt>Itinerario</dt><dd class="ib-itin">${esc(itTxt)}</dd>` : req('Destinos', l.destinos)}${req('Fecha', fecha)}${req('Días', diasTot)}${req('Personas', l.personas)}
+      ${req('Pasajes', l.pasajes)}${req('Presupuesto', l.presupuesto_pp)}${fila('Residencia', l.residencia)}${fila('Ocasión', l.ocasion)}
       ${fila('Código web', l.codigo_web)}${fila('Abrió', c.abierta_por === 'nosotros' ? 'Nosotros' : 'El lead')}
     </dl>
     ${l.ia_resumen ? `<h3>Resumen de la IA</h3><p>${esc(l.ia_resumen)}</p>` : ''}

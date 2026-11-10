@@ -138,16 +138,15 @@ export function armarAvisoLead(lead, { manual = false } = {}) {
   return { asunto, texto, html, faltan, waLink, mensaje: mensajeWhatsapp(lead, it) };
 }
 
-// La misma información del mail, como nota interna en el chat del Inbox: el
-// equipo ve qué falta y tiene el link de WhatsApp con el mensaje armado. Si el
+// El mismo aviso del mail, como nota interna en el chat del Inbox: lo que falta
+// y el mensaje armado para copiar (los datos del lead van en la ficha). Si el
 // setter no está activo o el lead no tiene WhatsApp, no hace nada; nunca frena el mail.
 export async function notaAlInbox(env, lead, aviso) {
   if (!setterActivo(env) || !String(lead.whatsapp || '').replace(/\D/g, '')) return false;
-  const cuerpo = aviso.texto.split('\n').filter((l) => !l.startsWith('Abrir en el CRM') && !l.startsWith('Confirmar por WhatsApp')).join('\n').trim();
   try {
     const r = await alWorker(env, 'interno/nota', {
       method: 'POST',
-      body: JSON.stringify({ whatsapp: lead.whatsapp, nombre: lead.nombre, texto: `Aviso de lead: contactar por WhatsApp\n${cuerpo}\n\nMensaje sugerido:\n${aviso.mensaje}` }),
+      body: JSON.stringify({ whatsapp: lead.whatsapp, nombre: lead.nombre, texto: ['Aviso de lead: contactar por WhatsApp', aviso.faltan.length ? `Faltan para cotizar: ${aviso.faltan.join(', ')}` : null].filter(Boolean).join('\n') + `\n\nMensaje sugerido:\n${aviso.mensaje}` }),
     });
     return r.ok;
   } catch {

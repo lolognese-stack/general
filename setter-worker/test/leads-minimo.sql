@@ -21,6 +21,11 @@ CREATE TABLE IF NOT EXISTS leads (
   ocasion TEXT,
   score INTEGER,
   codigo_web TEXT,
+  pasajes TEXT,
+  llegada TEXT,
+  salida TEXT,
+  dias INTEGER,
+  itinerario TEXT,
   creado_en TEXT NOT NULL,
   actualizado_en TEXT NOT NULL
 );

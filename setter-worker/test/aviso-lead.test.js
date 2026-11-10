@@ -12,12 +12,13 @@ const envCrm = () => ({ ...env, SETTER_INTERNAL_SECRET: env.SETTER_INTERNAL_SECR
 beforeEach(async () => { await prepararDb(); setterFetch.mockClear(); });
 
 describe('nota del aviso de lead en el Inbox', () => {
-  it('deja la nota con los datos, lo que falta y el mensaje sugerido, sin links a WhatsApp ni al CRM', async () => {
+  it('deja la nota con lo que falta y el mensaje para copiar, sin links ni datos repetidos', async () => {
     expect(await notaAlInbox(envCrm(), lead, armarAvisoLead(lead))).toBe(true);
     const m = await uno(`SELECT m.tipo, m.autor, m.texto, c.espera_persona, c.ia_activa FROM wa_mensajes m JOIN wa_conversaciones c ON c.id = m.conversacion_id WHERE c.wa_id = '51930299443'`);
     expect(m).toMatchObject({ tipo: 'nota', autor: 'sistema', espera_persona: 1, ia_activa: 0 });
     expect(m.texto).toContain('Aviso de lead: contactar por WhatsApp');
-    expect(m.texto).toContain('FALTA:');
+    expect(m.texto).toContain('Faltan para cotizar:');
+    expect(m.texto).not.toContain('Nombre:');
     expect(m.texto).toContain('Mensaje sugerido:\nHola Ana!');
     expect(m.texto).not.toContain('wa.me');
     expect(m.texto).not.toContain('Abrir en el CRM');
