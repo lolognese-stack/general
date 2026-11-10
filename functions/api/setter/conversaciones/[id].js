@@ -68,6 +68,25 @@ export async function onRequestPatch({ request, env, params }) {
       `UPDATE leads SET ia_calificacion = ?, ia_calificacion_por = ?, calificado = coalesce(?, calificado), actualizado_en = ? WHERE id = ?`
     ).bind(v, v ? 'persona' : null, CALIFICADO_DE[v] || null, ahora, conv.lead_id).run();
     await evento(env.DB, conv, 'calificacion_manual', v || 'sin etiqueta');
+  } else if (b.accion === 'asociar_lead') {
+    // Un chat que no cruzó solo con ningún lead (p. ej. le escribiste desde el celular a alguien
+    // cargado con otro número): se lo asocia a mano al lead que corresponde.
+    const destino = /^\d+$/.test(String(b.lead_id ?? '')) ? await env.DB.prepare('SELECT id FROM leads WHERE id = ?').bind(Number(b.lead_id)).first() : null;
+    if (!destino) return json({ error: 'no existe ese lead' }, 404);
+    const previo = conv.lead_id;
+    const otro = await env.DB.prepare('SELECT wa_id FROM wa_conversaciones WHERE lead_id = ? AND id <> ? LIMIT 1').bind(destino.id, conv.id).first();
+    await upd('lead_id = ?', destino.id);
+    await env.DB.prepare(`UPDATE leads SET wa_id = coalesce(wa_id, ?), whatsapp = coalesce(nullif(whatsapp, ''), ?), actualizado_en = ? WHERE id = ?`)
+      .bind(conv.wa_id, '+' + conv.wa_id, ahora, destino.id).run();
+    // El lead que se creó solo al llegar el chat (nombre = el número, sin nada más) sobra.
+    if (previo && previo !== destino.id) {
+      await env.DB.prepare(
+        `DELETE FROM leads WHERE id = ? AND nombre GLOB '+[0-9]*' AND fuente = 'WhatsApp' AND ia_resumen IS NULL
+           AND NOT EXISTS (SELECT 1 FROM wa_conversaciones WHERE lead_id = ?)`
+      ).bind(previo, previo).run();
+    }
+    await evento(env.DB, conv, 'asociar_lead', `lead ${destino.id}`);
+    return json({ ok: true, otro_chat: otro ? otro.wa_id : null, conversacion: await conversacion(env, conv.id) });
   } else if (b.accion === 'leer') {
     // No toca actualizado_en: leer no es un cambio que los demás tengan que recargar.
     await env.DB.prepare('UPDATE wa_conversaciones SET no_leidos = 0 WHERE id = ?').bind(conv.id).run();

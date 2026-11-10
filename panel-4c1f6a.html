@@ -2028,6 +2028,10 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 .ib-plantilla:hover{background:var(--surface-sunk);color:var(--ink)}
 .ib-plantilla:disabled{opacity:.5}
 .ib-comp-hint{padding:0 16px 8px;background:var(--surface-2)}
+.ib-asoc{display:grid;gap:8px;padding:10px 16px;background:var(--masomenos-bg);border-bottom:1px solid var(--line);font-size:12.5px;color:var(--ink-2)}
+.ib-asoc[hidden]{display:none}
+.ib-asoc-f{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ib-asoc-f input{flex:1 1 220px;min-width:0;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);font:inherit;font-size:13px;padding:7px 10px}
 .ib-ficha-acc{display:flex;flex-wrap:wrap;gap:6px}
 @media (min-width:1181px){
   .ib[data-ficha="0"]{grid-template-columns:320px minmax(0,1fr)}
@@ -13447,6 +13451,7 @@ function renderInbox(){
     </div>
     <div class="ib-col ib-col-hilo">
       <div class="ib-head" id="ib-head"></div>
+      <div class="ib-asoc" id="ib-asoc" hidden></div>
       <div class="ib-hilo" id="ib-hilo"><div class="ib-sin">Elige un chat de la lista.</div></div>
       <form class="ib-leccion" id="ib-leccion" hidden>
         <h4 id="ib-lec-tit"></h4>
@@ -13653,6 +13658,51 @@ function ibMensajeHtml(m, conv){
   </div>`;
 }
 
+// Chat que no cruzó con ningún lead (el lead quedó con el número como nombre): se ofrece asociarlo a uno existente.
+function ibPintarAsoc(){
+  const box = el('ib-asoc');
+  if(!box || !ibHilo) return;
+  const c = ibHilo.conversacion, l = ibHilo.lead;
+  const sinAsociar = !l || /^\+?\d[\d\s]*$/.test(String(l.nombre || '').trim());
+  if(!sinAsociar){ box.hidden = true; box.innerHTML = ''; delete box.dataset.conv; return; }
+  if(box.dataset.conv === String(c.id) && !box.hidden) return;   // no repintar mientras se escribe
+  box.dataset.conv = String(c.id);
+  box.hidden = false;
+  const etiqueta = x => `${x.nombre || 'Sin nombre'} · ${x.whatsapp || x.email || 'sin número'} (#${x.id})`;
+  box.innerHTML = `<div><b>+${esc(c.wa_id)}</b> todavía no está asociado a un lead. ¿Es alguien que ya tenés cargado?</div>
+    <form class="ib-asoc-f" id="ib-asoc-f">
+      <input id="ib-asoc-q" list="ib-asoc-lista" placeholder="Buscá el lead por nombre o número (ej. Ulises)" autocomplete="off" required aria-label="Lead existente">
+      <datalist id="ib-asoc-lista">${(typeof leads !== 'undefined' ? leads : []).filter(x => !l || x.id !== l.id).map(x => `<option value="${esc(etiqueta(x))}"></option>`).join('')}</datalist>
+      <button type="submit" class="btn btn-primary btn-sm" id="ib-asoc-ok">Asociar</button>
+      ${l ? `<button type="button" class="btn btn-ghost btn-sm" id="ib-asoc-nuevo">Es un lead nuevo</button>` : ''}
+    </form>
+    <div class="hint" id="ib-asoc-res" aria-live="polite"></div>`;
+  el('ib-asoc-f').addEventListener('submit', async e => {
+    e.preventDefault();
+    const m = /\(#(\d+)\)\s*$/.exec(el('ib-asoc-q').value);
+    const res = el('ib-asoc-res');
+    if(!m){ res.textContent = 'Elegí un lead de la lista.'; return; }
+    el('ib-asoc-ok').disabled = true;
+    res.textContent = 'Asociando…';
+    try{
+      const r = await api(`/api/setter/conversaciones/${c.id}`, { method:'PATCH', body: JSON.stringify({ accion:'asociar_lead', lead_id: Number(m[1]) }) });
+      toast(r.otro_chat ? `Asociado. Ese lead ya tenía otro chat (+${r.otro_chat}): quedan los dos.` : 'Chat asociado al lead', { tipo:'ok', ms: 5000 });
+      box.hidden = true; delete box.dataset.conv;
+      await ibCargarHilo(c.id, { silencioso:true });
+      ibCargarLista();
+      load();
+    }catch(err){
+      res.textContent = 'No se pudo: ' + err.message;
+      el('ib-asoc-ok').disabled = false;
+    }
+  });
+  const nuevo = el('ib-asoc-nuevo');
+  if(nuevo) nuevo.addEventListener('click', () => {
+    if(!leads.find(x => x.id === l.id)) return alert('El lead todavía no está cargado en el panel. Probá en unos segundos.');
+    abrirDrawer(l.id);
+  });
+}
+
 function ibPintarHilo(){
   const d = ibHilo, c = d.conversacion;
   const nombre = ibNombre({ ...c, nombre: d.lead && d.lead.nombre });
@@ -13738,6 +13788,7 @@ function ibPintarHilo(){
   if(abajo) hilo.scrollTop = hilo.scrollHeight;
 
   ibPintarPie();
+  ibPintarAsoc();
 }
 
 // El pie (aviso de ventana + caja de respuesta) se arma una vez por chat:

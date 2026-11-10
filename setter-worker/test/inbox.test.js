@@ -261,3 +261,29 @@ describe('manychat_id en el chat', () => {
     expect((await r.json()).lead.manychat_id).toBe('1234567890');
   });
 });
+
+describe('asociar un chat a un lead', () => {
+  const patch = (id, body) => chat.onRequestPatch({ request: pedido('/x', { method: 'PATCH', body: JSON.stringify(body) }), env: envCrm(), params: { id: String(id) } });
+
+  it('engancha el chat al lead elegido, completa su número y borra el lead vacío que se creó solo', async () => {
+    const ahora = new Date().toISOString();
+    const real = (await env.DB.prepare(`INSERT INTO leads (nombre, whatsapp, etapa, creado_en, actualizado_en) VALUES ('Ulises', '+34 600 111 222', 'lead_nuevo', ?1, ?1)`).bind(ahora).run()).meta.last_row_id;
+    await webhookFirmado(exports.default, payloadMensaje({ waId: '51955555555', nombre: null, id: 'wamid.ASOC1', texto: 'Hola' }));
+    const conv = await uno(`SELECT id, lead_id FROM wa_conversaciones WHERE wa_id = '51955555555'`);
+    expect((await uno('SELECT nombre FROM leads WHERE id = ?', conv.lead_id)).nombre).toBe('+51955555555');
+
+    const r = await patch(conv.id, { accion: 'asociar_lead', lead_id: real });
+    expect(r.status).toBe(200);
+    expect((await r.json()).otro_chat).toBeNull();
+    expect(await uno('SELECT lead_id FROM wa_conversaciones WHERE id = ?', conv.id)).toEqual({ lead_id: real });
+    expect(await uno('SELECT wa_id, whatsapp FROM leads WHERE id = ?', real)).toEqual({ wa_id: '51955555555', whatsapp: '+34 600 111 222' });
+    expect(await uno('SELECT count(*) n FROM leads WHERE id = ?', conv.lead_id)).toEqual({ n: 0 });
+  });
+
+  it('un lead que no existe, 404; y no se borra un lead con datos', async () => {
+    const conv = await uno(`SELECT id, lead_id FROM wa_conversaciones WHERE wa_id = '51911111111'`);
+    expect((await patch(conv.id, { accion: 'asociar_lead', lead_id: 99999 })).status).toBe(404);
+    expect((await patch(conv.id, { accion: 'asociar_lead', lead_id: 'x' })).status).toBe(404);
+    expect(await uno('SELECT count(*) n FROM leads WHERE id = ?', conv.lead_id)).toEqual({ n: 1 });
+  });
+});
