@@ -26,9 +26,11 @@ export async function enviar(env, canal, pedido, ahora = new Date().toISOString(
   canal = canalPara(canal, conv.wa_id);
   const { texto, media, plantilla } = pedido;
   if (!texto && !media && !plantilla) throw new ErrorEnvio('nada para enviar');
-  // Fuera de la ventana de 24 h, WhatsApp solo acepta plantillas aprobadas.
+  // Fuera de la ventana de 24 h, WhatsApp solo acepta plantillas aprobadas. Los envíos
+  // automáticos (IA, seguimientos) lo respetan; el equipo puede mandar igual con
+  // `forzar` y asume lo que pase: si Meta lo rechaza, el error vuelve tal cual.
   const ventanaAbierta = conv.ventana_hasta && conv.ventana_hasta > ahora;
-  if (!plantilla && !ventanaAbierta) throw new ErrorEnvio('ventana de 24 h cerrada: solo plantillas', 409);
+  if (!plantilla && !ventanaAbierta && !pedido.forzar) throw new ErrorEnvio('ventana de 24 h cerrada: solo plantillas', 409);
 
   let ref, tipo, cuerpo = texto ?? null, mediaKey = null;
   try {
