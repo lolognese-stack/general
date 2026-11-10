@@ -1,5 +1,5 @@
 import { checkToken } from '../../_lib/auth.js';
-import { CAMPOS_PIEZA } from '../piezas.js';
+import { CAMPOS_PIEZA, errorEtiquetaRepetida } from '../piezas.js';
 import { piezaHecha, marcarIdeasUsadas } from '../../_lib/ideas-usadas.js';
 
 
@@ -31,9 +31,15 @@ export async function onRequestPatch({ request, env, params }) {
     ? await env.DB.prepare('SELECT estado, inspiracion FROM piezas WHERE id = ?').bind(params.id).first()
     : null;
 
-  await env.DB.prepare(`UPDATE piezas SET ${setClause} WHERE id = ?`)
-    .bind(...values)
-    .run();
+  try {
+    await env.DB.prepare(`UPDATE piezas SET ${setClause} WHERE id = ?`)
+      .bind(...values)
+      .run();
+  } catch (e) {
+    const r = errorEtiquetaRepetida(e, body);
+    if (r) return json(r, 409);
+    throw e;
+  }
 
   if (antes) {
     const estado = fields.includes('estado') ? body.estado : antes.estado;

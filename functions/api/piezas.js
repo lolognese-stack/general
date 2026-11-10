@@ -47,6 +47,13 @@ export async function onRequestGet({ request, env }) {
   return json(results);
 }
 
+// El índice único de etiqueta_manychat evita que dos piezas se lleven los mismos
+// leads. Si se repite, se avisa cuál es el problema en vez de tirar un 500.
+export function errorEtiquetaRepetida(e, body) {
+  if (!/UNIQUE constraint failed: piezas\.etiqueta_manychat/.test(String(e && e.message))) return null;
+  return { error: `Ya hay otra pieza con la etiqueta "${body.etiqueta_manychat || ''}". Cambiala para que no se repita (por ejemplo, sumale un 2).` };
+}
+
 export async function onRequestPost({ request, env }) {
   if (!checkToken(request, env)) return json({ error: 'unauthorized' }, 401);
   const body = await request.json();
@@ -59,9 +66,16 @@ export async function onRequestPost({ request, env }) {
   const sql = `INSERT INTO piezas (${cols.join(', ')}, creado_en, actualizado_en)
                VALUES (${cols.map(() => '?').join(', ')}, ?, ?)`;
 
-  const result = await env.DB.prepare(sql)
-    .bind(...cols.map((c) => datos[c]), now, now)
-    .run();
+  let result;
+  try {
+    result = await env.DB.prepare(sql)
+      .bind(...cols.map((c) => datos[c]), now, now)
+      .run();
+  } catch (e) {
+    const r = errorEtiquetaRepetida(e, body);
+    if (r) return json(r, 409);
+    throw e;
+  }
 
   if (piezaHecha(datos.estado)) await marcarIdeasUsadas(env, datos.inspiracion);
 

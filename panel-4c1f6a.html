@@ -10248,7 +10248,13 @@ function pzEtiquetaSugerida(p){
   const f = String(p.fecha).slice(0, 10);
   const formato = p.formato === 'Carrusel' ? 'CARRUSEL' : 'REEL';
   const angulo = (p.angulo_nombre || 'Sin ángulo').replace(/\//g, '-');
-  return `${formato} | ${angulo} | ${f.slice(8, 10)}-${f.slice(5, 7)}`;
+  const base = `${formato} | ${angulo} | ${f.slice(8, 10)}-${f.slice(5, 7)}`;
+  // Dos piezas del mismo día y ángulo darían la misma etiqueta y la base no la
+  // admite repetida (daba HTTP 500 al guardar): se le suma un número.
+  const usadas = new Set(piezas.filter(x => x.id !== p.id && x.etiqueta_manychat).map(x => x.etiqueta_manychat));
+  let etiqueta = base, n = 2;
+  while(usadas.has(etiqueta)) etiqueta = `${base} ${n++}`;
+  return etiqueta;
 }
 
 // Botón "Abrir ↗" al lado de cada campo de link: sin esto, para ver el post
