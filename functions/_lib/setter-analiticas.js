@@ -28,11 +28,11 @@ export async function cargarDatos(db, desde) {
     db.prepare(
       `SELECT c.id, c.lead_id, c.wa_id, c.nombre_perfil, c.ia_activa, c.espera_persona, c.abierta_por, c.paso_guion, c.ultimo_autor, c.ultimo_en, c.creado_en,
               l.nombre, l.ia_estado, l.calificado, l.etapa, l.ia_origen, l.ia_primera_intencion
-         FROM wa_conversaciones c LEFT JOIN leads l ON l.id = c.lead_id WHERE c.creado_en >= ?`
+         FROM wa_conversaciones c LEFT JOIN leads l ON l.id = c.lead_id WHERE c.creado_en >= ? AND c.rol IS NULL`
     ).bind(desde).all().then((r) => r.results),
     db.prepare(
       `SELECT m.conversacion_id, m.direccion, m.autor, m.estado, m.es_followup, m.intento_followup, m.recurso_id, m.creado_en
-         FROM wa_mensajes m JOIN wa_conversaciones c ON c.id = m.conversacion_id WHERE c.creado_en >= ? AND m.tipo <> 'nota' ORDER BY m.creado_en, m.id`
+         FROM wa_mensajes m JOIN wa_conversaciones c ON c.id = m.conversacion_id WHERE c.creado_en >= ? AND c.rol IS NULL AND m.tipo <> 'nota' ORDER BY m.creado_en, m.id`
     ).bind(desde).all().then((r) => r.results),
     db.prepare(`SELECT a.* FROM wa_analisis a JOIN wa_conversaciones c ON c.id = a.conversacion_id WHERE c.creado_en >= ?`).bind(desde).all().then((r) => r.results),
     db.prepare('SELECT clave, recurso_conversion_id FROM setter_agentes').all().then((r) => r.results),

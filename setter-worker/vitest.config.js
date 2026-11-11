@@ -36,6 +36,7 @@ const SQL = [
   ...leer('../crm/migracion-040-setter-archivos.sql'),
   ...leer('../crm/migracion-041-setter-calificacion.sql'),
   ...leer('../crm/migracion-043-setter-sugerencias.sql'),
+  ...leer('../crm/migracion-051-conversacion-rol.sql'),
   ...leer('../crm/seed-setter-luna-llena.sql'),
   ...leer('../crm/seed-setter-catalogo.sql'),
 ];

@@ -6,6 +6,9 @@ import { setterActivo, evento } from '../../../_lib/setter.js';
 //   devolver_ia     la IA vuelve a contestar y el chat deja de esperar a una persona
 //   asignar         { asignada_a } ('' = desasignar)
 //   leer            pone en 0 los no leídos
+//   anclar          { anclada } el chat queda arriba de la lista (o deja de estarlo)
+//   rol             { rol: 'cotizador' | '', alias } marca al contacto que cotiza: no es un lead,
+//                   queda anclado y sin IA. Hay uno solo: marcar a otro le saca el rol al anterior
 //   calificacion    { ia_calificacion } etiqueta comercial puesta por una persona
 //                   ('' = sin etiqueta); la IA ya no la cambia
 
@@ -68,6 +71,27 @@ export async function onRequestPatch({ request, env, params }) {
       `UPDATE leads SET ia_calificacion = ?, ia_calificacion_por = ?, calificado = coalesce(?, calificado), actualizado_en = ? WHERE id = ?`
     ).bind(v, v ? 'persona' : null, CALIFICADO_DE[v] || null, ahora, conv.lead_id).run();
     await evento(env.DB, conv, 'calificacion_manual', v || 'sin etiqueta');
+  } else if (b.accion === 'anclar') {
+    await upd('anclada = ?', b.anclada ? 1 : 0);
+  } else if (b.accion === 'rol') {
+    if (b.rol !== 'cotizador' && b.rol !== '' && b.rol !== null) return json({ error: 'rol inválido' }, 400);
+    if (b.rol === 'cotizador') {
+      const alias = typeof b.alias === 'string' ? b.alias.trim().slice(0, 60) : '';
+      if (!alias && !conv.alias) return json({ error: 'poné el nombre de la persona' }, 400);
+      await env.DB.prepare(`UPDATE wa_conversaciones SET rol = NULL WHERE rol = 'cotizador' AND id <> ?`).bind(conv.id).run();
+      // Si el chat entró solo y se creó un lead con el número como nombre, ese lead sobra: no es un cliente.
+      const sobra = conv.lead_id
+        ? await env.DB.prepare(`SELECT id FROM leads WHERE id = ? AND nombre GLOB '+[0-9]*' AND fuente = 'WhatsApp' AND ia_resumen IS NULL`).bind(conv.lead_id).first()
+        : null;
+      await upd(`rol = 'cotizador', alias = coalesce(?, alias), anclada = 1, ia_activa = 0, ia_pausa_motivo = 'manual', espera_persona = 0${sobra ? ', lead_id = NULL' : ''}`, alias || null);
+      if (sobra) {
+        try {
+          await env.DB.prepare(`DELETE FROM leads WHERE id = ? AND NOT EXISTS (SELECT 1 FROM wa_conversaciones WHERE lead_id = ?)`).bind(sobra.id, sobra.id).run();
+        } catch { /* con datos colgando (radar, cotizaciones) queda: no molesta */ }
+      }
+    } else {
+      await upd('rol = NULL');
+    }
   } else if (b.accion === 'asociar_lead') {
     // Un chat que no cruzó solo con ningún lead (p. ej. le escribiste desde el celular a alguien
     // cargado con otro número): se lo asocia a mano al lead que corresponde.

@@ -287,3 +287,55 @@ describe('asociar un chat a un lead', () => {
     expect(await uno('SELECT count(*) n FROM leads WHERE id = ?', conv.lead_id)).toEqual({ n: 1 });
   });
 });
+
+describe('anclar y cotizador', () => {
+  const patch = (id, body) => chat.onRequestPatch({ request: pedido('/x', { method: 'PATCH', body: JSON.stringify(body) }), env: envCrm(), params: { id: String(id) } });
+  const listado = async (q = '') => (await lista.onRequestGet({ request: pedido('/api/setter/conversaciones' + q), env: envCrm() })).json();
+  const convDe = (wa) => uno('SELECT id, lead_id FROM wa_conversaciones WHERE wa_id = ?', wa);
+
+  it('un chat anclado va primero, aunque otro espere a una persona', async () => {
+    const lucia = await convDe('51911111111'), pedro = await convDe('51922222222');
+    await env.DB.prepare('UPDATE wa_conversaciones SET espera_persona = 1 WHERE id = ?').bind(lucia.id).run();
+    await env.DB.prepare('UPDATE wa_conversaciones SET espera_persona = 0 WHERE id = ?').bind(pedro.id).run();
+    expect((await listado())[0].id).toBe(lucia.id);
+    expect((await patch(pedro.id, { accion: 'anclar', anclada: true })).status).toBe(200);
+    const l = await listado();
+    expect(l[0].id).toBe(pedro.id);
+    expect(l[0].anclada).toBe(1);
+    await patch(pedro.id, { accion: 'anclar', anclada: false });
+    expect((await listado())[0].id).toBe(lucia.id);
+  });
+
+  it('marcar al cotizador: lo ancla, le pone nombre, pausa la IA y borra el lead que se creó solo', async () => {
+    await webhookFirmado(exports.default, payloadMensaje({ waId: '51930299443', nombre: null, id: 'wamid.COT1', texto: '.' }));
+    const c = await convDe('51930299443');
+    expect((await uno('SELECT nombre FROM leads WHERE id = ?', c.lead_id)).nombre).toBe('+51930299443');
+
+    expect((await patch(c.id, { accion: 'rol', rol: 'cotizador' })).status).toBe(400);   // falta el nombre
+    expect((await patch(c.id, { accion: 'rol', rol: 'jefe', alias: 'X' })).status).toBe(400);
+    expect((await patch(c.id, { accion: 'rol', rol: 'cotizador', alias: ' Álvaro ' })).status).toBe(200);
+
+    expect(await uno('SELECT rol, alias, anclada, ia_activa, lead_id FROM wa_conversaciones WHERE id = ?', c.id))
+      .toEqual({ rol: 'cotizador', alias: 'Álvaro', anclada: 1, ia_activa: 0, lead_id: null });
+    expect(await uno('SELECT count(*) n FROM leads WHERE id = ?', c.lead_id)).toEqual({ n: 0 });
+    const cot = await listado('?rol=cotizador');
+    expect(cot.map((x) => x.id)).toEqual([c.id]);
+    expect(cot[0]).toMatchObject({ rol: 'cotizador', alias: 'Álvaro', anclada: 1 });
+    expect((await listado('?q=lvaro')).map((x) => x.id)).toEqual([c.id]);
+    expect((await listado())[0].id).toBe(c.id);
+  });
+
+  it('hay un solo cotizador, y un chat con lead de verdad no pierde su lead', async () => {
+    await webhookFirmado(exports.default, payloadMensaje({ waId: '51930299443', nombre: null, id: 'wamid.COT2', texto: '.' }));
+    const a = await convDe('51930299443'), lucia = await convDe('51911111111');
+    await patch(a.id, { accion: 'rol', rol: 'cotizador', alias: 'Álvaro' });
+    await patch(lucia.id, { accion: 'rol', rol: 'cotizador', alias: 'Lucía' });
+    expect((await listado('?rol=cotizador')).map((x) => x.id)).toEqual([lucia.id]);
+    expect(await uno('SELECT lead_id FROM wa_conversaciones WHERE id = ?', lucia.id)).toEqual({ lead_id: lucia.lead_id });
+    expect(await uno('SELECT rol FROM wa_conversaciones WHERE id = ?', a.id)).toEqual({ rol: null });
+
+    await patch(lucia.id, { accion: 'rol', rol: '' });
+    expect((await listado('?rol=cotizador')).length).toBe(0);
+    expect(await uno('SELECT anclada FROM wa_conversaciones WHERE id = ?', lucia.id)).toEqual({ anclada: 1 });
+  });
+});

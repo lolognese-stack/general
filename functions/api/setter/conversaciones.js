@@ -6,6 +6,7 @@ import { setterActivo } from '../../_lib/setter.js';
 //   visto=vio_no_contesto|no_abrio                          asignacion=mios|sin_asignar (+ yo=<nombre>)
 //   abierta=lead|nosotros        actividad=hoy|semana|mes|rango (+ desde, hasta YYYY-MM-DD)
 //   urgentes=1                   q=<texto>                lead_id=<id>
+//   rol=cotizador                los anclados van siempre primero
 //
 // "Hoy", "semana" y "mes" van en hora de Perú (UTC-5), como el resto del CRM.
 
@@ -47,21 +48,22 @@ export async function onRequestGet({ request, env }) {
     if (RE_FECHA.test(p.get('hasta') || '')) y('c.ultimo_en < ?', finDiaPeru(p.get('hasta')));
   }
   if (p.get('urgentes') === '1') y('c.espera_persona = 1');
+  if (p.get('rol') === 'cotizador') y(`c.rol = 'cotizador'`);
   if (/^\d+$/.test(p.get('lead_id') || '')) y('c.lead_id = ?', Number(p.get('lead_id')));
   const q = (p.get('q') || '').trim().toLowerCase().slice(0, 80);
   if (q) {
     const like = '%' + q.replace(/[%_]/g, '') + '%';
-    y(`(lower(coalesce(l.nombre, c.nombre_perfil, '')) LIKE ? OR c.wa_id LIKE ? OR lower(coalesce(c.ultimo_texto, '')) LIKE ?)`, like, like, like);
+    y(`(lower(coalesce(c.alias, l.nombre, c.nombre_perfil, '')) LIKE ? OR c.wa_id LIKE ? OR lower(coalesce(c.ultimo_texto, '')) LIKE ?)`, like, like, like);
   }
 
   const { results } = await env.DB.prepare(
     `SELECT c.id, c.lead_id, c.wa_id, c.nombre_perfil, c.agente_activo, c.ia_activa, c.ia_pausa_motivo,
             c.abierta_por, c.asignada_a, c.espera_persona, c.no_leidos, c.visto_por_lead, c.ventana_hasta,
-            c.ultimo_texto, c.ultimo_autor, c.ultimo_en,
+            c.ultimo_texto, c.ultimo_autor, c.ultimo_en, c.anclada, c.rol, c.alias,
             l.nombre, l.etapa, l.calificado, l.score, l.ia_estado, l.ia_origen, l.ia_calificacion
        FROM wa_conversaciones c LEFT JOIN leads l ON l.id = c.lead_id
       ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
-      ORDER BY c.espera_persona DESC, c.ultimo_en DESC
+      ORDER BY c.anclada DESC, c.espera_persona DESC, c.ultimo_en DESC
       LIMIT 300`
   ).bind(...binds).all();
   return json(results);

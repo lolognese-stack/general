@@ -1983,6 +1983,8 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 .ib-barra{padding:14px 16px 8px}
 .ib-barra .ib-cuenta{font-size:15px;font-weight:700;color:var(--ink);letter-spacing:-.01em}
 .ib-lista .ib-item{display:grid;grid-template-columns:44px minmax(0,1fr);gap:0 12px;align-items:start;padding:0 0 0 16px;border-bottom:none}
+.ib-item[data-anclada="1"]{background:color-mix(in srgb,var(--surface-2) 70%,var(--surface))}
+.ib-pin{flex:none;color:var(--ink-3)}
 .ib-item:hover{background:var(--surface-2)}
 .ib-item[aria-current="true"]{background:var(--surface-sunk)}
 .ib-item[data-urgente="1"]::before{display:none}
@@ -12649,7 +12651,8 @@ function ibCuando(iso){
   return ibDiaKey(iso) === ibDiaKey(new Date().toISOString()) ? ibHora(iso)
     : new Date(iso).toLocaleDateString('es-AR', { timeZone:'America/Lima', day:'2-digit', month:'2-digit' });
 }
-const ibNombre = c => (c.nombre || c.nombre_perfil || '+' + c.wa_id).trim();
+const ibNombre = c => (c.alias || c.nombre || c.nombre_perfil || '+' + c.wa_id).trim();
+const IB_PIN = '<svg class="ib-pin" viewBox="0 0 24 24" width="13" height="13" aria-label="Anclado" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>';
 
 // Avatar con iniciales (como en WhatsApp Web); el tono sale del nombre.
 function ibAvatar(nombre){
@@ -13468,6 +13471,12 @@ function renderInbox(){
         <div class="hint" id="ib-apr-res" aria-live="polite"></div>
         <div class="ib-leccion-acc"><button type="button" class="btn btn-ghost btn-sm" id="ib-apr-no">Cerrar</button><button type="submit" class="btn btn-primary btn-sm" id="ib-apr-ok">Proponer lecciones</button></div>
       </form>
+      <form class="ib-leccion" id="ib-pase" hidden>
+        <h4>Pasar a <span id="ib-pase-quien">el cotizador</span></h4>
+        <label>Mensaje con toda la información del cliente<textarea id="ib-pase-txt" rows="9"></textarea></label>
+        <div class="hint" id="ib-pase-res" aria-live="polite"></div>
+        <div class="ib-leccion-acc"><button type="button" class="btn btn-ghost btn-sm" id="ib-pase-no">Cerrar</button><button type="button" class="btn btn-ghost btn-sm" id="ib-pase-copiar">Copiar</button><button type="submit" class="btn btn-primary btn-sm" id="ib-pase-ok">Enviar</button></div>
+      </form>
       <div id="ib-pie"></div>
     </div>
     <div class="ib-col ib-col-ficha"><div class="ib-ficha" id="ib-ficha"></div></div>
@@ -13578,16 +13587,17 @@ function ibPintarLista(){
   box.innerHTML = ibLista.map(c => {
     // Una sola línea de contexto, sin chips: lo urgente va con ícono y texto, el resto en gris.
     const meta = [];
+    if(c.rol === 'cotizador') meta.push('Cotizador');
     if(c.espera_persona) meta.push(`<span class="ib-urg">● Espera a una persona</span>`);
     if(c.ia_calificacion) meta.push(esc(ibCalifLbl(c.ia_calificacion)));
     if(c.ia_estado) meta.push(esc(IB_ESTADO_LBL[c.ia_estado] || c.ia_estado));
     if(!c.ia_activa) meta.push('Humano');
     if(c.asignada_a) meta.push(esc(c.asignada_a));
     if(c.visto_por_lead === 'vio_no_contesto') meta.push('Vio y no contestó');
-    return `<button type="button" class="ib-item" data-ib="${c.id}" aria-current="${String(c.id === ibSel)}" data-urgente="${c.espera_persona ? 1 : 0}" data-noleido="${c.no_leidos > 0 ? 1 : 0}">
+    return `<button type="button" class="ib-item" data-ib="${c.id}" aria-current="${String(c.id === ibSel)}" data-urgente="${c.espera_persona ? 1 : 0}" data-noleido="${c.no_leidos > 0 ? 1 : 0}" data-anclada="${c.anclada ? 1 : 0}">
       ${ibAvatar(ibNombre(c))}
       <div class="ib-item-body">
-        <div class="ib-item-top"><b>${esc(ibNombre(c))}</b><time>${ibCuando(c.ultimo_en)}</time></div>
+        <div class="ib-item-top"><b>${esc(ibNombre(c))}</b>${c.anclada ? IB_PIN : ''}<time>${ibCuando(c.ultimo_en)}</time></div>
         <div class="ib-prev"><span>${esc(autorPrev(c.ultimo_autor) + (c.ultimo_texto || ''))}</span>${c.no_leidos > 0 ? `<i class="ib-nl">${c.no_leidos}</i>` : ''}</div>
         ${meta.length ? `<div class="ib-meta">${meta.join(' · ')}</div>` : ''}
       </div>
@@ -13663,7 +13673,7 @@ function ibPintarAsoc(){
   const box = el('ib-asoc');
   if(!box || !ibHilo) return;
   const c = ibHilo.conversacion, l = ibHilo.lead;
-  const sinAsociar = !l || /^\+?\d[\d\s]*$/.test(String(l.nombre || '').trim());
+  const sinAsociar = !c.rol && (!l || /^\+?\d[\d\s]*$/.test(String(l.nombre || '').trim()));
   if(!sinAsociar){ box.hidden = true; box.innerHTML = ''; delete box.dataset.conv; return; }
   if(box.dataset.conv === String(c.id) && !box.hidden) return;   // no repintar mientras se escribe
   box.dataset.conv = String(c.id);
@@ -13715,6 +13725,9 @@ function ibPintarHilo(){
     <div class="ib-head-acc">
     <button type="button" class="btn btn-ghost btn-sm" id="ib-ia-btn">${c.ia_activa ? 'Tomar control' : 'Devolver a la IA'}</button>
     <details class="ib-mas"><summary class="btn btn-ghost btn-sm">Más</summary><div class="ib-mas-menu">
+    ${d.lead && !c.rol ? `<button type="button" class="btn btn-ghost btn-sm" id="ib-pase-btn">Pasar al cotizador</button>` : ''}
+    <button type="button" class="btn btn-ghost btn-sm" id="ib-anclar-btn">${c.anclada ? 'Desanclar el chat' : 'Anclar el chat'}</button>
+    <button type="button" class="btn btn-ghost btn-sm" id="ib-rol-btn">${c.rol === 'cotizador' ? 'Ya no es el cotizador' : 'Es el cotizador'}</button>
     <button type="button" class="btn btn-ghost btn-sm" id="ib-asig-btn">${c.asignada_a && c.asignada_a === ibYo() ? 'Desasignarme' : 'Asignarme'}</button>
     <button type="button" class="btn btn-ghost btn-sm" id="ib-aprender-btn" title="La IA lee este chat y propone qué aprender (queda en Setter IA › Para aprobar)">Aprender de este chat</button></div></details>
     <button type="button" class="ib-ficha-btn" id="ib-ficha-btn" aria-pressed="${ibFichaGet() === '1'}" aria-controls="ib-ficha" aria-label="Mostrar u ocultar la ficha del lead" title="Mostrar u ocultar la ficha del lead"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -13732,6 +13745,14 @@ function ibPintarHilo(){
     const f = el('ib-aprender');
     el('ib-apr-nota').value = ''; el('ib-apr-res').textContent = ''; f.hidden = false; el('ib-apr-nota').focus();
   });
+  el('ib-anclar-btn').addEventListener('click', () => ibAccion({ accion:'anclar', anclada: !c.anclada }));
+  el('ib-rol-btn').addEventListener('click', () => {
+    if(c.rol) return ibAccion({ accion:'rol', rol:'' });
+    const a = (prompt('¿Cómo se llama? Así aparece en el Inbox y en «Pasar a…».', ibNombre({ ...c, nombre: d.lead && d.lead.nombre }).replace(/^\+\d+$/, '')) || '').trim();
+    if(a) ibAccion({ accion:'rol', rol:'cotizador', alias: a });
+  });
+  const pase = el('ib-pase-btn');
+  if(pase) pase.addEventListener('click', ibPasarCotizador);
   el('ib-asig-btn').addEventListener('click', () => {
     if(c.asignada_a && c.asignada_a === ibYo()) return ibAccion({ accion:'asignar', asignada_a:'' });
     if(ibPedirNombre()) ibAccion({ accion:'asignar', asignada_a: ibYo() });
@@ -13750,7 +13771,8 @@ function ibPintarHilo(){
   hilo.querySelectorAll('[data-copiar]').forEach(b => b.addEventListener('click', () => ibCopiarSugerido(b)));
   hilo.querySelectorAll('[data-ensenar]').forEach(b => b.addEventListener('click', () => ibAbrirLeccion(b.dataset.ensenar, Number(b.dataset.id))));
   const lec = el('ib-leccion'), apr = el('ib-aprender');
-  if(lec.dataset.conv !== String(c.id)){ lec.hidden = true; apr.hidden = true; lec.dataset.conv = String(c.id); }
+  if(lec.dataset.conv !== String(c.id)){ lec.hidden = true; apr.hidden = true; el('ib-pase').hidden = true; lec.dataset.conv = String(c.id); }
+  ibEnlazarPase();
   if(!apr.dataset.listo){
     apr.dataset.listo = '1';
     el('ib-apr-no').addEventListener('click', () => { apr.hidden = true; });
@@ -13799,7 +13821,7 @@ function ibPintarPie(){
   pie.dataset.conv = String(c.id);
   pie.innerHTML = `
     <form class="ib-comp" id="ib-form">
-      <button type="button" class="ib-plantilla" id="ib-plantilla" title="Mandar la plantilla aprobada de primer contacto (sirve aunque el lead no haya escrito)">Plantilla</button>
+      ${c.rol ? '' : `<button type="button" class="ib-plantilla" id="ib-plantilla" title="Mandar la plantilla aprobada de primer contacto (sirve aunque el lead no haya escrito)">Plantilla</button>`}
       <textarea id="ib-texto" rows="1" placeholder="Escribe un mensaje" aria-label="Mensaje"></textarea>
       <button type="submit" class="ib-send" id="ib-enviar" aria-label="Enviar" title="Enviar (Ctrl+Enter)"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M3.4 20.4l17.45-7.48a1 1 0 000-1.84L3.4 3.6a.993.993 0 00-1.39.91L2 9.12c0 .5.37.93.87.99L17 12 2.87 13.88c-.5.07-.87.5-.87 1l.01 4.61c0 .71.73 1.2 1.39.91z" fill="currentColor"/></svg></button>
     </form>
@@ -13808,7 +13830,19 @@ function ibPintarPie(){
   ta.addEventListener('keydown', e => { if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); ibEnviar(); } });
   ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 160) + 'px'; });
   el('ib-form').addEventListener('submit', e => { e.preventDefault(); ibEnviar(); });
-  el('ib-plantilla').addEventListener('click', ibEnviarPlantilla);
+  if(el('ib-plantilla')) el('ib-plantilla').addEventListener('click', ibEnviarPlantilla);
+}
+
+async function ibPortapapeles(texto){
+  try{
+    await navigator.clipboard.writeText(texto);
+  }catch(e){
+    const t = document.createElement('textarea');   // sin permiso del portapapeles: vía selección
+    t.value = texto; t.style.position = 'fixed'; t.style.opacity = '0';
+    document.body.appendChild(t); t.select();
+    try{ document.execCommand('copy'); }catch(e2){ toast('No se pudo copiar: seleccioná el texto a mano.', { tipo:'error' }); }
+    t.remove();
+  }
 }
 
 // Copia el mensaje del aviso para pegarlo a mano en WhatsApp.
@@ -13816,15 +13850,7 @@ async function ibCopiarSugerido(btn){
   const m = ibHilo && ibHilo.mensajes.find(x => x.id === Number(btn.dataset.copiar));
   const sug = m && String(m.texto || '').split('\nMensaje sugerido:\n')[1];
   if(!sug) return;
-  try{
-    await navigator.clipboard.writeText(sug);
-  }catch(e){
-    const t = document.createElement('textarea');   // sin permiso del portapapeles: vía selección
-    t.value = sug; t.style.position = 'fixed'; t.style.opacity = '0';
-    document.body.appendChild(t); t.select();
-    try{ document.execCommand('copy'); }catch(e2){ toast('No se pudo copiar: seleccioná el texto a mano.', { tipo:'error' }); }
-    t.remove();
-  }
+  await ibPortapapeles(sug);
   const txt = btn.textContent;
   btn.textContent = 'Copiado ✓';
   setTimeout(() => { btn.textContent = txt; }, 2000);
@@ -13900,21 +13926,102 @@ async function ibVerMedia(b){
   }
 }
 
+// Fecha, días e itinerario del lead ya ordenados: los usan la ficha y el mensaje al cotizador.
+function ibDatosViaje(l){
+  const it = (() => { try{ const x = JSON.parse(l.itinerario || 'null'); return Array.isArray(x) && x.some(t => t && Array.isArray(t.dias) && t.dias.length) ? x : null; }catch(e){ return null; } })();
+  const fecha = l.fecha_viaje || (l.llegada ? l.llegada + (l.salida ? ' al ' + l.salida : '') : '');
+  const diasTot = l.dias || (it ? it.reduce((n, t) => n + t.dias.length, 0) : '');
+  const itTxt = it ? it.map((t, i) => `${i + 1}. ${t.titulo || ''} (${t.dias.length} día${t.dias.length > 1 ? 's' : ''})`).join('\n') : '';
+  return { itTxt, fecha, diasTot };
+}
+
+// Mensaje con todo lo que el cotizador necesita para armar la cotización (formato WhatsApp: *negrita*).
+function ibArmarPase(){
+  const d = ibHilo, l = d.lead, c = d.conversacion;
+  const { itTxt, fecha, diasTot } = ibDatosViaje(l);
+  const L = [];
+  const lin = (k, v) => { if(v || v === 0) L.push(`*${k}:* ${String(v).trim()}`); };
+  L.push('*Cotización para armar*', '');
+  lin('Cliente', l.nombre);
+  lin('WhatsApp', l.whatsapp || '+' + c.wa_id);
+  L.push(`https://wa.me/${c.wa_id}`);
+  lin('Mail', l.email); lin('País', l.pais); lin('Residencia', l.residencia);
+  L.push('', '*Viaje*');
+  lin('Destinos', l.destinos);
+  if(itTxt) L.push('*Itinerario:*', itTxt);
+  lin('Fecha', fecha); lin('Días', diasTot); lin('Personas', l.personas); lin('Edades de los menores', l.edades_menores);
+  lin('Pasajes aéreos', l.pasajes); lin('Presupuesto por persona', l.presupuesto_pp); lin('Hotel', l.categoria_hotel); lin('Ocasión', l.ocasion);
+  const faltan = [['Personas', l.personas], ['Mail', l.email], ['País', l.pais], ['Fecha', fecha], ['Días', diasTot], ['Destinos', l.destinos || itTxt], ['Pasajes', l.pasajes], ['Presupuesto por persona', l.presupuesto_pp]]
+    .filter(([, v]) => !(v || v === 0)).map(([k]) => k);
+  if(faltan.length) L.push('', `*Faltan:* ${faltan.join(', ')}`);
+  if(l.ia_resumen) L.push('', '*Resumen:*', l.ia_resumen);
+  if(l.notas) L.push('', '*Notas:*', l.notas);
+  const quien = { lead:'Cliente', ia:'IA' };
+  const hist = d.mensajes.filter(m => m.tipo !== 'nota' && (m.transcripcion || m.texto)).slice(-8)
+    .map(m => `${quien[m.autor] || 'Nosotros'}: ${String(m.transcripcion || m.texto).replace(/\s+/g, ' ').slice(0, 300)}`);
+  if(hist.length) L.push('', '*Últimos mensajes del chat:*', ...hist);
+  if(l.manychat_id) L.push('', `ManyChat: ${MANYCHAT_CHAT(l.manychat_id)}`);
+  return L.join('\n').slice(0, 3900);
+}
+
+async function ibPasarCotizador(){
+  if(!ibHilo || !ibHilo.lead) return;
+  let cot = null;
+  try{ cot = (await api('/api/setter/conversaciones?rol=cotizador'))[0] || null; }catch(e){}
+  const f = el('ib-pase'), ok = el('ib-pase-ok');
+  f.dataset.cot = cot ? String(cot.id) : '';
+  el('ib-pase-quien').textContent = cot ? ibNombre(cot) : 'el cotizador';
+  el('ib-pase-txt').value = ibArmarPase();
+  el('ib-pase-res').textContent = cot ? '' : 'Todavía no hay cotizador marcado: en su chat, Más › Es el cotizador. Mientras, copiá el mensaje y pegalo a mano.';
+  ok.textContent = cot ? 'Enviar a ' + ibNombre(cot) : 'Enviar';
+  ok.disabled = !cot;
+  f.hidden = false;
+  el('ib-pase-txt').focus();
+  el('ib-pase-txt').setSelectionRange(0, 0);
+  el('ib-pase-txt').scrollTop = 0;
+}
+
+function ibEnlazarPase(){
+  const f = el('ib-pase');
+  if(f.dataset.listo) return;
+  f.dataset.listo = '1';
+  el('ib-pase-no').addEventListener('click', () => { f.hidden = true; });
+  el('ib-pase-copiar').addEventListener('click', async () => {
+    await ibPortapapeles(el('ib-pase-txt').value);
+    const b = el('ib-pase-copiar');
+    b.textContent = 'Copiado ✓';
+    setTimeout(() => { b.textContent = 'Copiar'; }, 2000);
+  });
+  f.addEventListener('submit', async e => {
+    e.preventDefault();
+    const texto = el('ib-pase-txt').value.trim(), cot = f.dataset.cot;
+    if(!texto || !cot) return;
+    const ok = el('ib-pase-ok'), res = el('ib-pase-res');
+    ok.disabled = true; res.textContent = 'Enviando…';
+    try{
+      await api(`/api/setter/conversaciones/${cot}/enviar`, { method:'POST', body: JSON.stringify({ texto }) });
+      f.hidden = true;
+      toast('Ficha enviada al cotizador', { tipo:'ok', ms: 4000 });
+      ibCargarLista();
+    }catch(err){
+      res.textContent = 'No se pudo enviar: ' + err.message + '. Si el cotizador no te escribió en las últimas 24 h, WhatsApp no deja: copiá el mensaje y pegalo en su chat desde el celular.';
+      ok.disabled = false;
+    }
+  });
+}
+
 function ibPintarFicha(){
   const box = el('ib-ficha');
   if(!box || !ibHilo) return;
   const l = ibHilo.lead, a = ibHilo.analisis, c = ibHilo.conversacion;
-  if(!l){ box.innerHTML = `<h3>Lead</h3><p>Este chat todavía no tiene lead.</p>`; return; }
+  if(!l){ box.innerHTML = c.rol ? `<h3>${esc(ibNombre(c))}</h3><p>Contacto del equipo (${c.rol}). No es un lead: acá le llegan las fichas con «Pasar al cotizador» desde el chat de cada cliente.</p>` : `<h3>Lead</h3><p>Este chat todavía no tiene lead.</p>`; return; }
   const etapa = (ETAPAS.find(e => e.key === l.etapa) || { label: l.etapa || '—' }).label;
   const cal = l.calificado ? (CALIFICACIONES.find(x => x.key === l.calificado) || { label: l.calificado }).label : '—';
   const fila = (k, v) => v || v === 0 ? `<dt>${k}</dt><dd>${esc(String(v))}</dd>` : '';
   const lista = j => { try{ const x = JSON.parse(j || '[]'); return Array.isArray(x) ? x : []; }catch(e){ return []; } };
   // Datos del aviso de lead (los mismos del mail): si el chat tiene un aviso, lo que falta se marca en rojo.
   const hayAviso = ibHilo.mensajes.some(m => m.tipo === 'nota');
-  const it = (() => { try{ const x = JSON.parse(l.itinerario || 'null'); return Array.isArray(x) && x.some(t => t && Array.isArray(t.dias) && t.dias.length) ? x : null; }catch(e){ return null; } })();
-  const fecha = l.fecha_viaje || (l.llegada ? l.llegada + (l.salida ? ' al ' + l.salida : '') : '');
-  const diasTot = l.dias || (it ? it.reduce((n, t) => n + t.dias.length, 0) : '');
-  const itTxt = it ? it.map((t, i) => `${i + 1}. ${t.titulo || ''} (${t.dias.length} día${t.dias.length > 1 ? 's' : ''})`).join('\n') : '';
+  const { itTxt, fecha, diasTot } = ibDatosViaje(l);
   const req = (k, v) => v || v === 0 ? fila(k, v) : (hayAviso ? `<dt>${k}</dt><dd class="ib-falta">⚠ Falta</dd>` : '');
   const faltan = hayAviso ? [['Personas', l.personas], ['Mail', l.email], ['País', l.pais], ['Fecha', fecha], ['Días', diasTot], ['Destinos', l.destinos || itTxt], ['Pasajes', l.pasajes], ['Presupuesto por persona', l.presupuesto_pp]]
     .filter(([, v]) => !(v || v === 0)).map(([k]) => k) : [];
@@ -13930,13 +14037,14 @@ function ibPintarFicha(){
       ${fila('Código web', l.codigo_web)}${fila('Abrió', c.abierta_por === 'nosotros' ? 'Nosotros' : 'El lead')}
     </dl>
     ${l.ia_resumen ? `<h3>Resumen de la IA</h3><p>${esc(l.ia_resumen)}</p>` : ''}
-    <div class="ib-ficha-acc"><button type="button" class="btn btn-ghost btn-sm" id="ib-abrir-lead">Abrir la ficha completa</button>${l.manychat_id ? `<a class="btn btn-ghost btn-sm" href="${esc(MANYCHAT_CHAT(l.manychat_id))}" target="_blank" rel="noopener">Abrir chat en ManyChat</a>` : ''}</div>
+    <div class="ib-ficha-acc"><button type="button" class="btn btn-primary btn-sm" id="ib-pase-ficha">Pasar al cotizador</button><button type="button" class="btn btn-ghost btn-sm" id="ib-abrir-lead">Abrir la ficha completa</button>${l.manychat_id ? `<a class="btn btn-ghost btn-sm" href="${esc(MANYCHAT_CHAT(l.manychat_id))}" target="_blank" rel="noopener">Abrir chat en ManyChat</a>` : ''}</div>
     <h3 style="margin-top:var(--s5)">Análisis</h3>
     ${a ? `<dl>
       ${fila('Intención', a.intencion_inicial)}${fila('Tipo', a.tipo_lead)}${fila('Próxima acción', a.proxima_accion)}${fila('Prioridad', a.prioridad)}
       ${fila('Objeciones', lista(a.objeciones_json).map(o => o.objecion || o).join(' · '))}
       ${fila('Sin responder', lista(a.preguntas_sin_respuesta_json).join(' · '))}
     </dl>` : `<p>Todavía no hay análisis de este chat.</p>`}`;
+  el('ib-pase-ficha').addEventListener('click', ibPasarCotizador);
   el('ib-abrir-lead').addEventListener('click', () => {
     if(!leads.find(x => x.id === l.id)) return alert('El lead todavía no está cargado en el panel. Prueba en unos segundos.');
     abrirDrawer(l.id);
