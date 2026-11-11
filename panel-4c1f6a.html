@@ -1143,6 +1143,59 @@ tr:hover .pz-link-edit,.pz-link-edit:focus-visible{opacity:1}
 .pf2-fresh.viejo i{background:var(--masomenos)}
 .pf2-fresh.viejo{color:var(--masomenos)}
 
+/* ---- Diagnóstico por pieza (Performance > Contenido) ----------------------
+   Embudo del período, tablero "Dónde fallan", puntos por etapa en la tabla y
+   bloque de la ficha. Sobrio a propósito: el color solo aparece donde hay una
+   falla o un sano, y nunca va solo (la falla es cuadrada, además de roja). */
+.pfe{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:var(--s5);overflow:hidden}
+.pfe-paso{padding:var(--s4);border-left:1px solid var(--line-soft);display:flex;flex-direction:column;gap:2px;min-width:0}
+.pfe-paso:first-child{border-left:0}
+.pfe-tasa{font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums;line-height:1.4}
+.pfe-tasa b{color:var(--ink);font-weight:700;font-size:13px}
+.pfe-hist{font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+@media(max-width:900px){
+  .pfe{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pfe-paso{border-left:0;border-top:1px solid var(--line-soft)}
+  .pfe-paso:first-child{grid-column:1/-1;border-top:0}
+}
+
+.pff{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:var(--s2);margin-bottom:var(--s5)}
+.pff-b{appearance:none;font:inherit;color:inherit;text-align:left;cursor:pointer;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:var(--s3) var(--s4);display:flex;flex-direction:column;gap:1px;min-width:0;min-height:44px}
+.pff-b:hover:not(:disabled){border-color:var(--ink-3)}
+.pff-b[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.pff-b:disabled{cursor:default;opacity:.55}
+.pff-n{font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.1;font-variant-numeric:tabular-nums}
+.pff-b[data-t="mal"]:not(:disabled) .pff-n{color:var(--danger)}
+.pff-b[data-t="ok"]:not(:disabled) .pff-n{color:var(--si)}
+.pff-l{font-size:12.5px;font-weight:700}
+.pff-s{font-size:11px;color:var(--ink-3);line-height:1.3}
+
+.pfd{display:inline-flex;align-items:center;gap:4px;vertical-align:middle}
+.pfd i{width:9px;height:9px;border-radius:50%;flex:none;box-sizing:border-box}
+.pfd i[data-e="ok"]{background:var(--si)}
+.pfd i[data-e="bajo"]{background:var(--ink-3);opacity:.5}
+.pfd i[data-e="mal"]{background:var(--danger);border-radius:2px}
+.pfd i[data-e="sin"]{border:1.5px solid var(--ink-3);opacity:.55}
+.pfd i[data-e="na"]{border:1.5px dashed var(--ink-3);opacity:.35}
+.pf-falla{font-weight:700;white-space:nowrap}
+.pf-falla[data-t="mal"]{color:var(--danger)}
+.pf-falla[data-t="ok"]{color:var(--si)}
+.pf-falla[data-t="sin"]{color:var(--ink-3);font-weight:500}
+.pf2-tops td.pf-wrap{white-space:normal;min-width:150px;line-height:1.4}
+.pf-quitar{appearance:none;border:0;background:none;padding:0;font:inherit;font-size:11.5px;color:var(--ink);text-decoration:underline;cursor:pointer}
+
+.pzd-cab{border-left:3px solid var(--line);padding:2px 0 2px var(--s3);margin-bottom:var(--s3)}
+.pzd-cab[data-t="mal"]{border-left-color:var(--danger)}
+.pzd-cab[data-t="ok"]{border-left-color:var(--si)}
+.pzd-cab strong{font-size:14px}
+.pzd-cab p{margin:2px 0 0;font-size:12.5px;line-height:1.45;color:var(--ink-2)}
+.pzd-t{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:var(--s2)}
+.pzd-t th,.pzd-t td{text-align:left;padding:6px 8px 6px 0;border-bottom:1px solid var(--line-soft);vertical-align:top;font-variant-numeric:tabular-nums;background:none}
+.pzd-t thead th{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+.pzd-t tbody th{font-weight:700;color:var(--ink)}
+.pzd-t small{display:block;font-weight:400;font-size:11px;color:var(--ink-3)}
+.pzd-t td:last-child{white-space:nowrap}
+
 /* Con 5 sub-pestañas el switch no entra en un teléfono y la última ("Cuenta")
    quedaba fuera de pantalla, sin scroll: inalcanzable. Scrollea solo él. */
 @media(max-width:700px){
@@ -2660,6 +2713,11 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
     <div id="pz-hero"></div>
     <input type="hidden" id="pz-f-id">
 
+    <fieldset class="fieldset" id="pz-diag-wrap" style="display:none">
+      <legend>Dónde falla</legend>
+      <div id="pz-diag"></div>
+    </fieldset>
+
     <fieldset class="fieldset">
       <legend>Pieza</legend>
       <div class="field"><label for="pz-f-tema">Tema / estructura del video</label><input id="pz-f-tema"></div>
@@ -2753,6 +2811,11 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
         <div class="field"><label for="pz-f-guardados">Guardados</label><input id="pz-f-guardados" type="number" min="0"></div>
         <div class="field"><label for="pz-f-tiempo_prom">Tiempo prom.</label><input id="pz-f-tiempo_prom" placeholder="0:12"></div>
       </div>
+      <div class="grid2">
+        <div class="field"><label for="pz-f-duracion_seg">Duración del video (segundos)</label><input id="pz-f-duracion_seg" type="number" min="1" step="1" placeholder="12"></div>
+        <div class="field"><label for="pz-f-retencion_3s">Retención a 3 segundos (%)</label><input id="pz-f-retencion_3s" type="number" min="0" max="100" step="0.1" placeholder="62"></div>
+      </div>
+      <div class="hint">Estos dos Instagram no los manda: se copian a mano y pueden quedar vacíos. La retención está en las estadísticas del reel, dentro de la app; si muestra "tasa de omisión", es 100 menos ese número. Con ellos se sabe si el video falla en el gancho o más adelante.</div>
     </fieldset>
   </div>
 
@@ -3237,6 +3300,7 @@ let metricasCargado = false;
 let pfIgVista = 'reach';   // métrica de la serie temporal: reach|views|total_interactions|new_followers
 let pfIgRango = 30;        // 7 | 14 | 30
 let pfOrden = { col:'fecha', dir:'desc' }; // orden de la tabla de piezas publicadas
+let pfFiltroFalla = '';    // '' | alcance | retencion | valor | cta | conversion | sana | pendiente
 
 /* ---------------- utilidades ---------------- */
 
@@ -8178,16 +8242,21 @@ const PF_COLS_FULL = [
 // Contenido: sin hora, alcance, interacciones, ER, tasas de guardado y
 // compartido ni tiempo promedio -- esas viven en Detalle. Queda lo que se
 // mira seguido, más comentarios × view, que es la señal que importa acá.
+// Falla y Etapas (diagnóstico por pieza) ocupan el lugar de Tipo, que sigue
+// en Detalle: acá la pregunta es dónde se cae cada pieza.
 const PF_COLS_CONTENIDO = [
-  ['fecha','Fecha'], ['formato','Formato'], ['angulo_nombre','Ángulo'], ['angulo_categoria','Tipo'],
+  ['fecha','Fecha'], ['formato','Formato'], ['angulo_nombre','Ángulo'], ['falla','Falla'], ['etapas','Etapas'],
   ['views','Views'], ['comentarios','Coment.'], ['comXView','Com. × view'], ['seguimientos','Segui.'], ['leads_n','Leads'],
 ];
 const PF_COLS_NUM = ['alcance','views','engagement','comentarios','comXView','er','tasaGuardado','tasaCompartido','seguimientos','leads_n'];
 
-function pfTablaPiezasHtml(subidas, cols){
+function pfTablaPiezasHtml(subidas, cols, diag){
   const medianaGlobal = pfMedianaAlcanceGlobal();
   const filas = subidas.map(p => ({
     ...p,
+    // para ordenar: Falla por orden de etapa, Etapas por cuántas fallan
+    falla: diag && diag.get(p.id) ? PF_FALLA_ORDEN.indexOf(diag.get(p.id).falla) : null,
+    etapas: diag && diag.get(p.id) ? PF_ETAPAS.filter(([k]) => diag.get(p.id).etapas[k] === 'mal').length : null,
     er: p.alcance ? (p.engagement||0)/p.alcance : null,
     tasaGuardado: p.alcance ? (p.guardados||0)/p.alcance : null,
     tasaCompartido: p.alcance ? (p.compartidos||0)/p.alcance : null,
@@ -8209,6 +8278,10 @@ function pfTablaPiezasHtml(subidas, cols){
   });
 
   const celda = (p, campo) => {
+    if(campo === 'falla' || campo === 'etapas'){
+      const d = diag && diag.get(p.id);
+      return !d ? '—' : campo === 'falla' ? pfFallaHtml(d) : pfPuntosHtml(d);
+    }
     if(campo === 'fecha') return p.fecha ? fechaCorta(p.fecha) : '—';
     if(campo === 'angulo_nombre') return `<span class="strong">${angPuntoHtml(p.angulo_nombre, p.angulo_categoria, p.angulo_id)}</span>`;
     if(campo === 'angulo_categoria') return esc(p.angulo_categoria||'—');
@@ -8728,7 +8801,8 @@ const pfComPropios = (n) => (+n||0) * PF_COM_PROPIOS;
 // 8,5% y no 8,512%. Solo una tasa tan chica que daría 0% lleva dos decimales.
 function pfTasaTxt(v){
   if(v === null || !isFinite(v)) return '—';
-  return pct(v, v > 0 && v < 0.0005 ? 2 : 1);
+  // pct() redondea a un decimal: la tasa chica se arma acá para que no dé 0%.
+  return v > 0 && v < 0.0005 ? Math.round(v * 10000) / 100 + '%' : pct(v);
 }
 // La misma tasa en cosas contables: "de 1.000 views → 85 comentarios".
 function pfDe1000Html(v, base){
@@ -9052,6 +9126,279 @@ function pfMixInteraccionesMiniHtml(dias){
     ${pf2Donut('Mix de interacciones · 30d', entries, null, { compacto:true })}
     <div class="cv-note">Guardados + compartidos: ${total ? pct(intencionViaje/total) : '—'} del mix.</div>
   </div>`;
+}
+
+/* -------- Diagnóstico: en qué etapa falla cada pieza -------- */
+// Cada pieza Subida recorre cinco etapas, en el orden en que la recorre la
+// gente: la ve (alcance), se queda (retención), le sirve (valor), comenta
+// (CTA) y llega al CRM (conversión). La "falla" es la PRIMERA etapa que
+// queda muy por debajo de la mediana propia -- no de un benchmark de afuera,
+// que a una cuenta chica no le dice nada.
+//
+// La mediana sale de todo el historial y no del período elegido arriba: si
+// no, la misma pieza cambiaría de falla según el filtro. Va separada en video
+// y fijo (carrusel o foto), y solo cuentan piezas con PF_MADURA_DIAS o más:
+// un reel de ayer todavía está sumando views y tiraría la mediana para abajo.
+//
+// Lo que NO se puede medir se muestra como "sin dato", no se inventa:
+//   - retención necesita la duración del video (se carga a mano en la ficha);
+//   - el gancho se mide con la retención a 3 segundos (a mano también) y, si
+//     falta, se infiere del tiempo promedio contra la mediana;
+//   - conversión depende de que la etiqueta de ManyChat llegue al lead.
+const PF_ETAPAS = [['alcance','Alcance'], ['retencion','Retención'], ['valor','Valor'], ['cta','CTA'], ['conversion','Conversión']];
+const PF_ETAPA_QUE = {
+  alcance: '¿Instagram lo mostró?', retencion: '¿Lo vieron entero?', valor: '¿Lo guardaron o lo mandaron?',
+  cta: '¿Comentaron?', conversion: '¿Llegaron a lead?',
+};
+const PF_ESTADO_TXT = { ok:'bien', bajo:'bajo la mediana', mal:'falla', sin:'sin dato', na:'no aplica' };
+const PF_UMBRAL_ALCANCE = 0.5;   // falla con menos de la mitad de las views medianas
+const PF_UMBRAL_TASA = 0.7;      // falla con menos del 70% de la tasa mediana
+const PF_BASE_MIN = 4;           // piezas maduras del mismo grupo para tener con qué comparar
+const PF_MADURA_DIAS = 2;
+const PF_CONV_MIN_PERSONAS = 5;  // con menos gente comentando, cero leads no prueba nada
+
+const PF_FALLAS = {
+  alcance_gancho: { grupo:'alcance', tono:'mal', nombre:'Alcance · gancho',
+    accion:'Lo vio poca gente y la que lo vio se fue rápido. Cambiar la primera toma y el texto de apertura; el tema puede servir igual.' },
+  alcance_tema: { grupo:'alcance', tono:'mal', nombre:'Alcance · tema o portada',
+    accion:'Quien lo vio se quedó, pero Instagram no lo mostró más. Probar el mismo material con otro ángulo, otra portada u otro título.' },
+  retencion: { grupo:'retencion', tono:'mal', nombre:'Retención',
+    accion:'Entran y se van antes del final. Acortar, cortar más rápido y adelantar lo mejor.' },
+  valor: { grupo:'valor', tono:'mal', nombre:'Valor',
+    accion:'Se ve, pero casi nadie lo guarda ni lo manda. Sumar un dato útil o algo para mandarle a quien viajaría con vos.' },
+  cta: { grupo:'cta', tono:'mal', nombre:'CTA',
+    accion:'Gusta y no comentan. Pedir la palabra clave en pantalla y en el texto, antes del final.' },
+  conversion: { grupo:'conversion', tono:'mal', nombre:'Conversión',
+    accion:'Comentan y ninguno llegó a lead. Revisar la respuesta automática de ManyChat y que la etiqueta de la pieza llegue al CRM.' },
+  sana: { grupo:'sana', tono:'ok', nombre:'Sana',
+    accion:'Ninguna etapa quedó muy por debajo de la mediana.' },
+  nueva: { grupo:'pendiente', tono:'sin', nombre:'Muy nueva',
+    accion:`Tiene menos de ${PF_MADURA_DIAS} días y todavía está sumando views. Se diagnostica sola cuando madure.` },
+  sinbase: { grupo:'pendiente', tono:'sin', nombre:'Sin base',
+    accion:`Hacen falta ${PF_BASE_MIN} piezas del mismo tipo, con ${PF_MADURA_DIAS} días o más, para tener con qué comparar.` },
+  sindato: { grupo:'pendiente', tono:'sin', nombre:'Sin datos',
+    accion:'Todavía no llegaron las métricas de Instagram.' },
+};
+const PF_FALLA_ORDEN = Object.keys(PF_FALLAS);
+
+// "0:07" -> 7 · "1:02" -> 62
+function pfSeg(t){
+  const m = /^(\d+):(\d{1,2})$/.exec(String(t || '').trim());
+  return m ? (+m[1]) * 60 + (+m[2]) : null;
+}
+// Una foto que trae tiempo promedio es un reel hecho con una foto.
+function pfGrupo(p){
+  return p.formato === 'Carrusel' || (p.formato === 'Foto con copy' && pfSeg(p.tiempo_prom) === null) ? 'fijo' : 'video';
+}
+function pfEdadDias(p){
+  if(!p.fecha) return null;
+  const hoy = new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10);   // día de Perú, como el resto
+  return Math.round((Date.parse(hoy) - Date.parse(String(p.fecha).slice(0, 10))) / 86400000);
+}
+function pfValores(p){
+  const n = v => v === null || v === undefined || v === '' ? null : +v;
+  const views = n(p.views), alcance = n(p.alcance), com = n(p.comentarios);
+  const tiempo = pfSeg(p.tiempo_prom), dur = n(p.duracion_seg), r3 = n(p.retencion_3s);
+  return {
+    views, tiempo,
+    visto: tiempo !== null && dur ? tiempo / dur : null,
+    ret3: r3 !== null ? r3 / 100 : null,
+    valor: alcance ? ((+p.guardados || 0) + (+p.compartidos || 0)) / alcance : null,
+    cta: views && com !== null ? pfComPropios(com) / views : null,
+    personas: com !== null ? pfComPropios(com) : null,
+    leads: p.etiqueta_manychat ? (+p.leads_n || 0) : null,
+  };
+}
+
+// Map id de pieza -> diagnóstico. Barato: se recalcula en cada render.
+function pfDiagnostico(){
+  const filas = piezas.filter(p => p.estado === 'Subido')
+    .map(p => ({ p, grupo: pfGrupo(p), edad: pfEdadDias(p), v: pfValores(p) }));
+  const base = {};
+  ['video', 'fijo'].forEach(g => {
+    const maduras = filas.filter(f => f.grupo === g && f.v.views !== null && (f.edad === null || f.edad >= PF_MADURA_DIAS));
+    const med = campo => {
+      const vals = maduras.map(f => f.v[campo]).filter(x => x !== null);
+      return vals.length >= PF_BASE_MIN ? mediana(vals) : null;
+    };
+    base[g] = { n: maduras.length, views: med('views'), tiempo: med('tiempo'), visto: med('visto'), ret3: med('ret3'), valor: med('valor'), cta: med('cta') };
+  });
+  const estado = (valor, med, umbral) => {
+    if(valor === null || med === null || !(med > 0)) return 'sin';
+    const r = valor / med;
+    return r < umbral ? 'mal' : r < 1 ? 'bajo' : 'ok';
+  };
+  const mapa = new Map();
+  filas.forEach(({ p, grupo, edad, v }) => {
+    const b = base[grupo];
+    const etapas = {
+      alcance: estado(v.views, b.views, PF_UMBRAL_ALCANCE),
+      retencion: grupo === 'video' ? estado(v.visto, b.visto, PF_UMBRAL_TASA) : 'na',
+      valor: estado(v.valor, b.valor, PF_UMBRAL_TASA),
+      cta: estado(v.cta, b.cta, PF_UMBRAL_TASA),
+      conversion: v.leads === null || v.personas === null || v.personas < PF_CONV_MIN_PERSONAS ? 'sin'
+        : v.leads === 0 ? 'mal' : 'ok',
+    };
+    const gancho = grupo === 'video' ? estado(v.ret3, b.ret3, PF_UMBRAL_TASA) : 'na';
+    const ganchoMedido = gancho !== 'sin' && gancho !== 'na';
+    let falla;
+    if(v.views === null) falla = 'sindato';
+    else if(edad !== null && edad < PF_MADURA_DIAS) falla = 'nueva';
+    else if(b.views === null) falla = 'sinbase';
+    else if(etapas.alcance === 'mal'){
+      const esGancho = ganchoMedido ? gancho === 'mal'
+        : grupo === 'video' && v.tiempo !== null && b.tiempo !== null && v.tiempo < b.tiempo;
+      falla = esGancho ? 'alcance_gancho' : 'alcance_tema';
+    }
+    else falla = ['retencion', 'valor', 'cta', 'conversion'].find(k => etapas[k] === 'mal') || 'sana';
+    mapa.set(p.id, { p, grupo, edad, v, base: b, etapas, gancho, ganchoMedido, falla });
+  });
+  return mapa;
+}
+
+// [esta pieza, mediana] de una etapa, ya en texto.
+function pfEtapaTxt(d, k){
+  const { v, base: b } = d;
+  const t = x => x === null ? '—' : pfTasaTxt(x);
+  if(k === 'alcance') return [v.views === null ? '—' : num(v.views) + ' views', b.views === null ? '—' : num(Math.round(b.views)) + ' views'];
+  if(k === 'retencion') return [
+    v.visto !== null ? pct(v.visto) + ' del video' : v.tiempo !== null ? v.tiempo + ' s, falta la duración' : '—',
+    b.visto !== null ? pct(b.visto) + ' del video' : '—'];
+  if(k === 'valor') return [t(v.valor), t(b.valor)];
+  if(k === 'cta') return [t(v.cta), t(b.cta)];
+  if(v.personas === null) return ['—', '—'];
+  const gente = Math.round(v.personas);
+  return [`${num(gente)} persona${gente === 1 ? '' : 's'} → ${v.leads === null ? 'sin etiqueta' : v.leads + ' lead' + (v.leads === 1 ? '' : 's')}`, '—'];
+}
+
+function pfPendiente(d){ return PF_FALLAS[d.falla].grupo === 'pendiente'; }
+
+// Cinco puntos, uno por etapa. La falla es cuadrada además de roja y el
+// detalle va en el título: el color nunca es la única pista.
+function pfPuntosHtml(d){
+  const est = k => pfPendiente(d) ? (d.etapas[k] === 'na' ? 'na' : 'sin') : d.etapas[k];
+  const partes = PF_ETAPAS.map(([k, nombre]) => `${nombre}: ${PF_ESTADO_TXT[est(k)]}`);
+  return `<span class="pfd" role="img" aria-label="${esc(partes.join(' · '))}" title="${esc(partes.join('\n'))}">${PF_ETAPAS.map(([k]) => `<i data-e="${est(k)}"></i>`).join('')}</span>`;
+}
+function pfFallaHtml(d){
+  const f = PF_FALLAS[d.falla];
+  return `<span class="pf-falla" data-t="${f.tono}" title="${esc(f.accion)}">${esc(f.nombre)}</span>`;
+}
+
+// Embudo del período: los mismos cinco pasos, sumados. Cada paso dice qué
+// parte del anterior llegó; con un período elegido, al lado va la tasa de
+// todo el historial para saber si ese paso viene mejor o peor que siempre.
+function pfEmbudoHtml(subidas){
+  const suma = lista => lista.reduce((s, p) => {
+    s.views += +p.views || 0;
+    s.alcance += +p.alcance || 0;
+    s.valor += (+p.guardados || 0) + (+p.compartidos || 0);
+    s.personas += pfComPropios(p.comentarios);
+    s.leads += p.etiqueta_manychat ? (+p.leads_n || 0) : 0;
+    s.ventas += +p.ventas_n || 0;
+    return s;
+  }, { views:0, alcance:0, valor:0, personas:0, leads:0, ventas:0 });
+  const a = suma(subidas);
+  const h = pfPeriodo.tipo === 'total' ? null : suma(piezas.filter(p => p.estado === 'Subido'));
+  const tasa = (x, y) => y ? x / y : null;
+  const paso = (lbl, valor, tasaAct, de, tasaHist) => `<div class="pfe-paso">
+      <div class="pf2-lbl">${lbl}</div>
+      <div class="pf2-val">${valor}</div>
+      <div class="pfe-tasa">${tasaAct === null ? de : `<b>${pfTasaTxt(tasaAct)}</b> ${de}`}</div>
+      ${tasaHist === null || tasaHist === undefined ? '' : `<div class="pfe-hist">siempre: ${pfTasaTxt(tasaHist)}</div>`}
+    </div>`;
+  return `<div class="pfe">
+    ${paso('Views', numAbrev(a.views), null, `${subidas.length} pieza${subidas.length === 1 ? '' : 's'} · ${numAbrev(a.alcance)} cuentas alcanzadas`)}
+    ${paso('Guardaron o mandaron', num(a.valor), tasa(a.valor, a.alcance), 'del alcance', h && tasa(h.valor, h.alcance))}
+    ${paso('Comentaron', num(Math.round(a.personas)), tasa(a.personas, a.views), 'de las views', h && tasa(h.personas, h.views))}
+    ${paso('Leads', num(a.leads), tasa(a.leads, a.personas), 'de quienes comentaron', h && tasa(h.leads, h.personas))}
+    ${paso('Ventas', num(a.ventas), tasa(a.ventas, a.leads), 'de los leads', h && tasa(h.ventas, h.leads))}
+  </div>`;
+}
+
+// Cuántas piezas del período se caen en cada etapa. Cada tarjeta filtra la tabla.
+function pfFallasHtml(diags){
+  const grupos = [
+    ['alcance', 'Alcance', 'no llegó a la gente', 'mal'],
+    ['retencion', 'Retención', 'no lo vieron entero', 'mal'],
+    ['valor', 'Valor', 'ni guardado ni compartido', 'mal'],
+    ['cta', 'CTA', 'gustó y no comentaron', 'mal'],
+    ['conversion', 'Conversión', 'comentaron, cero leads', 'mal'],
+    ['sana', 'Sanas', 'ninguna etapa floja', 'ok'],
+    ['pendiente', 'Sin diagnóstico', 'muy nuevas o sin base', 'sin'],
+  ];
+  // Sin la duración cargada en al menos PF_BASE_MIN videos, un 0 en Retención
+  // no es "ninguno falla": es que no se puede medir. La tarjeta lo dice.
+  const sinDuracion = !diags.some(d => d.grupo === 'video' && d.etapas.retencion !== 'sin');
+  return `<div class="pff" id="pf-fallas">${grupos.map(([k, nombre, sub, tono]) => {
+    const n = diags.filter(d => PF_FALLAS[d.falla].grupo === k).length;
+    if(k === 'retencion' && sinDuracion) sub = `falta la duración de ${PF_BASE_MIN} videos o más`;
+    return `<button type="button" class="pff-b" data-f="${k}" data-t="${tono}" aria-pressed="${pfFiltroFalla === k}"${n ? '' : ' disabled'}>
+      <span class="pff-n">${k === 'retencion' && sinDuracion ? '—' : n}</span><span class="pff-l">${nombre}</span><span class="pff-s">${sub}</span>
+    </button>`;
+  }).join('')}</div>`;
+}
+
+// Qué formato y qué ángulo se caen dónde. Las piezas sin diagnóstico no entran.
+function pfPatronesHtml(diags){
+  const utiles = diags.filter(d => !pfPendiente(d));
+  if(utiles.length < 3) return `<div class="pf2-empty">Hacen falta al menos 3 piezas diagnosticadas en el período para ver un patrón.</div>`;
+  const nombreEtapa = Object.fromEntries(PF_ETAPAS);
+  const tabla = (titulo, cabecera, claveFn, nombreFn) => {
+    const m = new Map();
+    utiles.forEach(d => {
+      const k = claveFn(d.p) || '—';
+      if(!m.has(k)) m.set(k, { p: d.p, n: 0, sanas: 0, fallas: {} });
+      const g = m.get(k), grupo = PF_FALLAS[d.falla].grupo;
+      g.n++;
+      if(grupo === 'sana') g.sanas++; else g.fallas[grupo] = (g.fallas[grupo] || 0) + 1;
+    });
+    const filas = [...m.values()].sort((x, y) => y.n - x.n).map(g => {
+      const fallas = PF_ETAPAS.map(([k]) => [k, g.fallas[k] || 0]).filter(([, n]) => n).sort((x, y) => y[1] - x[1]);
+      return `<tr><td class="strong">${nombreFn(g.p)}</td><td class="num">${g.n}</td><td class="num">${g.sanas}</td>
+        <td class="pf-wrap">${fallas.length ? fallas.map(([k, n]) => `${nombreEtapa[k]} ${n}`).join(' · ') : '—'}</td></tr>`;
+    });
+    return `<div class="pf2-dcard"><div class="pf2-dhead">${titulo}</div><div class="table-wrap"><table>
+      <thead><tr><th>${cabecera}</th><th>Piezas</th><th>Sanas</th><th>Dónde fallan</th></tr></thead>
+      <tbody>${filas.join('')}</tbody>
+    </table></div></div>`;
+  };
+  return `<div class="pf2-tops">
+    ${tabla('Por formato', 'Formato', p => p.formato, p => esc(p.formato || '—'))}
+    ${tabla('Por ángulo', 'Ángulo', p => p.angulo_nombre, p => p.angulo_nombre ? angPuntoHtml(p.angulo_nombre, p.angulo_categoria, p.angulo_id) : '—')}
+  </div>`;
+}
+
+// Bloque "Dónde falla" de la ficha: la falla, qué hacer y cada etapa contra la mediana.
+function pzPintarDiag(p){
+  const wrap = el('pz-diag-wrap');
+  wrap.style.display = 'none';
+  if(!p || p.estado !== 'Subido') return;
+  const d = pfDiagnostico().get(p.id);
+  if(!d) return;
+  const f = PF_FALLAS[d.falla];
+  const esVideo = d.grupo === 'video';
+  const notas = [];
+  if(!pfPendiente(d)){
+    notas.push(`Comparada contra ${d.base.n} ${esVideo ? 'reels' : 'carruseles y fotos'} con ${PF_MADURA_DIAS} días o más.`);
+    if(esVideo && d.v.visto === null) notas.push('Cargá abajo la duración del video para medir la retención.');
+    else if(esVideo && d.base.visto === null) notas.push(`La retención se compara cuando haya ${PF_BASE_MIN} videos con la duración cargada.`);
+    if(esVideo && d.etapas.alcance === 'mal') notas.push(d.ganchoMedido
+      ? 'El gancho está medido con la retención a 3 segundos.'
+      : 'El gancho está inferido del tiempo promedio: con la retención a 3 segundos cargada se mide de verdad.');
+  }
+  el('pz-diag').innerHTML = `
+    <div class="pzd-cab" data-t="${f.tono}"><strong>${esc(f.nombre)}</strong><p>${esc(f.accion)}</p></div>
+    ${pfPendiente(d) ? '' : `<table class="pzd-t">
+      <thead><tr><th scope="col">Etapa</th><th scope="col">Esta pieza</th><th scope="col">Mediana</th><th scope="col">Estado</th></tr></thead>
+      <tbody>${PF_ETAPAS.filter(([k]) => d.etapas[k] !== 'na').map(([k, nombre]) => {
+        const [esta, med] = pfEtapaTxt(d, k);
+        return `<tr><th scope="row">${nombre}<small>${PF_ETAPA_QUE[k]}</small></th><td>${esta}</td><td>${med}</td>
+          <td><span class="pfd" aria-hidden="true"><i data-e="${d.etapas[k]}"></i></span> ${PF_ESTADO_TXT[d.etapas[k]]}</td></tr>`;
+      }).join('')}</tbody>
+    </table>
+    <div class="hint">${notas.join(' ')}</div>`}`;
+  wrap.style.display = '';
 }
 
 /* -------- F. Top 5 -------- */
@@ -9533,11 +9880,30 @@ function renderPerformance(){
       ${pfMixInteraccionesMiniHtml(dias30)}
     </div>`;
 
+  // Diagnóstico por pieza: se calcula contra todo el historial y acá se
+  // recorta al período. El filtro de "Dónde fallan" se suelta solo si en el
+  // período elegido ya no queda ninguna pieza de ese grupo.
+  const diag = pfDiagnostico();
+  const diags = subidas.map(p => diag.get(p.id)).filter(Boolean);
+  const enGrupo = p => { const d = diag.get(p.id); return !!d && PF_FALLAS[d.falla].grupo === pfFiltroFalla; };
+  if(pfFiltroFalla && !subidas.some(enGrupo)) pfFiltroFalla = '';
+  const filtradas = pfFiltroFalla ? subidas.filter(enGrupo) : subidas;
+
   const bloqueContenido = () => `
     ${pzSinAsociarHtml()}
-    ${pfDashContenidoHtml(subidas)}
-    <div class="ag-sec-h"><h2 style="margin:0">Piezas publicadas</h2><span class="hint">clic en una fila para cargar sus métricas · las columnas completas están en Detalle</span></div>
-    ${pfTablaPiezasHtml(subidas, PF_COLS_CONTENIDO)}
+    ${!subidas.length ? `<div class="pf2-empty">Sin piezas subidas en este período.</div>` : `
+    <div class="ag-sec-h"><h2 style="margin:0">Embudo del período</h2><span class="hint">cada paso dice qué parte del anterior llegó · comentarios sin la mitad que genera ManyChat</span></div>
+    ${pfEmbudoHtml(subidas)}
+    <div class="ag-sec-h"><h2 style="margin:0">Dónde fallan</h2><span class="hint">la primera etapa que queda muy por debajo de la mediana propia · clic en una tarjeta para filtrar la tabla</span></div>
+    ${pfFallasHtml(diags)}`}
+    <div class="ag-sec-h"><h2 style="margin:0">Piezas publicadas</h2><span class="hint">${pfFiltroFalla
+      ? `mostrando ${filtradas.length} de ${subidas.length} · <button type="button" class="pf-quitar" id="pf-falla-quitar">ver todas</button>`
+      : 'clic en una fila para ver dónde falla y cargar sus métricas · las columnas completas están en Detalle'}</span></div>
+    ${pfTablaPiezasHtml(filtradas, PF_COLS_CONTENIDO, diag)}
+    ${subidas.length ? `<div class="ag-sec-h" style="margin-top:var(--s5)"><h2>Patrones</h2><span class="hint">qué formato y qué ángulo se caen en qué etapa, en el período</span></div>
+    ${pfPatronesHtml(diags)}
+    <div class="ag-sec-h" style="margin-top:var(--s5)"><h2>Volumen del período</h2><span class="hint">totales y curva por fecha de publicación</span></div>
+    ${pfDashContenidoHtml(subidas)}` : ''}
     ${subidas.length ? `<div class="ag-sec-h" style="margin-top:var(--s5)"><h2>Tasas de comentarios</h2><span class="hint">cada punto es una pieza · la marca gruesa es el promedio del período</span></div>
     ${pfTasasContenidoHtml(subidas)}` : ''}
     <div class="ag-sec-h" style="margin-top:var(--s5)"><h2>Conteo de contenido</h2><span class="hint">todas las piezas planificadas del período, no solo lo Subido</span></div>
@@ -9547,7 +9913,7 @@ function renderPerformance(){
 
   const bloqueDetalle = () => `
     <div class="cv-note" style="margin-bottom:var(--s4)">Todas las columnas de cada pieza publicada del período (por fecha de pieza, ${rangoPiezas}). Clic en una fila para cargar o corregir sus métricas.</div>
-    ${pfTablaPiezasHtml(subidas, PF_COLS_FULL)}`;
+    ${pfTablaPiezasHtml(subidas, PF_COLS_FULL, diag)}`;
 
   const bloqueAcumulado = () => pfAcumuladoHtml();
 
@@ -9595,6 +9961,13 @@ function renderPerformance(){
   pzWireRows(el('view-performance'));
   pfWireModo();
   pzSinAsociarWire(el('view-performance'));
+
+  const fallasBox = el('pf-fallas');
+  if(fallasBox) fallasBox.querySelectorAll('button').forEach(b => {
+    b.addEventListener('click', () => { pfFiltroFalla = pfFiltroFalla === b.dataset.f ? '' : b.dataset.f; renderPerformance(); });
+  });
+  const quitarFalla = el('pf-falla-quitar');
+  if(quitarFalla) quitarFalla.addEventListener('click', () => { pfFiltroFalla = ''; renderPerformance(); });
 
   const rangoSel = el('pf-ig-rango');
   if(rangoSel) rangoSel.querySelectorAll('button').forEach(b => {
@@ -10692,7 +11065,7 @@ const CAMPOS_FORM_PIEZA = [
   'hook','descripcion','cta','drive_url','video_url','inspiracion','diseno_url',
   'etiqueta_manychat','link_manychat',
   'views','alcance','likes','compartidos','seguimientos','comentarios','guardados','tiempo_prom',
-  'hora_publicacion',
+  'hora_publicacion','duracion_seg','retencion_3s',
 ];
 
 // La tabla ya no tiene selector de semana propio -- queda "indexada" acá:
@@ -10758,6 +11131,7 @@ function abrirDrawerPieza(id){
 
   pzPintarAsociar(p);
   el('pz-delete-btn').style.display = p ? '' : 'none';
+  pzPintarDiag(p);
   pzCargarSerie(p);
   el('pz-hero').innerHTML = pzHeroHtml(p);
   el('pz-hero').closest('.drawer-body').scrollTop = 0;
@@ -10978,7 +11352,7 @@ async function guardarPieza(){
   const body = {};
   CAMPOS_FORM_PIEZA.forEach(f => { const n = el('pz-f-' + f); if(n) body[f] = n.value.trim(); });
   body.portada = el('pz-f-portada').checked;
-  ['views','alcance','likes','compartidos','seguimientos','comentarios','guardados'].forEach(f => {
+  ['views','alcance','likes','compartidos','seguimientos','comentarios','guardados','duracion_seg','retencion_3s'].forEach(f => {
     body[f] = body[f] ? Number(body[f]) : null;
   });
   body.angulo_id = body.angulo_id ? Number(body.angulo_id) : null;

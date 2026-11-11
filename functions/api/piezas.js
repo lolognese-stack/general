@@ -11,6 +11,7 @@ export const CAMPOS_PIEZA = [
   'inspiracion', 'diseno_url', 'drive_url', 'drive_miniatura_id', 'portada',
   'views', 'alcance', 'likes', 'compartidos', 'seguimientos', 'comentarios', 'guardados',
   'engagement', 'tiempo_prom', 'hora_publicacion', 'medido_en', 'notion_id',
+  'duracion_seg', 'retencion_3s',
 ];
 
 
@@ -44,6 +45,24 @@ export async function onRequestGet({ request, env }) {
        LEFT JOIN recursos r ON r.id = p.recurso_id
       ORDER BY p.fecha DESC, p.id DESC`
   ).all();
+
+  // Ventas por pieza: lead con la etiqueta de la pieza que terminó en venta.
+  // Aparte y con try: un cliente sin la tabla de ventas no puede quedarse sin
+  // Planificador por un dato del embudo de Performance.
+  try {
+    const { results: ventas } = await env.DB.prepare(
+      `SELECT l.etiqueta_manychat AS etiqueta, COUNT(*) AS n
+         FROM ventas v JOIN leads l ON l.id = v.lead_id
+        WHERE l.etiqueta_manychat IS NOT NULL AND l.etiqueta_manychat <> ''
+          AND v.estado NOT IN ('pendiente_pago', 'cancelada')
+        GROUP BY l.etiqueta_manychat`
+    ).all();
+    const porEtiqueta = new Map(ventas.map((v) => [v.etiqueta, v.n]));
+    for (const p of results) p.ventas_n = p.etiqueta_manychat ? (porEtiqueta.get(p.etiqueta_manychat) || 0) : 0;
+  } catch (e) {
+    for (const p of results) p.ventas_n = 0;
+  }
+
   return json(results);
 }
 
