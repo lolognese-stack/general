@@ -41,6 +41,7 @@ async function fuentes(db, lead) {
       ).bind(conv.id).all()).results
     : [];
   const waAnalisis = conv ? await db.prepare('SELECT * FROM wa_analisis WHERE conversacion_id = ?').bind(conv.id).first() : null;
+  const waReporte = conv ? await db.prepare('SELECT texto, actualizado_en FROM wa_reportes WHERE conversacion_id = ?').bind(conv.id).first() : null;
   const waCuenta = conv ? await db.prepare('SELECT count(*) AS n, sum(direccion = \'in\') AS entrantes FROM wa_mensajes WHERE conversacion_id = ? AND tipo <> \'nota\'').bind(conv.id).first() : null;
 
   const sesiones = (lead.codigo_web || lead.manychat_id)
@@ -59,7 +60,7 @@ async function fuentes(db, lead) {
       ).bind(...sesiones.map((s) => s.sesion_id)).all()).results
     : [];
 
-  const huella = [radar?.actualizado_en || '-', conv?.ultimo_en || '-', sesiones.length ? sesiones[sesiones.length - 1].ultimo_evento : '-'].join('|');
+  const huella = [radar?.actualizado_en || '-', conv?.ultimo_en || '-', sesiones.length ? sesiones[sesiones.length - 1].ultimo_evento : '-', ...(waReporte ? [waReporte.actualizado_en] : [])].join('|');
 
   // Línea de tiempo de todos los canales.
   const linea = [];
@@ -74,7 +75,7 @@ async function fuentes(db, lead) {
   if (conv?.ultimo_en && conv.ultimo_en !== conv.creado_en) linea.push({ fecha: enPeru(conv.ultimo_en), canal: 'whatsapp', texto: 'Último mensaje de WhatsApp' });
   linea.sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)));
 
-  return { radar, conv, mensajes, waAnalisis, waCuenta, sesiones, fichas, huella, linea };
+  return { radar, conv, mensajes, waAnalisis, waReporte, waCuenta, sesiones, fichas, huella, linea };
 }
 
 async function cargar(db, id) {
@@ -127,7 +128,7 @@ export async function onRequestPost({ request, env, params }) {
     `=== LÍNEA DE TIEMPO ===\n${f.linea.map((l) => `${l.fecha} · ${l.canal} · ${l.texto}`).join('\n') || '(vacía)'}`,
     `=== INSTAGRAM (reporte del Radar) ===\n${f.radar ? f.radar.texto : '(sin reporte)'}`,
     `=== WEB ===\n${f.sesiones.length ? `${f.sesiones.length} visitas. Fichas vistas: ${f.fichas.map((x) => `${x.nombre} (${x.vistas})`).join(', ') || 'ninguna'}` : '(no entró a la web identificado)'}`,
-    `=== WHATSAPP ===\n${chatWa || '(sin chat)'}${f.waAnalisis ? `\nAnálisis previo: intención "${f.waAnalisis.intencion_inicial || ''}", tipo ${f.waAnalisis.tipo_lead || '?'}, próxima acción "${f.waAnalisis.proxima_accion || ''}"` : ''}`,
+    `=== WHATSAPP ===\n${chatWa || '(sin chat)'}${f.waReporte ? `\nReporte de WhatsApp (análisis del chat, incluye qué cambió respecto de Instagram y el CRM):\n${String(f.waReporte.texto).slice(0, 3500)}` : ''}${f.waAnalisis ? `\nAnálisis previo: intención "${f.waAnalisis.intencion_inicial || ''}", tipo ${f.waAnalisis.tipo_lead || '?'}, próxima acción "${f.waAnalisis.proxima_accion || ''}"` : ''}`,
   ].join('\n\n');
 
   let d, modelo;

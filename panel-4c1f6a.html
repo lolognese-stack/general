@@ -1795,6 +1795,16 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 .rp-ig{font-size:12px}
 .rp-ig pre{white-space:pre-wrap;font:12px/1.45 var(--font-body,inherit);background:var(--surface-sunk);border-radius:8px;padding:10px;max-height:340px;overflow:auto;margin:6px 0 0}
 .rp-pie{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
+.wr-score{display:inline-block;font-weight:700;font-size:12px;padding:2px 8px;border-radius:999px;background:var(--surface-sunk);color:var(--ink-2);margin:0 0 8px}
+.wr-cambios{margin:0 0 10px;padding:8px 10px;border-radius:8px;background:color-mix(in srgb,var(--masomenos) 12%,var(--surface));font-size:12px;line-height:1.45}
+.wr-cambios b.wr-tit{display:block;margin-bottom:4px}
+.wr-cambios ul{list-style:none;margin:0 0 6px;padding:0}
+.wr-cambios li{padding:3px 0}
+.wr-cambios li small{display:block;color:var(--ink-3)}
+.wr-ok{margin:0 0 10px;font-size:12px;color:var(--ink-3)}
+.wr-nov{margin:0 0 10px;padding:0 0 0 16px;font-size:12.5px}
+.wr-viejo{color:var(--danger);font-weight:600}
+.wr-res{margin-left:8px;font-size:12px;color:var(--ink-3)}
 #view-web tr[data-lead]{cursor:pointer}
 #view-web tr[data-lead]:hover td{background:var(--surface-sunk)}
 
@@ -2579,6 +2589,11 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
     <fieldset class="fieldset" id="wa-block" hidden>
       <legend>Chat de WhatsApp</legend>
       <div id="wa-body"></div>
+    </fieldset>
+
+    <fieldset class="fieldset" id="wr-block" hidden>
+      <legend>Análisis de WhatsApp</legend>
+      <div id="wr-body"></div>
     </fieldset>
 
     <fieldset class="fieldset">
@@ -14043,18 +14058,113 @@ function ibPintarFicha(){
       ${fila('Intención', a.intencion_inicial)}${fila('Tipo', a.tipo_lead)}${fila('Próxima acción', a.proxima_accion)}${fila('Prioridad', a.prioridad)}
       ${fila('Objeciones', lista(a.objeciones_json).map(o => o.objecion || o).join(' · '))}
       ${fila('Sin responder', lista(a.preguntas_sin_respuesta_json).join(' · '))}
-    </dl>` : `<p>Todavía no hay análisis de este chat.</p>`}`;
+    </dl>` : `<p>Todavía no hay análisis de este chat.</p>`}
+    <h3 style="margin-top:var(--s5)">Análisis de WhatsApp</h3>
+    <div id="ib-wr"></div>`;
   el('ib-pase-ficha').addEventListener('click', ibPasarCotizador);
+  wrBloque(c.id, l.id, null, el('ib-wr'), c.ultimo_en || '');
   el('ib-abrir-lead').addEventListener('click', () => {
     if(!leads.find(x => x.id === l.id)) return alert('El lead todavía no está cargado en el panel. Prueba en unos segundos.');
     abrirDrawer(l.id);
   });
 }
 
+/* ---- Análisis de WhatsApp (el Radar de los chats de WhatsApp) ---- */
+// /api/wa-radar/<conversación>: Claude lee el chat, lo compara con lo que ya
+// sabíamos (CRM, formulario, Instagram) y lista lo que la persona cambió. Los
+// cambios no pisan el lead solos: "Actualizar el lead" los pasa. Se guarda el
+// último análisis por chat; `clave` (último mensaje del chat) evita pedirlo de
+// nuevo cada vez que se vuelve a dibujar la ficha.
+const WR_DATO = { destinos:'Destinos', dias:'Días', fecha:'Fecha', personas:'Personas', presupuesto:'Presupuesto', desde_donde:'Desde dónde viaja', pasajes:'Vuelos', otro:'Otro' };
+const WR_APLICABLES = ['destinos','dias','fecha','personas'];
+const wrCache = {};
+
+async function wrBloque(convId, leadId, box, body, clave){
+  if(!body) return;
+  if(box) box.hidden = false;
+  const c = wrCache[convId];
+  if(c && c.clave === clave){ wrPintar(convId, leadId, body, c.d, clave); return; }
+  body.innerHTML = `<div class="hint">Cargando…</div>`;
+  let d;
+  try{ d = await api('/api/wa-radar/' + convId); }
+  catch(e){ body.innerHTML = `<div class="hint">No se pudo cargar.</div>`; return; }
+  wrCache[convId] = { clave, d };
+  wrPintar(convId, leadId, body, d, clave);
+}
+
+function wrPintar(convId, leadId, body, d, clave){
+  if(!body.isConnected) return;
+  const r = d.reporte, dt = r && r.datos;
+  const cuando = s => s ? new Date(s).toLocaleString('es-AR', { timeZone:'America/Lima', day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : '';
+  if(!r){
+    body.innerHTML = `<p class="hint" style="margin:0 0 8px">Lee el chat y arma el mismo reporte que el Radar de Instagram. Como en WhatsApp la gente cambia fecha, personas y destinos, marca qué cambió respecto de lo que ya sabíamos.</p>
+      <button type="button" class="btn btn-primary btn-sm" data-wr="analizar">Analizar chat</button>`;
+  }else if(!dt){
+    body.innerHTML = `<div class="hint">El análisis guardado está dañado.</div><button type="button" class="btn btn-ghost btn-sm" data-wr="analizar">Volver a analizar</button>`;
+  }else{
+    const cambios = dt.cambios || [];
+    const aplicables = cambios.filter(x => WR_APLICABLES.includes(x.dato));
+    body.innerHTML = `
+      <span class="wr-score">Interés ${dt.score}/10</span>
+      <p class="rp-sint">${esc(dt.sintesis)}</p>
+      <div class="rp-accion"><b>Próxima acción:</b> ${esc(dt.proxima_accion)}</div>
+      ${cambios.length ? `<div class="wr-cambios"><b class="wr-tit">Cambió en WhatsApp</b><ul>${cambios.map(x =>
+          `<li><b>${esc(WR_DATO[x.dato] || x.dato)}:</b> ${esc(x.antes)} → <b>${esc(x.ahora)}</b>${x.frase ? `<small>"${esc(x.frase)}"${x.cuando ? ' · ' + esc(x.cuando) : ''}</small>` : ''}</li>`).join('')}</ul>
+        ${leadId && aplicables.length ? (r.aplicado_en
+          ? `<span class="hint">Ya pasado al lead (${cuando(r.aplicado_en)}).</span>`
+          : `<button type="button" class="btn btn-primary btn-sm" data-wr="aplicar">Actualizar el lead con esto</button><span class="hint"> · pasa ${aplicables.map(x => (WR_DATO[x.dato] || x.dato).toLowerCase()).join(', ')}</span>`) : ''}
+      </div>` : `<p class="wr-ok">No cambió nada: lo que dice por WhatsApp coincide con lo que ya sabíamos.</p>`}
+      ${dt.novedades && dt.novedades.length ? `<b style="font-size:12px">Dato nuevo</b><ul class="wr-nov">${dt.novedades.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
+      <details class="rp-ig"><summary>Reporte completo</summary><pre>${esc(r.texto)}</pre></details>
+      <div class="rp-pie">
+        <span class="hint">${r.mensajes || 0} mensajes · analizado ${cuando(r.actualizado_en)}${d.viejo ? ' · <span class="wr-viejo">hay mensajes nuevos</span>' : ''}</span>
+        <span><button type="button" class="btn btn-ghost btn-sm" data-wr="analizar">${d.viejo ? 'Analizar de nuevo' : 'Rehacer'}</button></span>
+      </div>`;
+  }
+  body.onclick = ev => {
+    const b = ev.target.closest('[data-wr]');
+    if(!b || !body.contains(b)) return;
+    if(b.dataset.wr === 'analizar') wrAccion(convId, leadId, body, clave, b, '', 'Leyendo el chat…');
+    else if(b.dataset.wr === 'aplicar') wrAccion(convId, leadId, body, clave, b, '/aplicar', 'Actualizando…');
+  };
+}
+
+async function wrAccion(convId, leadId, body, clave, btn, sufijo, textoEspera){
+  const original = btn.textContent;
+  btn.disabled = true; btn.textContent = textoEspera;
+  try{
+    const r = await api('/api/wa-radar/' + convId + sufijo, { method:'POST', body:'{}' });
+    // El análisis devuelve el reporte; "aplicar", los campos cambiados: ahí se pide el reporte de nuevo para ver el aplicado_en.
+    const d = sufijo ? await api('/api/wa-radar/' + convId) : r;
+    wrCache[convId] = { clave, d };
+    wrPintar(convId, leadId, body, d, clave);
+    await load();
+    wrSincronizarForm(leadId, sufijo ? (r.campos || {}) : null);
+    if(sufijo) toast('Lead actualizado con lo que dijo por WhatsApp', { tipo:'ok', ms:4000 });
+  }catch(e){
+    btn.disabled = false; btn.textContent = original;
+    if(e.message !== 'unauthorized') toast('WhatsApp: ' + e.message, { tipo:'error', ms:9000 });
+  }
+}
+
+// Si la ficha del lead está abierta, se actualizan sus campos para que guardar
+// no pise con vacío lo que el análisis completó. `campos` = lo que se cambió a
+// propósito (se reemplaza); si es null, solo se llenan los que estaban vacíos.
+function wrSincronizarForm(leadId, campos){
+  if(!leadId || !drawerAbierto || Number(el('f-id').value) !== leadId) return;
+  const l = leads.find(x => x.id === leadId);
+  if(!l) return;
+  ['destinos','personas','fecha_viaje','dias'].forEach(k => {
+    const inp = el('f-' + k);
+    if(!inp) return;
+    if(campos ? (k in campos) : !String(inp.value).trim()) inp.value = l[k] === null || l[k] === undefined ? '' : l[k];
+  });
+}
+
 /* ---- Chat de WhatsApp, dentro del lead ---- */
 async function waBloqueLead(l){
   const box = el('wa-block'), body = el('wa-body');
-  if(!ibActivo || !l){ box.hidden = true; return; }
+  if(!ibActivo || !l){ box.hidden = true; el('wr-block').hidden = true; return; }
   box.hidden = false;
   body.innerHTML = `<div class="hint">Cargando…</div>`;
   const pedido = l.id;
@@ -14064,8 +14174,9 @@ async function waBloqueLead(l){
     if(lista.length) d = await api('/api/setter/conversaciones/' + lista[0].id);
   }catch(e){ body.innerHTML = `<div class="hint">No se pudo cargar.</div>`; return; }
   if(Number(el('f-id').value) !== pedido) return;   // se abrió otro lead mientras tanto
-  if(!d){ body.innerHTML = `<div class="hint">Sin chat de WhatsApp todavía.</div>`; return; }
+  if(!d){ body.innerHTML = `<div class="hint">Sin chat de WhatsApp todavía.</div>`; el('wr-block').hidden = true; return; }
   const c = d.conversacion;
+  wrBloque(c.id, l.id, el('wr-block'), el('wr-body'), c.ultimo_en || '');
   body.innerHTML = `
     <div class="hint" style="margin-bottom:8px">${c.ia_activa ? 'IA activa' : 'IA pausada'} · ${d.mensajes.length} mensajes${c.espera_persona ? ' · <b style="color:var(--danger)">espera a una persona</b>' : ''}</div>
     <div class="wa-mini">${d.mensajes.slice(-8).map(m => ibMensajeHtml(m, { ...c, nombre: d.lead && d.lead.nombre })).join('')}</div>

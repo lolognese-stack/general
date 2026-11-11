@@ -90,12 +90,12 @@ CAMPOS
 }
 
 // ---------- utilidades ----------
-const sinTildes = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '');
+export const sinTildes = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '');
 export const normEtiqueta = (s) => sinTildes(s).toUpperCase().replace(/\s*\|\s*/g, ' | ').replace(/\s+/g, ' ').trim();
 const FORMATO_RE = /^(CARRUSEL(ES)?|REELS?|HISTORIAS?)$/;
 const FORMATO_MES_RE = /^(CARRUSEL(ES)?|REELS?|HISTORIAS?) \| (ENERO|FEBRERO|MARZO|ABRIL|MAYO|JUNIO|JULIO|AGOSTO|SEPTIEMBRE|SETIEMBRE|OCTUBRE|NOVIEMBRE|DICIEMBRE) \d{4}$/;
 const PARECE_PIEZA_RE = /^(CARRUSEL(ES)?|REELS?|HISTORIAS?)\b/;
-const entero = (v) => { const n = Math.round(Number(v)); return Number.isFinite(n) && n > 0 ? n : null; };
+export const entero = (v) => { const n = Math.round(Number(v)); return Number.isFinite(n) && n > 0 ? n : null; };
 export const fechaCorta = (s) => (s ? String(s).slice(0, 10) : null);
 
 export function diasEntre(a, b) {
@@ -116,7 +116,7 @@ const fmtDia = (s) => {
   return isNaN(t) ? s : new Date(t + 12 * 3600000).toLocaleDateString('es-PE', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 };
 
-function canonDestino(d) {
+export function canonDestino(d) {
   const s = String(d || '').trim();
   if (!s) return null;
   if (/^otro\s*:/i.test(s)) return 'Otro: ' + s.replace(/^otro\s*:\s*/i, '');
@@ -124,7 +124,7 @@ function canonDestino(d) {
   return DESTINOS.find((c) => sinTildes(c).toLowerCase() === k) || 'Otro: ' + s;
 }
 
-function tramoDias(min, max) {
+export function tramoDias(min, max) {
   if (!min && !max) return null;
   const m = ((min || max) + (max || min)) / 2;
   if (m <= 1) return 'Full day';
