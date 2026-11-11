@@ -10,6 +10,8 @@ import { checkToken, json } from '../../_lib/auth.js';
 //   GET  /api/cotizador/catalogo  -> productos del catálogo de la web (para el buscador)
 //   POST /api/cotizador/cotizar   -> { pedido, nombre?, idioma?, dias_disponibles? } -> /v1/cotizar
 //   POST /api/cotizador/turno     -> { mensaje, estado? } -> /v1/turno (pegar chat)
+//   GET  /api/cotizador/rutas     -> rutas, ciudades y categorías de hotel para viajes a medida (/v1/rutas)
+//   POST /api/cotizador/medida    -> { solicitud, categorias?, nombre?, idioma? } -> /v1/medida (la misma ruta en cada categoría)
 //   POST /api/cotizador/guardar   -> { lead_id, enviada?, quien?, pedido, nombre?, idioma?, ... } (recotiza y guarda)
 //   GET  /api/cotizador/lead/<id> -> cotizaciones guardadas de ese lead (tabla cotizador_cotizaciones, migración 048)
 //
@@ -59,39 +61,112 @@ async function cotizar(request, env) {
   return llamar(env, '/v1/cotizar', c);
 }
 
+const entero = (x, max) => { const n = Number(x); return Number.isInteger(n) && n >= 1 && n <= max ? n : null; };
+const CATEGORIAS = ['economico', 'confort', 'premium'];
+
+// Solo los campos que entiende el motor: nada de pasaportes ni fechas de nacimiento.
+function viajerosLimpios(lista) {
+  return lista.slice(0, 40).map(v => {
+    const o = { nacionalidad: String(v.nacionalidad || '').slice(0, 60) };
+    if (v.adulto) o.adulto = true; else o.edad = Number(v.edad);
+    if (v.estudiante) o.estudiante = true;
+    return o;
+  });
+}
+
+function itemsLimpios(lista, conDia) {
+  return lista.slice(0, 30).map(i => {
+    const o = { id: String(i.id || '') };
+    if (i.tarifa) o.tarifa = String(i.tarifa);
+    if (i.cantidad) o.cantidad = Number(i.cantidad);
+    if (conDia && entero(i.dia, 60)) o.dia = entero(i.dia, 60);
+    return o;
+  });
+}
+
+function habitacionesLimpias(h) {
+  const o = {};
+  if (h && typeof h === 'object') for (const k of ['SGL', 'DBL', 'TPL']) { const n = entero(h[k], 20); if (n) o[k] = n; }
+  return o;
+}
+
+// Servicios del tarifario (hoteles, traslados, trenes) de un viaje a medida: salen del cotizador (/v1/medida)
+// y vuelven a él para recotizar. Acá solo se limpia la forma; el precio lo pone el cotizador.
+function serviciosLimpios(lista) {
+  return lista.slice(0, 40).map(s => {
+    s = s && typeof s === 'object' ? s : {};
+    const o = { id: String(s.id || '').slice(0, 120) };
+    for (const [k, max] of [['dia', 60], ['noches', 60], ['cantidad', 30]]) { const n = entero(s[k], max); if (n) o[k] = n; }
+    if (s.variante) o.variante = String(s.variante).slice(0, 60);
+    const h = habitacionesLimpias(s.habitaciones);
+    if (Object.keys(h).length) o.habitaciones = h;
+    return o;
+  });
+}
+
 // Lo que se manda a /v1/cotizar: solo los campos que entiende el motor.
 function cuerpoCotizar(b) {
   const p = b.pedido;
-  if (!p || !Array.isArray(p.items) || !p.items.length) return { error: 'Elegí al menos un producto' };
+  // Viaje a medida: trae servicios del tarifario y los días ya puestos, así que no se reordena.
+  const aMedida = !!p && Array.isArray(p.servicios) && p.servicios.length > 0;
+  if (!p || !Array.isArray(p.items) || (!p.items.length && !aMedida)) return { error: 'Elegí al menos un producto' };
   if (!Array.isArray(p.viajeros) || !p.viajeros.length) return { error: 'Cargá al menos un viajero' };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(p.fecha_viaje || '')) return { error: 'Falta la fecha del viaje' };
 
-  // Solo los campos que entiende el motor: nada de pasaportes ni fechas de nacimiento.
   const pedido = {
     fecha_hoy: hoyLima(),
     fecha_viaje: p.fecha_viaje,
-    viajeros: p.viajeros.slice(0, 40).map(v => {
-      const o = { nacionalidad: String(v.nacionalidad || '').slice(0, 60) };
-      if (v.adulto) o.adulto = true; else o.edad = Number(v.edad);
-      if (v.estudiante) o.estudiante = true;
-      return o;
-    }),
-    items: p.items.slice(0, 30).map(i => {
-      const o = { id: String(i.id || '') };
-      if (i.tarifa) o.tarifa = String(i.tarifa);
-      if (i.cantidad) o.cantidad = Number(i.cantidad);
-      return o;
-    }),
+    viajeros: viajerosLimpios(p.viajeros),
+    items: itemsLimpios(p.items, aMedida),
   };
+  if (aMedida) pedido.servicios = serviciosLimpios(p.servicios);
   if (p.llegada && /^\d{2}:\d{2}$/.test(p.llegada.hora || '')) pedido.llegada = { dia: 1, hora: p.llegada.hora };
 
   return {
     pedido,
-    ordenar: true,
+    ordenar: !aMedida,
     nombre: b.nombre ? String(b.nombre).slice(0, 80) : null,
     idioma: ['es', 'en', 'pt'].includes(b.idioma) ? b.idioma : 'es',
     dias_disponibles: Number(b.dias_disponibles) > 0 ? Number(b.dias_disponibles) : null,
   };
+}
+
+// Viaje a medida: días + ciudades + viajeros. La ruta, los hoteles y los precios los pone el cotizador.
+function cuerpoMedida(b) {
+  const s = b.solicitud;
+  if (!s || typeof s !== 'object') return { error: 'Falta la solicitud' };
+  const dias = entero(s.dias, 30);
+  if (!dias || dias < 2) return { error: 'Poné cuántos días dura el viaje (2 a 30)' };
+  if (!Array.isArray(s.viajeros) || !s.viajeros.length) return { error: 'Cargá al menos un viajero' };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s.fecha_viaje || '')) return { error: 'Falta la fecha del viaje' };
+  const slug = x => String(x || '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 60);
+  const solicitud = {
+    fecha_hoy: hoyLima(),
+    fecha_viaje: s.fecha_viaje,
+    dias,
+    viajeros: viajerosLimpios(s.viajeros),
+    ciudades: (Array.isArray(s.ciudades) ? s.ciudades : []).slice(0, 12).map(slug).filter(Boolean),
+    ruta: slug(s.ruta) || null,
+    items: itemsLimpios(Array.isArray(s.items) ? s.items : [], false),
+  };
+  const h = habitacionesLimpias(s.habitaciones);
+  if (Object.keys(h).length) solicitud.habitaciones = h;
+  if (s.llegada && /^\d{2}:\d{2}$/.test(s.llegada.hora || '')) solicitud.llegada = { dia: 1, hora: s.llegada.hora };
+  const categorias = (Array.isArray(b.categorias) ? b.categorias : []).filter(c => CATEGORIAS.includes(c));
+  return {
+    solicitud,
+    ...(categorias.length ? { categorias } : {}),
+    nombre: b.nombre ? String(b.nombre).slice(0, 80) : null,
+    idioma: ['es', 'en', 'pt'].includes(b.idioma) ? b.idioma : 'es',
+  };
+}
+
+async function medida(request, env) {
+  const { b, error } = await leerCuerpo(request);
+  if (error) return error;
+  const c = cuerpoMedida(b);
+  if (c.error) return json({ error: c.error }, 400);
+  return llamar(env, '/v1/medida', c);
 }
 
 // Guardar en lead: el servidor vuelve a cotizar el pedido (los importes nunca vienen del navegador),
@@ -128,10 +203,12 @@ async function guardar(request, env) {
   const now = new Date().toISOString();
   const quien = b.quien ? String(b.quien).slice(0, 60) : null;
   const nombres = Array.isArray(b.nombres) ? b.nombres : [];
-  const resumen = (data.pedido && data.pedido.items || []).map(i => {
+  // Viaje a medida: el resumen arranca con la ruta y la categoría (los hoteles no están en el catálogo de la web).
+  const titulo = c.pedido.servicios ? (b.titulo ? String(b.titulo).slice(0, 120) : 'Viaje a medida') : '';
+  const resumen = [titulo, ...(data.pedido && data.pedido.items || []).map(i => {
     const n = nombres.find(x => x && x.id === i.id);
     return n ? String(n.nombre).slice(0, 80) : i.id;
-  }).join(' + ').slice(0, 400);
+  })].filter(Boolean).join(' + ').slice(0, 400);
   const v = cot.versiones || {};
 
   const sentencias = [env.DB.prepare(
@@ -139,7 +216,7 @@ async function guardar(request, env) {
        pedido_json, versiones, enviada, quien, creado_en, slug, propuesta_html) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(leadId, cot.estado || 'desconocido', conTotal ? String(cot.total_usd) : null, conTotal ? String(cot.adelanto_usd) : null,
     c.pedido.viajeros.length, c.pedido.fecha_viaje, resumen, c.idioma, (data.borrador && data.borrador.texto) || null,
-    JSON.stringify(data.pedido || c.pedido), [v.catalogo, v.entradas, v.reglas, v.tc].filter(Boolean).join(' · '), enviada, quien, now,
+    JSON.stringify(data.pedido || c.pedido), [v.catalogo, v.entradas, v.reglas, v.tc, v.tarifario].filter(Boolean).join(' · '), enviada, quien, now,
     slug, html)];
 
   let etapa = lead.etapa;
@@ -183,13 +260,13 @@ async function turno(request, env) {
 }
 
 // Llama al cotizador. Devuelve { status, data } con status ya traducido para el panel.
-async function pedir(env, ruta, cuerpo) {
+async function pedir(env, ruta, cuerpo, metodo = 'POST') {
   let r;
   try {
     r = await fetch((env.COTIZADOR_URL || URL_COTIZADOR) + ruta, {
-      method: 'POST',
+      method: metodo,
       headers: { 'content-type': 'application/json', authorization: 'Bearer ' + env.COTIZADOR_TOKEN },
-      body: JSON.stringify(cuerpo),
+      ...(metodo === 'POST' ? { body: JSON.stringify(cuerpo) } : {}),
       signal: AbortSignal.timeout(55000),
     });
   } catch (e) {
@@ -199,6 +276,8 @@ async function pedir(env, ruta, cuerpo) {
   let data;
   try { data = JSON.parse(texto); } catch { return { status: 502, data: { error: 'Respuesta inválida del cotizador (HTTP ' + r.status + ')' } }; }
   if (r.status === 401 || r.status === 503) return { status: 502, data: { error: 'El CRM no tiene bien configurado el token del cotizador.' } };
+  // Un cotizador publicado antes de los viajes a medida no conoce /v1/rutas ni /v1/medida.
+  if (r.status === 404) return { status: 502, data: { error: 'el cotizador publicado todavía no tiene esta función (hay que publicar la versión nueva).' } };
   if (!r.ok) return { status: r.status === 400 || r.status === 413 ? r.status : 502, data: { error: data.error || 'HTTP ' + r.status } };
   return { status: 200, data };
 }
@@ -222,6 +301,8 @@ export async function onRequest({ request, env, params }) {
   }
   if (ruta === 'cotizar' && metodo === 'POST') return cotizar(request, env);
   if (ruta === 'turno' && metodo === 'POST') return turno(request, env);
+  if (ruta === 'rutas' && metodo === 'GET') { const { status, data } = await pedir(env, '/v1/rutas', null, 'GET'); return json(data, status); }
+  if (ruta === 'medida' && metodo === 'POST') return medida(request, env);
   if (ruta === 'guardar' && metodo === 'POST') return guardar(request, env);
   const mLead = ruta.match(/^lead\/(\d+)$/);
   if (mLead && metodo === 'GET') return deLead(env, mLead[1]);

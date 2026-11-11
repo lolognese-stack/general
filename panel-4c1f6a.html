@@ -1925,6 +1925,19 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 .cz-msg{width:100%;min-height:220px;border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px 12px;background:var(--surface-2);font:13px/1.5 inherit;resize:vertical;white-space:pre-wrap}
 .cz-pie{font-size:11px;color:var(--ink-3);margin-top:var(--s3);line-height:1.5}
 .cz-vacio{padding:var(--s6) var(--s4);text-align:center;color:var(--ink-3);font-size:13px;line-height:1.6}
+.cz-chips{display:flex;flex-wrap:wrap;gap:6px}
+.cz-chip{border:1px solid var(--line);background:var(--surface-2);color:var(--ink-2);font-size:12.5px;font-weight:600;padding:7px 11px;border-radius:var(--radius-sm);cursor:pointer;min-height:34px}
+.cz-chip:hover{border-color:var(--ink-3)}
+.cz-chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+.cz-ops{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s2);margin-bottom:var(--s4)}
+@media (max-width:640px){ .cz-ops{grid-template-columns:1fr} }
+.cz-op{text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:var(--radius);padding:12px 14px;cursor:pointer;display:flex;flex-direction:column;gap:2px;box-shadow:var(--shadow);min-width:0}
+.cz-op:hover{border-color:var(--ink-3)}
+.cz-op[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.cz-op .cat{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3)}
+.cz-op .tot{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink)}
+.cz-op .pp{font-size:11.5px;color:var(--ink-3)}
+.cz-sinhotel{color:var(--danger);font-weight:600}
 
 
 
@@ -13074,8 +13087,8 @@ let czCatalogo = null;      // productos de la web: [{id, nombre, categoria, dur
 let czCargandoCat = false;
 let czRes = null;           // última respuesta del cotizador
 let czCotizando = false;
-let czModo = 'manual';      // 'manual' (formulario) | 'chat' (pegar el mensaje del cliente)
-try{ if(localStorage.getItem('cz_modo') === 'chat') czModo = 'chat'; }catch(e){}
+let czModo = 'manual';      // 'manual' (formulario) | 'chat' (pegar el mensaje del cliente) | 'medida' (ruta + hoteles del tarifario)
+try{ const m = localStorage.getItem('cz_modo'); if(m === 'chat' || m === 'medida') czModo = m; }catch(e){}
 // Conversación de "Pegar chat": solo en memoria (tiene nombre e intereses del cliente).
 let czChat = { estado:null, mensajes:0, res:null, borrador:'' };
 const CZ_VACIO = () => ({ nombre:'', idioma:'es', whatsapp:'', fecha:'', dias:'', llegada:'',
@@ -13134,10 +13147,11 @@ function renderCotizador(forzar){
   const f = czForm;
   const modos = `<div class="ag-sec-h cv-toolbar-top">
     <div class="cv-vswitch" id="cz-modo" role="group" aria-label="Cómo cotizar">
-      ${[['manual','Armar a mano'],['chat','Pegar chat']].map(([v, t]) => `<button type="button" data-v="${v}" aria-current="${String(czModo === v)}">${t}</button>`).join('')}
+      ${[['manual','Armar a mano'],['chat','Pegar chat'],['medida','A medida']].map(([v, t]) => `<button type="button" data-v="${v}" aria-current="${String(czModo === v)}">${t}</button>`).join('')}
     </div>
-    <span class="hint">${czModo === 'chat' ? 'la IA lee el mensaje; los precios los sigue calculando el cotizador' : 'productos del catálogo de la web'}</span>
+    <span class="hint">${czModo === 'chat' ? 'la IA lee el mensaje; los precios los sigue calculando el cotizador' : czModo === 'medida' ? 'varias ciudades con hotel: económico, confort y premium' : 'productos del catálogo de la web'}</span>
   </div>`;
+  if(czModo === 'medida'){ renderMedida(host, modos); return; }
   if(czModo === 'chat'){
     host.innerHTML = modos + `<div id="cz-root">
       <div>
@@ -13411,7 +13425,7 @@ function czEventos(){
       if(a === 'vj-menos'){ czForm.viajeros.splice(i, 1); czPintarViajeros(); }
       if(a === 'it-menos'){ czForm.items.splice(i, 1); czPintarItems(); }
       if(a === 'nac-todos'){ const n = (czForm.viajeros.find(v => v.nacionalidad.trim()) || {}).nacionalidad || ''; czForm.viajeros.forEach(v => v.nacionalidad = n); czPintarViajeros(); }
-      if(a === 'limpiar'){ if(!confirm('¿Borrar el formulario y el resultado?')) return; czForm = CZ_VACIO(); czRes = null; czGuardar(); renderCotizador(true); return; }
+      if(a === 'limpiar'){ if(!confirm('¿Borrar el formulario y el resultado?')) return; czForm = CZ_VACIO(); czRes = null; czMed = CZ_MED_VACIO(); czMedRes = null; czGuardar(); czMedGuardar(); renderCotizador(true); return; }
       if(a === 'copiar') czCopiar();
       czGuardar();
       return;
@@ -13482,6 +13496,7 @@ function czPintarResultado(){
   const box = el('cz-res');
   if(!box) return;
   if(czModo === 'chat'){ czPintarChat(); return; }
+  if(czModo === 'medida'){ box.innerHTML = czMedResultadoHtml(); return; }
   box.innerHTML = czRes ? czResultadoHtml(czRes)
     : `<div class="ag-sec-h"><h2>Resultado</h2></div><div class="wb-panel"><div class="pf2-empty">Completá el pedido y tocá <b>Cotizar</b>.<br>Acá vas a ver el itinerario, el desglose con de dónde sale cada número, las alertas y el mensaje listo para mandar.</div></div>`;
 }
@@ -13497,7 +13512,8 @@ function czResultadoHtml(r){
   // Itinerario: los días los puso el cotizador.
   const dias = {};
   for(const it of (r.pedido && r.pedido.items) || []){ const p = czProd(it.id); (dias[it.dia || 0] = dias[it.dia || 0] || []).push(p ? p.nombre : it.id); }
-  if(Object.keys(dias).length && !dias[1]) dias[1] = ['Llegada a Cusco y descanso'];
+  const aMedida = !!(r.pedido && (r.pedido.servicios || []).length);   // el viaje no arranca necesariamente en Cusco
+  if(Object.keys(dias).length && !dias[1] && !aMedida) dias[1] = ['Llegada a Cusco y descanso'];
   const itin = Object.keys(dias).map(Number).sort((a, b) => a - b)
     .map(d => `<li><b>${d ? 'Día ' + d : 'Sin día'}</b><span>${dias[d].map(esc).join(' + ')}</span></li>`).join('');
   const filas = (c.lineas || []).map(l => `<tr data-ok="${CZ_CON_TOTAL.includes(l.estado) ? 1 : 0}">
@@ -13522,8 +13538,8 @@ function czResultadoHtml(r){
         <div class="pf2-card"><div class="pf2-lbl">Saldo</div><div class="pf2-val">${czUsd(c.saldo_usd)}</div><div class="pf2-sub">antes del viaje</div></div>
       </div>`
       : `<div class="cz-alerta" data-n="pend" style="margin-bottom:var(--s4)"><b>Sin total para mandar.</b> Hay que resolver lo pendiente (o cotizarlo a mano). ${c.total_parcial_usd ? `Parcial calculado, solo de referencia interna: ${czUsd(c.total_parcial_usd)}.` : ''}</div>`}
-    <div class="ag-sec-h"><h2>Itinerario</h2></div>
-    <div class="wb-panel"><ul class="cz-dias">${itin}</ul></div>
+    ${itin ? `<div class="ag-sec-h"><h2>${aMedida ? 'Tours' : 'Itinerario'}</h2></div>
+    <div class="wb-panel"><ul class="cz-dias">${itin}</ul></div>` : ''}
     <div class="ag-sec-h"><h2>Desglose</h2><span class="hint">de dónde sale cada número</span></div>
     <div class="wb-panel cz-panel-tabla"><div class="cv-tblwrap"><table class="cz-tabla"><thead><tr><th>Concepto</th><th>Quién</th><th class="num">Cant.</th><th class="num">Unitario</th><th class="num">Subtotal</th><th>Estado</th></tr></thead><tbody>${filas}</tbody></table></div></div>
     <div class="ag-sec-h"><h2>Mensaje para el cliente</h2><span class="hint">${esc({ es:'Español', en:'Inglés', pt:'Portugués' }[b.idioma] || '')}</span></div>
@@ -13535,9 +13551,263 @@ function czResultadoHtml(r){
       </div>
       <div class="cz-pie">Revisalo antes de mandarlo: nada sale solo. Si cambiás algo del pedido, volvé a cotizar (los importes no se editan a mano).<br>
         Cotizado ${new Date(r._cuando || Date.now()).toLocaleString('es-AR', { timeZone:'America/Lima', day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
-        · tipo de cambio ${esc(c.tipo_cambio || '—')} · ${esc([v.catalogo, v.entradas, v.reglas, v.tc].filter(Boolean).join(' · '))}</div>
+        · tipo de cambio ${esc(c.tipo_cambio || '—')} · ${esc([v.catalogo, v.entradas, v.reglas, v.tc, v.tarifario].filter(Boolean).join(' · '))}</div>
     </div>
     ${czGuardarHtml(conTotal)}`;
+}
+
+/* ---- A medida: /api/cotizador/medida (ruta + hoteles del tarifario; lo arma el cotizador por código, sin IA) ---- */
+// Comparte cliente, viajeros y tours con "Armar a mano" (czForm). Lo propio de este modo va en czMed.
+
+const CZ_MED_VACIO = () => ({ dias:'', ciudades:[], ruta:'', hab:{ SGL:'', DBL:'', TPL:'' } });
+let czMed = CZ_MED_VACIO();
+try{ const g = JSON.parse(localStorage.getItem('cz_medida') || 'null'); if(g && Array.isArray(g.ciudades)) czMed = { ...CZ_MED_VACIO(), ...g, hab:{ ...CZ_MED_VACIO().hab, ...(g.hab || {}) } }; }catch(e){}
+const czMedGuardar = () => { try{ localStorage.setItem('cz_medida', JSON.stringify(czMed)); }catch(e){} };
+let czRutas = null;          // { rutas, ciudades, categorias } del cotizador
+let czRutasErr = '';
+let czCargandoRutas = false;
+let czMedRes = null;         // { opciones:[{ categoria, ok, motivo, ruta, estadias, aparte, cotizacion, pedido, borrador, alertas, pendientes }] }
+let czMedCat = 'confort';
+const CZ_CAT_HOTEL = { economico:'Económico', confort:'Confort', premium:'Premium' };
+const CZ_HAB = [['DBL','Dobles'], ['SGL','Simples'], ['TPL','Triples']];
+
+const czCiudad = id => ((czRutas && czRutas.ciudades.find(c => c.id === id)) || {}).nombre || id;
+const czTramos = r => r.tramos.map(t => `${czCiudad(t.ciudad)} ${t.noches}n`).join(' › ');
+const czMedOpcion = () => (czMedRes && (czMedRes.opciones || []).find(o => o.categoria === czMedCat)) || null;
+
+function czMedCandidatas(){
+  const d = Number(czMed.dias);
+  if(!czRutas || !(d >= 2)) return [];
+  return czRutas.rutas.filter(r => r.dias_min <= d && d <= r.dias_max && czMed.ciudades.every(c => r.tramos.some(t => t.ciudad === c)));
+}
+
+async function czCargarRutas(){
+  if(czCargandoRutas) return;
+  czCargandoRutas = true;
+  try{
+    const r = await api('/api/cotizador/rutas');
+    if(r.error && !(r.rutas || []).length) throw new Error(r.error);
+    czRutas = { rutas: r.rutas || [], ciudades: r.ciudades || [], categorias: r.categorias || [] };
+    czMed.ciudades = czMed.ciudades.filter(c => czRutas.ciudades.some(x => x.id === c));
+    czRutasErr = '';
+  }catch(e){
+    if(e.message === 'unauthorized') return;
+    czRutasErr = e.message || 'no se pudieron leer las rutas';
+  }finally{ czCargandoRutas = false; }
+  if(seccion === 'cotizador' && czModo === 'medida') renderCotizador(true);
+}
+
+function renderMedida(host, modos){
+  if(!czRutas){
+    host.innerHTML = modos + `<div id="cz-root"><div class="wb-panel"><div class="pf2-empty">${czRutasErr
+      ? `Viajes a medida todavía no está disponible: ${esc(czRutasErr)}<br><button type="button" class="btn btn-ghost" id="cz-rutas-reintentar" style="margin-top:var(--s3)">Probar de nuevo</button>`
+      : 'Cargando las rutas…'}</div></div><div id="cz-res"></div></div>`;
+    czEventosModo();
+    if(czRutasErr) el('cz-rutas-reintentar').addEventListener('click', () => { czRutasErr = ''; renderCotizador(true); });
+    else czCargarRutas();
+    return;
+  }
+  const f = czForm;
+  const sinHoteles = !czRutas.ciudades.some(c => Object.values(c.hoteles || {}).some(Boolean));
+  host.innerHTML = modos + `<div id="cz-root">
+    <div>
+    <div class="ag-sec-h"><h2>Viaje a medida</h2><span class="hint">días + ciudades · la ruta, los hoteles y el precio los pone el cotizador</span></div>
+    ${sinHoteles ? `<div class="cz-alertas"><div class="cz-alerta" data-n="pend"><b>El tarifario todavía no tiene hoteles cargados.</b> Las opciones van a salir sin precio hasta que se carguen las tarifas de los proveedores.</div></div>` : ''}
+    <div class="wb-panel" id="cz-form">
+      <div class="cz-sec">
+        <div class="cz-sec-tit">Cliente</div>
+        <div class="cz-grid3">
+          <div class="field"><label for="cz-nombre">Nombre</label><input id="cz-nombre" data-f="nombre" value="${esc(f.nombre)}" placeholder="Ana" maxlength="80"></div>
+          <div class="field"><label for="cz-idioma">Idioma del mensaje</label><select id="cz-idioma" data-f="idioma">
+            ${[['es','Español'],['en','Inglés'],['pt','Portugués']].map(([v, t]) => `<option value="${v}" ${f.idioma === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+          <div class="field"><label for="cz-wa">WhatsApp (opcional)</label><input id="cz-wa" data-f="whatsapp" value="${esc(f.whatsapp)}" placeholder="+54 9 11 …" inputmode="tel"></div>
+        </div>
+      </div>
+      <div class="cz-sec">
+        <div class="cz-sec-tit">Viaje</div>
+        <div class="cz-grid3">
+          <div class="field"><label for="cz-fecha">Fecha de llegada</label><input id="cz-fecha" type="date" data-f="fecha" value="${esc(f.fecha)}"></div>
+          <div class="field"><label for="cz-med-dias">Días del viaje</label><input id="cz-med-dias" type="number" min="2" max="30" data-m="dias" value="${esc(czMed.dias)}" placeholder="7">
+            <span class="hint">Del día que llega al día que se va.</span></div>
+          <div class="field"><label for="cz-llegada">Hora de llegada (opcional)</label><input id="cz-llegada" type="time" data-f="llegada" value="${esc(f.llegada)}"></div>
+        </div>
+      </div>
+      <div class="cz-sec">
+        <div class="cz-sec-tit">Ruta</div>
+        <div class="field"><label id="cz-ciudades-lbl">Ciudades que tiene que incluir (opcional)</label>
+          <div class="cz-chips" id="cz-ciudades" role="group" aria-labelledby="cz-ciudades-lbl">
+            ${czRutas.ciudades.map(c => `<button type="button" class="cz-chip" data-ciudad="${esc(c.id)}" aria-pressed="${czMed.ciudades.includes(c.id)}">${esc(c.nombre)}</button>`).join('')}
+          </div></div>
+        <div class="field" style="margin-top:var(--s3)"><label for="cz-ruta">Ruta</label><select id="cz-ruta" data-m="ruta"></select>
+          <span class="hint" id="cz-ruta-hint"></span></div>
+      </div>
+      <div class="cz-sec">
+        <div class="cz-sec-tit">Viajeros <span class="spacer"></span><button type="button" class="cz-link" data-acc="nac-todos">Misma nacionalidad para todos</button></div>
+        <div id="cz-vjs"></div>
+        <button type="button" class="btn btn-ghost" data-acc="vj-mas">Agregar viajero</button>
+        <datalist id="cz-paises">${CZ_PAISES.map(p => `<option value="${esc(p)}">`).join('')}</datalist>
+      </div>
+      <div class="cz-sec">
+        <div class="cz-sec-tit">Habitaciones (opcional)</div>
+        <div class="cz-grid3">
+          ${CZ_HAB.map(([k, t]) => `<div class="field"><label for="cz-hab-${k}">${t}</label><input id="cz-hab-${k}" type="number" min="0" max="20" data-hab="${k}" value="${esc(czMed.hab[k])}" placeholder="0"></div>`).join('')}
+        </div>
+        <div class="hint" style="font-size:11px;color:var(--ink-3)">Si lo dejás vacío se suponen dobles, y una simple si son impares. Queda avisado para confirmarlo con el cliente.</div>
+      </div>
+      <div class="cz-sec">
+        <div class="cz-sec-tit">Tours del catálogo (opcional)</div>
+        <div class="cz-busca"><input id="cz-q" placeholder="Buscar: Valle Sur, Humantay, Machu Picchu…" autocomplete="off" aria-label="Buscar producto">
+          <div class="cz-sug" id="cz-sug" hidden role="listbox"></div></div>
+        <div id="cz-its"></div>
+        <div class="hint" style="font-size:11px;color:var(--ink-3)">Los tours salen de Cusco: el cotizador los ubica en los días que el viaje duerme en Cusco.</div>
+      </div>
+      <div class="cz-acciones">
+        <button type="button" class="btn btn-primary" id="cz-med-btn">Armar opciones</button>
+        <button type="button" class="btn btn-ghost" data-acc="limpiar">Empezar de nuevo</button>
+        <span class="cz-err" id="cz-err" role="alert"></span>
+      </div>
+    </div>
+    </div>
+    <div id="cz-res" aria-live="polite"></div>
+  </div>`;
+  czPintarViajeros();
+  czPintarItems();
+  czMedPintarRuta();
+  czPintarResultado();
+  czEventos();
+  czEventosMedida();
+  czEventosModo();
+  czEventosGuardar();
+}
+
+// El selector de ruta y su ayuda dependen de los días y de las ciudades marcadas.
+function czMedPintarRuta(){
+  const sel = el('cz-ruta'), hint = el('cz-ruta-hint');
+  if(!sel) return;
+  const cand = czMedCandidatas();
+  if(czMed.ruta && !cand.some(r => r.id === czMed.ruta)){ czMed.ruta = ''; czMedGuardar(); }
+  sel.innerHTML = `<option value="">Que la elija el cotizador</option>` +
+    cand.map(r => `<option value="${esc(r.id)}" ${czMed.ruta === r.id ? 'selected' : ''}>${esc(r.nombre)} · ${esc(czTramos(r))}</option>`).join('');
+  sel.disabled = !cand.length;
+  const d = Number(czMed.dias);
+  if(!(d >= 2)) hint.textContent = 'Poné los días del viaje para ver qué rutas entran.';
+  else if(!cand.length) hint.textContent = `No hay una ruta cargada para ${d} días con esas ciudades: la arma una persona.`;
+  else if(!czMed.ruta) hint.textContent = `Va a usar "${cand[0].nombre}"${cand.length > 1 ? ` (también sirve${cand.length > 2 ? 'n' : ''}: ${cand.slice(1).map(r => r.nombre).join(', ')})` : ''}. Las noches que sobran se reparten solas.`;
+  else hint.textContent = 'Noches base de la ruta; las que sobran se reparten solas.';
+}
+
+function czEventosMedida(){
+  const root = el('cz-root');
+  root.addEventListener('input', e => {
+    const t = e.target;
+    if(t.dataset.m){ czMed[t.dataset.m] = t.value; czMedGuardar(); if(t.dataset.m === 'dias') czMedPintarRuta(); return; }
+    if(t.dataset.hab){ czMed.hab[t.dataset.hab] = t.value; czMedGuardar(); }
+  });
+  root.addEventListener('click', e => {
+    const chip = e.target.closest('[data-ciudad]');
+    if(chip){
+      const id = chip.dataset.ciudad, i = czMed.ciudades.indexOf(id);
+      if(i >= 0) czMed.ciudades.splice(i, 1); else czMed.ciudades.push(id);
+      chip.setAttribute('aria-pressed', String(i < 0));
+      czMedGuardar(); czMedPintarRuta();
+      return;
+    }
+    const cat = e.target.closest('[data-cat]');
+    if(cat){ czMedCat = cat.dataset.cat; czPintarResultado(); return; }
+    if(e.target.id === 'cz-med-btn') czMedArmar();
+  });
+}
+
+function czMedValidar(){
+  const f = czForm, d = Number(czMed.dias);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(f.fecha)) return 'Falta la fecha de llegada.';
+  if(f.fecha < new Date().toLocaleDateString('en-CA', { timeZone:'America/Lima' })) return 'La fecha del viaje ya pasó.';
+  if(!(Number.isInteger(d) && d >= 2 && d <= 30)) return 'Poné cuántos días dura el viaje (2 a 30).';
+  for(const [i, v] of f.viajeros.entries()){
+    if(!v.nacionalidad.trim()) return `Falta la nacionalidad del viajero ${i + 1} (cambia hoteles, entradas y trenes).`;
+    if(v.tipo === 'menor' && !(v.edad !== '' && Number(v.edad) >= 0 && Number(v.edad) <= 17)) return `Falta la edad del viajero ${i + 1} (0 a 17).`;
+  }
+  if(!f.viajeros.some(v => v.tipo === 'adulto')) return 'Tiene que viajar al menos un adulto.';
+  for(const [k, t] of CZ_HAB){ const n = czMed.hab[k]; if(n !== '' && !(Number.isInteger(Number(n)) && Number(n) >= 0 && Number(n) <= 20)) return `Habitaciones ${t.toLowerCase()}: un número de 0 a 20.`; }
+  for(const it of f.items){
+    const p = czProd(it.id);
+    if(czVariantes(p).length && !it.tarifa) return `Elegí la variante de ${p.nombre}.`;
+    if(p.unidad !== 'persona' && !(Number(it.cantidad) >= 1)) return `Poné cuántas ${p.unidad}s para ${p.nombre}.`;
+  }
+  return '';
+}
+
+async function czMedArmar(){
+  if(czCotizando) return;
+  const err = czMedValidar();
+  el('cz-err').textContent = err;
+  if(err) return;
+  const f = czForm;
+  const hab = {};
+  for(const [k] of CZ_HAB) if(Number(czMed.hab[k]) >= 1) hab[k] = Number(czMed.hab[k]);
+  const cuerpo = {
+    nombre: f.nombre.trim() || null,
+    idioma: f.idioma,
+    solicitud: {
+      fecha_viaje: f.fecha,
+      dias: Number(czMed.dias),
+      ciudades: czMed.ciudades,
+      ruta: czMed.ruta || null,
+      viajeros: f.viajeros.map(v => ({ nacionalidad: v.nacionalidad.trim(), estudiante: !!v.estudiante,
+        ...(v.tipo === 'adulto' ? { adulto: true } : { edad: Number(v.edad) }) })),
+      ...(Object.keys(hab).length ? { habitaciones: hab } : {}),
+      items: f.items.map(it => ({ id: it.id, ...(it.tarifa ? { tarifa: it.tarifa } : {}), ...(it.cantidad ? { cantidad: Number(it.cantidad) } : {}) })),
+      ...(f.llegada ? { llegada: { dia: 1, hora: f.llegada } } : {}),
+    },
+  };
+  czCotizando = true;
+  const btn = el('cz-med-btn');
+  btn.disabled = true; btn.textContent = 'Armando…';
+  try{
+    czMedRes = await api('/api/cotizador/medida', { method:'POST', body: JSON.stringify(cuerpo) });
+    const cuando = new Date().toISOString();
+    const ops = czMedRes.opciones || [];
+    ops.forEach(o => { o._cuando = cuando; });
+    // Queda en la categoría que estaba mirando si tiene total; si no, en la primera que lo tenga.
+    const conTotal = o => o && o.cotizacion && CZ_CON_TOTAL.includes(o.cotizacion.estado) && o.cotizacion.total_usd;
+    if(!conTotal(czMedOpcion())) czMedCat = (ops.find(conTotal) || czMedOpcion() || ops[0] || {}).categoria || czMedCat;
+    czPintarResultado();
+    if(window.matchMedia('(max-width:1100px)').matches) el('cz-res').scrollIntoView({ behavior:'smooth', block:'start' });
+  }catch(e){
+    if(e.message !== 'unauthorized') el('cz-err').textContent = e.message;
+  }finally{
+    czCotizando = false;
+    if(el('cz-med-btn')){ el('cz-med-btn').disabled = false; el('cz-med-btn').textContent = 'Armar opciones'; }
+  }
+}
+
+function czMedResultadoHtml(){
+  const ops = (czMedRes && czMedRes.opciones) || [];
+  if(!ops.length) return `<div class="ag-sec-h"><h2>Opciones</h2></div><div class="wb-panel"><div class="pf2-empty">Poné la fecha, los días y los viajeros y tocá <b>Armar opciones</b>.<br>Vas a ver la misma ruta en económico, confort y premium, con el hotel de cada ciudad, el total y el mensaje listo.</div></div>`;
+  if(!ops.some(o => o.ok)) return `<div class="ag-sec-h"><h2>No se arma sola</h2></div>
+    <div class="wb-panel"><div class="cz-alerta" data-n="pend">${esc(ops[0].motivo || 'El cotizador no pudo armar la ruta.')}</div>
+    <div class="cz-pie">Probá con otra cantidad de días u otras ciudades, o armala a mano.</div></div>`;
+  const op = czMedOpcion() || ops.find(o => o.ok) || ops[0];
+  const ruta = op.ruta || {};
+  const otras = (op.rutas_alternativas || []).map(r => r.nombre);
+  const pista = [ruta.estado && ruta.estado !== 'VALIDADO' ? 'ruta propuesta, sin validar' : '', otras.length ? 'también sirven: ' + otras.join(', ') : ''].filter(Boolean).join(' · ');
+  const selector = ops.map(o => {
+    const c = o.cotizacion || {};
+    const tot = CZ_CON_TOTAL.includes(c.estado) && c.total_usd;
+    return `<button type="button" class="cz-op" data-cat="${esc(o.categoria)}" aria-pressed="${o.categoria === op.categoria}">
+      <span class="cat">${esc(CZ_CAT_HOTEL[o.categoria] || o.categoria)}</span>
+      <span class="tot">${tot ? czUsd(c.total_usd) : 'Sin total'}</span>
+      <span class="pp">${tot ? czUsd(c.por_persona_usd) + ' por persona' : esc(o.ok ? (CZ_ESTADO[c.estado] || c.estado || '') : 'no se pudo armar')}</span>
+    </button>`;
+  }).join('');
+  const estadias = (op.estadias || []).map(e => `<li><b>Día ${esc(e.dia)}</b><span>${esc(e.ciudad_nombre || e.ciudad)} · ${e.hotel_nombre ? esc(e.hotel_nombre) : `<span class="cz-sinhotel">sin hotel ${esc((CZ_CAT_HOTEL[op.categoria] || '').toLowerCase())} cargado</span>`} · ${esc(e.noches)} noche${e.noches === 1 ? '' : 's'}</span></li>`).join('');
+  const aparte = (op.aparte || []).map(t => `<div class="cz-alerta">${esc(t)}</div>`).join('');
+  return `<div class="ag-sec-h"><h2>${esc(ruta.nombre || 'Opciones')}</h2><span class="hint">${esc(pista)}</span></div>
+    <div class="cz-ops" role="group" aria-label="Categoría de hotel">${selector}</div>
+    ${op.ok ? `<div class="ag-sec-h"><h2>Alojamiento</h2><span class="hint">${esc(CZ_CAT_HOTEL[op.categoria] || '')}</span></div>
+    <div class="wb-panel"><ul class="cz-dias" style="margin-bottom:0">${estadias}</ul></div>
+    ${aparte ? `<div class="ag-sec-h"><h2>Se cotiza aparte</h2><span class="hint">no está en el total</span></div><div class="cz-alertas">${aparte}</div>` : ''}
+    ${czResultadoHtml(op)}` : `<div class="wb-panel"><div class="cz-alerta" data-n="pend">${esc(op.motivo || '')}</div></div>`}`;
 }
 
 /* ---- Guardar en lead (tabla cotizador_cotizaciones; el servidor recotiza antes de guardar) ---- */
@@ -13591,8 +13861,8 @@ function czEventosGuardar(){
 async function czGuardarEnLead(){
   const err = el('cz-g-err');
   if(!czLeadSel){ err.textContent = 'Elegí el lead.'; return; }
-  const chat = czModo === 'chat';
-  const r = chat ? czChat.res : czRes;
+  const chat = czModo === 'chat', medida = czModo === 'medida';
+  const r = chat ? czChat.res : medida ? czMedOpcion() : czRes;
   if(!r || !r.pedido){ err.textContent = 'Primero cotizá.'; return; }
   const s = chat ? ((czChat.estado && czChat.estado.solicitud) || {}) : null;
   const cuerpo = {
@@ -13602,7 +13872,8 @@ async function czGuardarEnLead(){
     pedido: r.pedido,
     nombre: chat ? s.nombre : (czForm.nombre.trim() || null),
     idioma: chat ? (s.idioma || 'es') : czForm.idioma,
-    dias_disponibles: chat ? s.dias_disponibles : (Number(czForm.dias) || null),
+    dias_disponibles: chat ? s.dias_disponibles : medida ? null : (Number(czForm.dias) || null),
+    ...(medida ? { titulo: ['A medida', r.ruta && r.ruta.nombre, CZ_CAT_HOTEL[r.categoria]].filter(Boolean).join(' · ') } : {}),
     nombres: (r.pedido.items || []).map(i => ({ id: i.id, nombre: (czProd(i.id) || {}).nombre || i.id })),
     pagina: !!(el('cz-pagina') && el('cz-pagina').checked),
   };
@@ -13651,9 +13922,9 @@ async function czBloqueLead(l){
   el('ld-cz-list').querySelectorAll('[data-cz-i]').forEach(b => b.addEventListener('click', () => czAbrirGuardada(l, lista[Number(b.dataset.czI)])));
 }
 
-function czIrConLead(l){
+function czIrConLead(l, modo){
   czLeadSel = l.id;
-  czModo = 'manual';
+  czModo = modo || 'manual';
   try{ localStorage.setItem('cz_modo', czModo); }catch(e){}
   cerrarDrawer();
   irA('cotizador');
@@ -13671,6 +13942,17 @@ function czAbrirGuardada(l, c){
   if(!czForm.viajeros.length) czForm.viajeros = CZ_VACIO().viajeros;
   czRes = null;
   czGuardar();
+  if((p.servicios || []).length){
+    // Viaje a medida: se guardó el pedido armado (hoteles y días), no la solicitud. Vuelven los viajeros, la fecha y los
+    // tours; los días salen de las estadías guardadas y la ruta se elige de nuevo con los precios de hoy.
+    const fin = Math.max(0, ...p.servicios.filter(s => s.noches).map(s => (s.dia || 1) + s.noches));
+    czMed = { ...CZ_MED_VACIO(), dias: fin >= 2 ? String(fin) : '' };
+    czMedRes = null;
+    czMedGuardar();
+    czIrConLead(l, 'medida');
+    toast('Viaje a medida cargado: revisá ciudades y tocá Armar opciones');
+    return;
+  }
   czIrConLead(l);
   toast('Cotización cargada: tocá Cotizar para verla con los precios de hoy');
 }
