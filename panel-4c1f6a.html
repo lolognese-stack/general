@@ -13951,25 +13951,39 @@ function ibDatosViaje(l){
 }
 
 // Mensaje con todo lo que el cotizador necesita para armar la cotización (formato WhatsApp: *negrita*).
-function ibArmarPase(){
+// `an` = datos del análisis de WhatsApp (ibAnalisisParaPase): lo que el chat
+// dice manda sobre lo de Instagram, y lo que el lead no tiene se completa con él.
+function ibArmarPase(an){
   const d = ibHilo, l = d.lead, c = d.conversacion;
+  const v = an && an.viaje ? an.viaje : null;
   const { itTxt, fecha, diasTot } = ibDatosViaje(l);
+  const pais = l.pais || (v && v.desde_donde) || '';
+  const presupuesto = l.presupuesto_pp || (an && an.presupuesto) || '';
+  const pasajes = l.pasajes || (an && an.pasajes && an.pasajes !== 'No dice' ? an.pasajes : '');
   const L = [];
-  const lin = (k, v) => { if(v || v === 0) L.push(`*${k}:* ${String(v).trim()}`); };
+  const lin = (k, val) => { if(val || val === 0) L.push(`*${k}:* ${String(val).trim()}`); };
   L.push('*Cotización para armar*', '');
   lin('Cliente', l.nombre);
   lin('WhatsApp', l.whatsapp || '+' + c.wa_id);
   L.push(`https://wa.me/${c.wa_id}`);
-  lin('Mail', l.email); lin('País', l.pais); lin('Residencia', l.residencia);
+  lin('Mail', l.email); lin('País', pais); lin('Residencia', l.residencia);
   L.push('', '*Viaje*');
   lin('Destinos', l.destinos);
   if(itTxt) L.push('*Itinerario:*', itTxt);
   lin('Fecha', fecha); lin('Días', diasTot); lin('Personas', l.personas); lin('Edades de los menores', l.edades_menores);
-  lin('Pasajes aéreos', l.pasajes); lin('Presupuesto por persona', l.presupuesto_pp); lin('Hotel', l.categoria_hotel); lin('Ocasión', l.ocasion);
-  const faltan = [['Personas', l.personas], ['Mail', l.email], ['País', l.pais], ['Fecha', fecha], ['Días', diasTot], ['Destinos', l.destinos || itTxt], ['Pasajes', l.pasajes], ['Presupuesto por persona', l.presupuesto_pp]]
-    .filter(([, v]) => !(v || v === 0)).map(([k]) => k);
+  lin('Pasajes aéreos', pasajes); lin(l.presupuesto_pp ? 'Presupuesto por persona' : 'Presupuesto', presupuesto); lin('Hotel', l.categoria_hotel); lin('Ocasión', l.ocasion);
+  if(an){
+    lin('Qué busca', an.que_busca);
+    if(an.freno && an.freno !== 'Ninguno') lin('Freno', an.freno);
+    if(an.novedades && an.novedades.length) L.push('*Dato nuevo del chat:*', ...an.novedades.map(n => '• ' + n));
+    const cam = (an.cambios || []).filter(x => x.antes && x.ahora);
+    if(cam.length) L.push('*Cambió en el chat:*', ...cam.map(x => `• ${WR_DATO[x.dato] || x.dato}: ${x.antes} → ${x.ahora}`));
+  }
+  const faltan = [['Personas', l.personas], ['Mail', l.email], ['País', pais], ['Fecha', fecha], ['Días', diasTot], ['Destinos', l.destinos || itTxt], ['Pasajes', pasajes], ['Presupuesto por persona', presupuesto]]
+    .filter(([, val]) => !(val || val === 0)).map(([k]) => k);
   if(faltan.length) L.push('', `*Faltan:* ${faltan.join(', ')}`);
-  if(l.ia_resumen) L.push('', '*Resumen:*', l.ia_resumen);
+  if(an && an.sintesis) L.push('', '*Resumen del chat:*', an.sintesis);
+  else if(l.ia_resumen) L.push('', '*Resumen:*', l.ia_resumen);
   if(l.notas) L.push('', '*Notas:*', l.notas);
   const quien = { lead:'Cliente', ia:'IA' };
   const hist = d.mensajes.filter(m => m.tipo !== 'nota' && (m.transcripcion || m.texto)).slice(-8)
@@ -13983,17 +13997,57 @@ async function ibPasarCotizador(){
   if(!ibHilo || !ibHilo.lead) return;
   let cot = null;
   try{ cot = (await api('/api/setter/conversaciones?rol=cotizador'))[0] || null; }catch(e){}
-  const f = el('ib-pase'), ok = el('ib-pase-ok');
+  const f = el('ib-pase'), ok = el('ib-pase-ok'), res = el('ib-pase-res');
+  const sinCot = 'Todavía no hay cotizador marcado: en su chat, Más › Es el cotizador. Mientras, copiá el mensaje y pegalo a mano.';
   f.dataset.cot = cot ? String(cot.id) : '';
   el('ib-pase-quien').textContent = cot ? ibNombre(cot) : 'el cotizador';
-  el('ib-pase-txt').value = ibArmarPase();
-  el('ib-pase-res').textContent = cot ? '' : 'Todavía no hay cotizador marcado: en su chat, Más › Es el cotizador. Mientras, copiá el mensaje y pegalo a mano.';
   ok.textContent = cot ? 'Enviar a ' + ibNombre(cot) : 'Enviar';
-  ok.disabled = !cot;
+  ok.disabled = true;
+  el('ib-pase-txt').value = '';
+  res.textContent = 'Leyendo el chat para ajustar la ficha…';
   f.hidden = false;
+  const convId = ibHilo.conversacion.id;
+  // Primero se analiza el chat de WhatsApp: ahí la persona da más datos y cambia
+  // cosas, y el mensaje al cotizador tiene que salir con eso, no solo con lo de ManyChat.
+  let an = null, aviso = '';
+  try{ ({ an, aviso } = await ibAnalisisParaPase(ibHilo.conversacion)); }
+  catch(e){ if(e.message === 'unauthorized') return; aviso = 'No se pudo leer el chat (' + e.message + '): el mensaje sale con lo que ya tiene la ficha.'; }
+  if(!ibHilo || ibHilo.conversacion.id !== convId) return;   // se cambió de chat mientras tanto
+  el('ib-pase-txt').value = ibArmarPase(an);
+  res.textContent = [aviso, cot ? '' : sinCot].filter(Boolean).join(' ');
+  ok.disabled = !cot;
   el('ib-pase-txt').focus();
   el('ib-pase-txt').setSelectionRange(0, 0);
   el('ib-pase-txt').scrollTop = 0;
+}
+
+// Devuelve el análisis del chat al día para armar el pase: lo guardado si no hay
+// mensajes nuevos, o uno nuevo. Lo que la persona cambió se pasa al lead (el
+// mensaje se puede editar antes de enviarlo). `aviso` cuenta qué se ajustó.
+async function ibAnalisisParaPase(c){
+  const clave = c.ultimo_en || '';
+  const cache = wrCache[c.id];
+  let d = cache && cache.clave === clave ? cache.d : await api('/api/wa-radar/' + c.id);
+  const habla = ibHilo.mensajes.some(m => m.autor === 'lead');
+  if(habla && (!d.reporte || d.viejo)) d = await api('/api/wa-radar/' + c.id, { method:'POST', body:'{}' });
+  let dt = d.reporte && d.reporte.datos;
+  let aviso = '';
+  const aplicables = dt ? (dt.cambios || []).filter(x => WR_APLICABLES.includes(x.dato)) : [];
+  if(aplicables.length && !d.reporte.aplicado_en && ibHilo.lead){
+    const r = await api('/api/wa-radar/' + c.id + '/aplicar', { method:'POST', body:'{}' });
+    Object.assign(ibHilo.lead, r.campos || {});
+    const enLista = leads.find(x => x.id === ibHilo.lead.id);
+    if(enLista) Object.assign(enLista, r.campos || {});
+    d = await api('/api/wa-radar/' + c.id);
+    dt = d.reporte && d.reporte.datos;
+    aviso = 'Ficha ajustada con el chat: ' + aplicables.map(x => `${(WR_DATO[x.dato] || x.dato).toLowerCase()} ${x.antes} → ${x.ahora}`).join(', ') + '.';
+    wrSincronizarForm(ibHilo.lead.id, r.campos || {});
+  }
+  wrCache[c.id] = { clave, d };
+  if(!dt) return { an:null, aviso: habla ? '' : 'La persona todavía no escribió por WhatsApp: el mensaje sale con lo que tiene la ficha.' };
+  const nuevo = ibHilo && ibHilo.conversacion.id === c.id;
+  if(nuevo && document.getElementById('ib-wr')) wrPintar(c.id, ibHilo.lead && ibHilo.lead.id, el('ib-wr'), d, clave);
+  return { an:dt, aviso };
 }
 
 function ibEnlazarPase(){

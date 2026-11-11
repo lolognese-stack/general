@@ -195,6 +195,7 @@ export function armarReporteWa({ d, lead, conv, mensajesN, modelo }) {
     tipo_cotizacion: TIPOS.includes(d.tipo_cotizacion) ? d.tipo_cotizacion : 'No se sabe',
     cambios, novedades, paraLead,
     viaje: { destinos, dias_min: diasMin, dias_max: diasMax, fecha, personas, desde_donde: d.desde_donde || null },
+    que_busca: d.que_busca || '',
     sintesis: d.sintesis || '', proxima_accion: d.proxima_accion || '', mensajes: mensajesN, modelo,
   };
   return { texto, datos, paraLead, cambios };
