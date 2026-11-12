@@ -2123,6 +2123,35 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 .ib-comp-hint{padding:0 16px 8px;background:var(--surface-2)}
 .ib-asoc{display:grid;gap:8px;padding:10px 16px;background:var(--masomenos-bg);border-bottom:1px solid var(--line);font-size:12.5px;color:var(--ink-2)}
 .ib-asoc[hidden]{display:none}
+
+/* Seguimientos post propuesta (migración 055): botón en la barra, etiqueta en la lista y tarjeta en el chat */
+.ib-seg-btn{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 10px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink-2);font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+.ib-seg-btn:hover{background:var(--surface-2)}
+.ib-barra{flex-wrap:wrap;row-gap:6px}
+.ib-barra .ib-cuenta{white-space:nowrap;flex-basis:auto}
+.ib-seg-btn{white-space:nowrap}
+.ib-seg-btn[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+.ib-seg-btn i{display:inline-grid;place-items:center;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--brand);color:var(--brand-on);font-size:10px;font-style:normal;font-weight:700}
+.ib-seg-btn i:empty{display:none}
+.ib-meta .ib-seg-tag{color:var(--masomenos);font-weight:700}
+.ib-seg-vacio{padding:18px 16px;font-size:13px;color:var(--ink-2);line-height:1.5}
+.ib-seg{border-top:1px solid var(--line);background:var(--masomenos-bg);padding:10px 16px;font-size:13px;color:var(--ink);max-height:48vh;overflow:auto}
+.ib-seg[hidden]{display:none}
+.ib-seg-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ib-seg-h b{font-size:13px}
+.ib-seg-cont{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--masomenos)}
+.ib-seg-info{margin-top:3px;font-size:12px;color:var(--ink-2)}
+.ib-seg textarea{display:block;width:100%;margin-top:8px;min-height:72px;max-height:180px;resize:vertical;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);font:inherit;font-size:13px;line-height:1.45;padding:8px 10px}
+.ib-seg-guia{margin-top:6px;font-size:12.5px;color:var(--ink-2);font-style:italic;line-height:1.45}
+.ib-seg-aviso{margin-top:6px;font-size:12px;font-weight:600;color:var(--danger)}
+.ib-seg-aviso[hidden]{display:none}
+.ib-seg-acc{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center}
+.ib-seg-acc .btn-sm{min-height:32px}
+.ib-seg-acc .ib-seg-sec{margin-left:auto;display:flex;gap:4px;flex-wrap:wrap}
+.ib-seg-check{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:12.5px;cursor:pointer}
+.ib-seg-alta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px}
+.ib-seg-alta select{flex:1 1 200px;min-width:0;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);font:inherit;font-size:13px;padding:6px 8px}
+@media (max-width:760px){.ib-seg{max-height:55vh}.ib-seg-acc .ib-seg-sec{margin-left:0}}
 .ib-asoc-f{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .ib-asoc-f input{flex:1 1 220px;min-width:0;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);font:inherit;font-size:13px;padding:7px 10px}
 .ib-ficha-acc{display:flex;flex-wrap:wrap;gap:6px}
@@ -14669,6 +14698,218 @@ async function ibCargarLista(){
   if(pedido !== ibQuery()) return;   // cambiaron los filtros mientras tanto
   ibListaDe = ibUltimo;
   ibPintarLista();
+  ibSegCargar();
+}
+
+
+// ===== Seguimientos post propuesta (API /api/seguimientos, migración 055) =====
+// "Seguimientos hoy" filtra la lista a los chats con toque vencido (o calientes) y los recorre uno por uno.
+let ibSeg = { items: [], total: 0 };   // lo que devuelve GET /api/seguimientos
+let ibSegModo = false;
+let ibSegCola = [];                    // ids de chat al prender el modo (para el "3 de 7")
+let ibSegChatDe = null;                // { conv, items } del chat abierto
+let ibSegOcupado = false;
+
+const ibSegDe = id => ibSeg.items.find(x => x.conversacion_id === id);
+function ibSegTag(sg){
+  const t = sg.toque;
+  const partes = [`${sg.caliente ? '🔥 ' : ''}Día ${t.dia} · ${t.titulo}`];
+  if(sg.atraso > 0) partes.push(`atrasado ${sg.atraso} día${sg.atraso > 1 ? 's' : ''}`);
+  else if(!sg.vencido) partes.push('caliente');
+  return partes.join(' · ');
+}
+
+async function ibSegCargar(){
+  try{ ibSeg = await api('/api/seguimientos'); }catch(e){ return; }
+  const n = el('ib-seg-n');
+  if(n) n.textContent = ibSeg.total ? String(ibSeg.total) : '';
+  ibPintarLista();
+}
+
+function ibSegModoToggle(){
+  ibSegModo = !ibSegModo;
+  el('ib-seg-btn').setAttribute('aria-pressed', String(ibSegModo));
+  ibSegCola = ibSegModo ? ibSeg.items.map(x => x.conversacion_id) : [];
+  ibPintarLista();
+  // Al prenderlo se abre directo el primero.
+  if(ibSegModo && ibSegCola.length && !ibSegCola.includes(ibSel)) ibAbrir(ibSegCola[0]);
+  else if(ibSel && ibSegChatDe) ibSegPintarTarjeta();
+}
+
+function ibSegPintarLista(box){
+  const items = ibSeg.items;
+  el('ib-cuenta').textContent = items.length === 1 ? '1 seguimiento' : `${items.length} seguimientos`;
+  if(!items.length){
+    box.innerHTML = `<div class="ib-seg-vacio"><b>Listo por hoy.</b><br>No queda ningún seguimiento de propuesta para hoy.</div>`;
+    return;
+  }
+  box.innerHTML = items.map(sg => {
+    const c = ibLista.find(x => x.id === sg.conversacion_id) || { id: sg.conversacion_id, nombre: sg.nombre, wa_id: sg.wa_id || '' };
+    const nombre = ibNombre({ ...c, nombre: c.nombre || sg.nombre });
+    const info = [sg.cliente ? `Propuesta N° ${esc(sg.numero || '')} · ${esc(sg.cliente)}` : '', sg.abrio ? `abrió ${sg.aperturas} ${sg.aperturas === 1 ? 'vez' : 'veces'}` : 'no la abrió'].filter(Boolean).join(' · ');
+    return `<button type="button" class="ib-item" data-ib="${sg.conversacion_id}" aria-current="${String(sg.conversacion_id === ibSel)}">
+      ${ibAvatar(nombre)}
+      <div class="ib-item-body">
+        <div class="ib-item-top"><b>${esc(nombre)}</b><time>${c.ultimo_en ? ibCuando(c.ultimo_en) : ''}</time></div>
+        <div class="ib-meta"><span class="ib-seg-tag">${esc(ibSegTag(sg))}</span></div>
+        <div class="ib-meta">${info}</div>
+      </div>
+    </button>`;
+  }).join('');
+}
+
+async function ibSegChat(id, { silencioso = false } = {}){
+  const box = el('ib-seg');
+  if(!box) return;
+  // Con el polling no se repinta mientras se edita el mensaje o se elige la propuesta.
+  if(silencioso && box.dataset.conv === String(id) && (box.contains(document.activeElement) || box.dataset.alta === '1')) return;
+  let d;
+  try{ d = await api('/api/seguimientos?conversacion_id=' + id); }catch(e){ return; }
+  if(ibSel !== id) return;
+  ibSegChatDe = { conv: id, items: d.items };
+  box.dataset.conv = String(id);
+  ibSegPintarTarjeta();
+}
+
+function ibSegPintarTarjeta(){
+  const box = el('ib-seg');
+  const d = ibSegChatDe;
+  if(!box || !d) return;
+  if(box.dataset.alta === '1') return;
+  const sg = d.items.find(x => x.estado === 'activa') || d.items[0];
+  if(!sg){ box.hidden = true; box.innerHTML = ''; return; }
+  box.hidden = false;
+  const pos = ibSegModo ? ibSegCola.indexOf(sg.conversacion_id) : -1;
+  const cont = pos >= 0 ? `<span class="ib-seg-cont">${pos + 1} de ${ibSegCola.length}</span>` : '';
+  const abrio = sg.abrio ? `abrió la propuesta ${sg.aperturas} ${sg.aperturas === 1 ? 'vez' : 'veces'}, la última ${ibCuando(String(sg.ultima_apertura).replace(' ', 'T') + 'Z')}` : 'todavía no abrió la propuesta';
+  const cab = `<div class="ib-seg-h"><b>Seguimiento · Propuesta N° ${esc(sg.numero || '')}</b>${cont}</div>`;
+
+  if(sg.estado !== 'activa' || !sg.toque){
+    const lbl = { pausada:'Pausada', respondio:'Respondió', perdida:'Perdida', terminada:'Terminada', activa:'Secuencia completa' }[sg.estado] || sg.estado;
+    box.innerHTML = `${cab}
+      <div class="ib-seg-info">${esc(lbl)}${sg.estado_motivo ? ' · ' + esc(sg.estado_motivo) : ''} · ${esc(abrio)}</div>
+      <div class="ib-seg-acc">${sg.estado !== 'terminada' ? `<button type="button" class="btn btn-ghost btn-sm" data-seg="retomar">Retomar seguimiento</button>` : ''}
+        <button type="button" class="btn btn-ghost btn-sm" data-seg="ocultar">Ocultar</button></div>`;
+    return ibSegEnlazar(box, sg);
+  }
+
+  const t = sg.toque;
+  const cuando = sg.atraso > 0 ? `atrasado ${sg.atraso} día${sg.atraso > 1 ? 's' : ''}` : sg.vencido ? 'toca hoy' : `toca el ${sg.vence.slice(8, 10)}/${sg.vence.slice(5, 7)}`;
+  const grabar = t.tipo === 'grabar';
+  const ventana = sg.ventana_abierta;
+  const principal = grabar
+    ? `<a class="btn btn-primary btn-sm" data-seg="wa" href="${esc(sg.wa_link || '#')}" target="_blank" rel="noopener">Abrir WhatsApp para grabar</a>`
+    : ventana
+      ? `<button type="button" class="btn btn-primary btn-sm" data-seg="enviar">Enviar</button><a class="btn btn-ghost btn-sm" data-seg="wa" href="#" target="_blank" rel="noopener">Abrir en WhatsApp</a>`
+      : `<a class="btn btn-primary btn-sm" data-seg="wa" href="#" target="_blank" rel="noopener">Abrir en WhatsApp</a>`;
+  box.innerHTML = `${cab}
+    <div class="ib-seg-info">${sg.caliente ? '🔥 ' : ''}<b>Día ${t.dia} · ${esc(t.titulo)}</b> · ${esc(cuando)} · ${esc(abrio)}</div>
+    ${grabar
+      ? `<div class="ib-seg-guia">Grabá ${t.medio === 'video' ? 'un video' : 'un audio'} con esta idea: “${esc(sg.texto || '')}”</div>`
+      : `<textarea id="ib-seg-txt" aria-label="Mensaje del seguimiento">${esc(sg.texto || '')}</textarea>
+         ${t.adjunto === 'foto' ? `<div class="ib-seg-guia">Va con una foto: mandala desde el teléfono.</div>` : ''}
+         ${t.conDisponibilidad ? `<label class="ib-seg-check"><input type="checkbox" id="ib-seg-disp"${sg.reviso_disponibilidad ? ' checked' : ''}> Revisé la disponibilidad en sus fechas (cambia el mensaje)</label>` : ''}
+         <div class="ib-seg-aviso" id="ib-seg-aviso" hidden></div>
+         ${!ventana ? `<div class="ib-seg-guia">Pasaron más de 24 h desde su último mensaje: se manda desde el teléfono y después tocás «Ya lo mandé».</div>` : ''}`}
+    <div class="ib-seg-acc">
+      ${principal}
+      <button type="button" class="btn btn-ghost btn-sm" data-seg="hecho">Ya lo mandé</button>
+      <span class="ib-seg-sec">
+        <button type="button" class="btn btn-ghost btn-sm" data-seg="saltear">Saltear</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-seg="pausar">Pausar</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-seg="perdida">Perdida</button>
+      </span>
+    </div>`;
+  ibSegEnlazar(box, sg);
+}
+
+// "Propuesta enviada": une una propuesta publicada con este chat y arranca el Día 0.
+async function ibSegPintarAlta(box){
+  box.hidden = false;
+  box.innerHTML = `<div class="ib-seg-h"><b>Propuesta enviada</b></div><div class="ib-seg-info">Cargando propuestas…</div>`;
+  let r;
+  try{ r = await api('/api/seguimientos?propuestas=1'); }catch(e){ box.innerHTML = `<div class="ib-seg-info">No se pudieron cargar: ${esc(e.message)}</div>`; return; }
+  const ops = (r.propuestas || []).map(p => `<option value="${esc(p.slug)}">N° ${esc(p.numero || '')} · ${esc(p.cliente || p.slug)}${p.estado ? ' (ya tiene seguimiento: se reinicia)' : ''}</option>`).join('');
+  box.innerHTML = `<div class="ib-seg-h"><b>Propuesta enviada</b></div>
+    <div class="ib-seg-info">Elegí la propuesta que le mandaste. Hoy queda como Día 0 y arrancan los seguimientos.</div>
+    <div class="ib-seg-alta">${ops ? `<select id="ib-seg-prop" aria-label="Propuesta">${ops}</select>
+      <button type="button" class="btn btn-primary btn-sm" id="ib-seg-alta-ok">Marcar Día 0</button>` : '<span class="ib-seg-info">Todavía no hay propuestas: aparecen cuando el cliente abre la página por primera vez.</span>'}
+      <button type="button" class="btn btn-ghost btn-sm" id="ib-seg-alta-no">Cancelar</button></div>`;
+  el('ib-seg-alta-no').addEventListener('click', () => { box.dataset.alta = ''; box.hidden = true; box.innerHTML = ''; ibSegPintarTarjeta(); });
+  const ok = el('ib-seg-alta-ok');
+  if(ok) ok.addEventListener('click', async () => {
+    ok.disabled = true;
+    try{
+      await api('/api/seguimientos', { method:'POST', body: JSON.stringify({ accion:'enviada', slug: el('ib-seg-prop').value, conversacion_id: ibSel, por: ibYo() || undefined }) });
+      box.dataset.alta = '';
+      toast('Listo: hoy es el Día 0. El primer seguimiento toca en 2 días.', { tipo:'ok' });
+      await ibSegChat(ibSel);
+      ibSegCargar();
+    }catch(e){ alert('No se pudo: ' + e.message); ok.disabled = false; }
+  });
+}
+
+function ibSegAbrirAlta(){
+  const box = el('ib-seg');
+  if(!box) return;
+  box.dataset.alta = '1';
+  ibSegPintarAlta(box);
+  const m = document.querySelector('.ib-mas[open]');
+  if(m) m.open = false;
+}
+
+function ibSegEnlazar(box, sg){
+  const ta = el('ib-seg-txt');
+  const aviso = el('ib-seg-aviso');
+  const pendiente = () => ta && /\[(?:Nombre|novedad real|lugar)\]/i.test(ta.value);
+  const pintarAviso = () => { if(aviso){ aviso.hidden = !pendiente(); aviso.textContent = 'Completá lo que está entre corchetes antes de mandarlo.'; } };
+  pintarAviso();
+  if(ta) ta.addEventListener('input', pintarAviso);
+  // El link de WhatsApp lleva lo que esté escrito en ese momento.
+  box.querySelectorAll('[data-seg="wa"]').forEach(a => a.addEventListener('click', e => {
+    if(sg.toque && sg.toque.tipo === 'texto'){
+      if(pendiente()){ e.preventDefault(); pintarAviso(); ta.focus(); return; }
+      a.href = `https://wa.me/${sg.wa_id}?text=${encodeURIComponent(ta ? ta.value : sg.texto || '')}`;
+    }
+  }));
+  const disp = el('ib-seg-disp');
+  if(disp) disp.addEventListener('change', async () => {
+    try{ await api('/api/seguimientos', { method:'POST', body: JSON.stringify({ accion:'disponibilidad', slug: sg.slug, valor: disp.checked }) }); }
+    catch(e){ alert('No se pudo: ' + e.message); }
+    ibSegChat(ibSel);
+  });
+  box.querySelectorAll('button[data-seg]').forEach(b => b.addEventListener('click', () => ibSegAccion(b.dataset.seg, sg)));
+}
+
+async function ibSegAccion(accion, sg){
+  const box = el('ib-seg');
+  if(accion === 'ocultar'){ box.hidden = true; return; }
+  if(ibSegOcupado) return;
+  const ta = el('ib-seg-txt');
+  if(accion === 'enviar' && ta && /\[(?:Nombre|novedad real|lugar)\]/i.test(ta.value)){ ta.focus(); return; }
+  if(accion === 'perdida' && !confirm('¿Marcar esta propuesta como perdida? Se frenan los seguimientos (se puede retomar).')) return;
+  ibSegOcupado = true;
+  box.querySelectorAll('button').forEach(x => { x.disabled = true; });
+  try{
+    const body = { accion, slug: sg.slug, por: ibYo() || undefined };
+    if(['enviar', 'hecho', 'saltear'].includes(accion)) body.dia = sg.toque.dia;
+    if(accion === 'enviar') body.texto = ta ? ta.value.trim() : sg.texto;
+    await api('/api/seguimientos', { method:'POST', body: JSON.stringify(body) });
+    if(accion === 'enviar') await ibCargarHilo(ibSel, { silencioso:true });
+    await ibSegCargar();
+    // En el modo "Seguimientos hoy", al terminar uno se pasa solo al siguiente.
+    if(ibSegModo && ['enviar', 'hecho', 'saltear', 'pausar', 'perdida'].includes(accion)){
+      const sig = ibSegCola.find(id => id !== ibSel && ibSegDe(id));
+      if(sig){ ibSegOcupado = false; return ibAbrir(sig); }
+      toast('Listo por hoy: no quedan seguimientos.', { tipo:'ok' });
+    }
+    await ibSegChat(ibSel);
+  }catch(e){
+    alert('No se pudo: ' + e.message);
+    box.querySelectorAll('button').forEach(x => { x.disabled = false; });
+  }finally{
+    ibSegOcupado = false;
+  }
 }
 
 async function ibCargarHilo(id, { silencioso = false } = {}){
@@ -14680,6 +14921,7 @@ async function ibCargarHilo(id, { silencioso = false } = {}){
   ibHilo = d;
   ibPintarHilo();
   ibPintarFicha();
+  ibSegChat(id, { silencioso });
   if(d.conversacion.no_leidos > 0 && document.visibilityState === 'visible'){
     api(`/api/setter/conversaciones/${id}`, { method:'PATCH', body: JSON.stringify({ accion:'leer' }) })
       .then(() => { const c = ibLista.find(x => x.id === id); if(c){ c.no_leidos = 0; ibPintarLista(); } })
@@ -14697,6 +14939,7 @@ function ibAbrir(id){
   el('ib-head').innerHTML = '';
   el('ib-pie').innerHTML = '';
   el('ib-ficha').innerHTML = '';
+  if(el('ib-seg')){ el('ib-seg').hidden = true; el('ib-seg').innerHTML = ''; el('ib-seg').dataset.conv = ''; el('ib-seg').dataset.alta = ''; }
   ibCargarHilo(id);
 }
 
@@ -14727,6 +14970,7 @@ function renderInbox(){
         <div class="ib-barra">
           <span class="ib-cuenta" id="ib-cuenta" aria-live="polite"></span>
           <button type="button" class="ib-limpiar" id="ib-limpiar" hidden>Limpiar</button>
+          <button type="button" class="ib-seg-btn" id="ib-seg-btn" aria-pressed="false" title="Seguimientos de propuesta que tocan hoy, uno por uno">Seguimientos<i id="ib-seg-n"></i></button>
           <button type="button" class="btn btn-ghost btn-sm" id="ib-nuevo" aria-expanded="false" aria-controls="ib-nuevo-form">+ Contacto</button>
           <button type="button" class="ib-filtro-btn" id="ib-filtro-btn" aria-expanded="false" aria-controls="ib-filtro-panel" data-on="0">Filtros<i class="ib-filtro-n" id="ib-filtro-n" hidden></i><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.5l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         </div>
@@ -14780,6 +15024,7 @@ function renderInbox(){
         <div class="hint" id="ib-pase-res" aria-live="polite"></div>
         <div class="ib-leccion-acc"><button type="button" class="btn btn-ghost btn-sm" id="ib-pase-no">Cerrar</button><button type="button" class="btn btn-ghost btn-sm" id="ib-pase-copiar">Copiar</button><button type="submit" class="btn btn-primary btn-sm" id="ib-pase-ok">Enviar</button></div>
       </form>
+      <div class="ib-seg" id="ib-seg" hidden></div>
       <div id="ib-pie"></div>
     </div>
     <div class="ib-col ib-col-ficha"><div class="ib-ficha" id="ib-ficha"></div></div>
@@ -14845,6 +15090,7 @@ function renderInbox(){
     el('ib-urg').checked = false; el('ib-q').value = '';
     ibFiltrosCambiaron();
   });
+  el('ib-seg-btn').addEventListener('click', ibSegModoToggle);
   el('ib-lista').addEventListener('click', e => {
     const b = e.target.closest('[data-ib]');
     if(b) ibAbrir(Number(b.dataset.ib));
@@ -14881,6 +15127,7 @@ function ibPedirNombre(){
 function ibPintarLista(){
   const box = el('ib-lista');
   if(!box) return;
+  if(ibSegModo) return ibSegPintarLista(box);
   el('ib-cuenta').textContent = ibLista.length === 1 ? '1 chat' : `${ibLista.length} chats`;
   if(!ibLista.length){
     box.innerHTML = `<div class="ib-vacio">${ibListaDe === null && !ibUltimo ? 'Todavía no entró ningún WhatsApp.' : 'Ningún chat con estos filtros.'}</div>`;
@@ -14897,6 +15144,8 @@ function ibPintarLista(){
     if(!c.ia_activa) meta.push('Humano');
     if(c.asignada_a) meta.push(esc(c.asignada_a));
     if(c.visto_por_lead === 'vio_no_contesto') meta.push('Vio y no contestó');
+    const sg = ibSegDe(c.id);
+    if(sg) meta.unshift(`<span class="ib-seg-tag">${esc(ibSegTag(sg))}</span>`);
     return `<button type="button" class="ib-item" data-ib="${c.id}" aria-current="${String(c.id === ibSel)}" data-urgente="${c.espera_persona ? 1 : 0}" data-noleido="${c.no_leidos > 0 ? 1 : 0}" data-anclada="${c.anclada ? 1 : 0}">
       ${ibAvatar(ibNombre(c))}
       <div class="ib-item-body">
@@ -15029,6 +15278,7 @@ function ibPintarHilo(){
     <button type="button" class="btn btn-ghost btn-sm" id="ib-ia-btn">${c.ia_activa ? 'Tomar control' : 'Devolver a la IA'}</button>
     <details class="ib-mas"><summary class="btn btn-ghost btn-sm">Más</summary><div class="ib-mas-menu">
     ${d.lead && !c.rol ? `<button type="button" class="btn btn-ghost btn-sm" id="ib-pase-btn">Pasar al cotizador</button>` : ''}
+    <button type="button" class="btn btn-ghost btn-sm" id="ib-seg-alta-btn">Propuesta enviada…</button>
     <button type="button" class="btn btn-ghost btn-sm" id="ib-anclar-btn">${c.anclada ? 'Desanclar el chat' : 'Anclar el chat'}</button>
     <button type="button" class="btn btn-ghost btn-sm" id="ib-rol-btn">${c.rol === 'cotizador' ? 'Ya no es el cotizador' : 'Es el cotizador'}</button>
     <button type="button" class="btn btn-ghost btn-sm" id="ib-asig-btn">${c.asignada_a && c.asignada_a === ibYo() ? 'Desasignarme' : 'Asignarme'}</button>
@@ -15049,6 +15299,7 @@ function ibPintarHilo(){
     el('ib-apr-nota').value = ''; el('ib-apr-res').textContent = ''; f.hidden = false; el('ib-apr-nota').focus();
   });
   el('ib-anclar-btn').addEventListener('click', () => ibAccion({ accion:'anclar', anclada: !c.anclada }));
+  el('ib-seg-alta-btn').addEventListener('click', ibSegAbrirAlta);
   el('ib-rol-btn').addEventListener('click', () => {
     if(c.rol) return ibAccion({ accion:'rol', rol:'' });
     const a = (prompt('¿Cómo se llama? Así aparece en el Inbox y en «Pasar a…».', ibNombre({ ...c, nombre: d.lead && d.lead.nombre }).replace(/^\+\d+$/, '')) || '').trim();

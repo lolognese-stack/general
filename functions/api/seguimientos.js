@@ -98,6 +98,7 @@ async function fila(env, s, sec, hoy, { frenoAuto = true } = {}) {
     caliente: s.estado === 'activa' && caliente(ev),
     abrio: aperturas.length > 0, aperturas: aperturas.length, ultima_apertura: aperturas[0]?.creado_en || null,
     hechos: toques.length,
+    ultimo_toque: toques.length ? toques[toques.length - 1].fecha : null,
     ventana_abierta: ventanaAbierta,
     wa_link: s.wa_id ? `https://wa.me/${s.wa_id}${texto && p.toque.tipo === 'texto' ? '?text=' + encodeURIComponent(texto) : ''}` : null,
   };
@@ -135,8 +136,8 @@ export async function onRequestGet({ request, env }) {
   const items = [];
   for (const s of results) {
     const f = await fila(env, s, sec, hoy);
-    // Caliente sin toque vencido: recién desde el día siguiente al envío (el mismo día es ruido).
-    if (f.estado === 'activa' && f.toque && (f.vencido || (f.caliente && f.dia0 < hoy))) items.push(f);
+    // Caliente sin toque vencido: solo si hoy nadie le escribió todavía (ni el Día 0 ni un toque).
+    if (f.estado === 'activa' && f.toque && (f.vencido || (f.caliente && f.dia0 < hoy && f.ultimo_toque !== hoy))) items.push(f);
   }
   // Primero los calientes, después los más atrasados.
   items.sort((a, b) => (b.caliente - a.caliente) || (b.vencido - a.vencido) || (b.atraso - a.atraso) || String(a.nombre).localeCompare(String(b.nombre)));
