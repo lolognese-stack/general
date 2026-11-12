@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="referrer" content="no-referrer">
+<title>Propuestas · Luna Llena Travel</title>
+<style>
+:root{--bg:#F6F1EA;--paper:#FFFDF9;--ink:#161616;--ink2:#4A443E;--muted:#857B70;--line:#E2D9CE;--brand:#FF7A00;--brand-ink:#A34A00;--ok:#1F7A4D}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{display:flex;align-items:center;gap:14px;padding:18px 20px;border-bottom:1px solid var(--line);background:var(--paper)}
+header a{color:var(--ink2);text-decoration:none;font-size:.9rem}header h1{margin:0;font:600 1.1rem/1.2 inherit}
+header .der{margin-left:auto;display:flex;gap:10px;align-items:center}
+button{font:inherit;padding:8px 14px;border:1px solid var(--ink);background:var(--paper);border-radius:4px;cursor:pointer}
+main{padding:20px;max-width:1200px;margin:0 auto}
+.nota{color:var(--muted);font-size:.85rem;margin:0 0 16px}
+table{width:100%;border-collapse:collapse;background:var(--paper);border:1px solid var(--line)}
+th,td{padding:11px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;white-space:nowrap}
+td a{color:var(--ink);font-weight:600}td small{display:block;color:var(--muted);font-size:.8rem}
+.si{color:var(--ok);font-weight:600}.no{color:var(--muted)}.alerta{color:var(--brand-ink);font-weight:600}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.vacio,.error{padding:40px 20px;text-align:center;color:var(--muted);background:var(--paper);border:1px solid var(--line)}
+form{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:14px}form input{padding:9px 12px;border:1px solid var(--line);border-radius:4px;min-width:260px;font:inherit}
+h2{margin:28px 0 10px;font:600 .8rem/1.2 inherit;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2)}
+h2 .badge{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:10px;background:var(--brand);color:#fff;letter-spacing:0}
+.avisos{list-style:none;margin:0;padding:0;background:var(--paper);border:1px solid var(--line);max-height:340px;overflow:auto}
+.avisos li{display:flex;gap:12px;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line)}
+.avisos li.nuevo{background:#FFF4E8}.avisos li.nuevo b:before{content:"● ";color:var(--brand)}
+.avisos time{flex:none;color:var(--muted);font-size:.82rem;white-space:nowrap}
+.fila-h2{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.discord{margin-top:28px;padding:16px;background:var(--paper);border:1px solid var(--line)}
+.discord p{margin:0 0 10px;color:var(--ink2);font-size:.9rem}.discord form{justify-content:flex-start;margin:0}
+.estado{font-weight:600}.estado.on{color:var(--ok)}.msg{margin-top:8px;font-size:.88rem;color:var(--brand-ink)}
+@media(max-width:760px){
+  thead{display:none}table,tbody,tr,td{display:block;width:100%}tr{border-bottom:1px solid var(--line);padding:10px 0}
+  td{border:0;padding:4px 14px;display:flex;justify-content:space-between;gap:12px}td.num{text-align:right}
+  td:before{content:attr(data-t);color:var(--muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.05em}
+  td:first-child{display:block}td:first-child:before{content:none}
+}
+</style>
+</head>
+<body>
+<header><a href="/panel-4c1f6a">← Panel</a><h1>Propuestas</h1><div class="der"><button id="recargar" type="button">Actualizar</button></div></header>
+<main>
+  <p class="nota">Una fila por propuesta publicada. Aparece cuando alguien de la agencia la abre con <b>?preview=1</b> o cuando el cliente la abre por primera vez. Las visitas con <b>?preview=1</b> no se cuentan. Horas de Perú.</p>
+  <div class="fila-h2"><h2>Avisos <span id="badge" class="badge" hidden></span></h2><button id="leidos" type="button" hidden>Marcar como leídos</button></div>
+  <ul class="avisos" id="avisos"><li>Cargando…</li></ul>
+  <h2>Propuestas</h2>
+  <div id="raiz"><div class="vacio">Cargando…</div></div>
+  <section class="discord" id="discord" hidden></section>
+</main>
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const token = () => localStorage.getItem('crm_token');
+// D1 guarda UTC "AAAA-MM-DD HH:MM:SS"; se muestra en hora de Perú (UTC-5).
+const peru = (t) => { if (!t) return null; const d = new Date(Date.parse(t.replace(' ', 'T') + 'Z') - 5 * 3600e3); return d.toISOString().slice(0, 16).replace('T', ' '); };
+const fecha = (t) => { const p = peru(t); return p ? `${p.slice(8, 10)}/${p.slice(5, 7)} ${p.slice(11)}` : '—'; };
+function hace(t) {
+  if (!t) return '';
+  const m = Math.round((Date.now() - Date.parse(t.replace(' ', 'T') + 'Z')) / 60000);
+  if (m < 60) return `hace ${m} min`;
+  if (m < 48 * 60) return `hace ${Math.round(m / 60)} h`;
+  return `hace ${Math.round(m / 1440)} días`;
+}
+const dur = (s) => { s = Number(s) || 0; if (!s) return '—'; const m = Math.round(s / 60); return m < 1 ? `${s} s` : m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60} min`; };
+const siNo = (v) => v ? '<span class="si">Sí</span>' : '<span class="no">No</span>';
+const DISP = { movil: 'teléfono', tablet: 'tablet', desktop: 'compu', desconocido: '?' };
+
+function pedirToken(msg) {
+  $('#raiz').innerHTML = `<div class="vacio">${esc(msg)}<form id="f"><input id="t" type="password" placeholder="Token del CRM" autocomplete="current-password"><button>Entrar</button></form></div>`;
+  $('#f').addEventListener('submit', (e) => { e.preventDefault(); localStorage.setItem('crm_token', $('#t').value.trim()); cargar(); });
+}
+
+async function cargar() {
+  if (!token()) return pedirToken('Entra con el mismo token del panel.');
+  let r;
+  try { r = await fetch('/api/propuestas-resumen', { headers: { 'x-crm-token': token() } }); } catch { $('#raiz').innerHTML = '<div class="error">No se pudo conectar.</div>'; return; }
+  if (r.status === 401) return pedirToken('El token no es válido.');
+  if (!r.ok) { $('#raiz').innerHTML = `<div class="error">Error ${r.status}.</div>`; return; }
+  const j = await r.json();
+  const { base, propuestas } = j;
+  pintarAvisos(j); pintarDiscord(j);
+  if (!propuestas.length) { $('#raiz').innerHTML = '<div class="vacio">Todavía no hay propuestas registradas.</div>'; return; }
+  const hoy = new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10);
+  $('#raiz').innerHTML = `<table><thead><tr>
+      <th>Propuesta</th><th>Última apertura</th><th class="num">Visitas</th><th>Vio la tarifa</th><th>Vio cómo reservar</th><th>Clic en reservar</th><th class="num">Clics en botones</th><th class="num">PDF</th><th class="num">Tiempo total</th><th>Dispositivo</th><th>Vence</th>
+    </tr></thead><tbody>${propuestas.map((p) => {
+      const vencida = p.valid_until && p.valid_until < hoy;
+      return `<tr>
+        <td><a href="${esc(base)}/${esc(p.slug)}/" target="_blank" rel="noopener">${esc(p.cliente || p.slug)}</a><small>${p.numero ? 'N° ' + esc(p.numero) + ' · ' : ''}${esc(p.slug)}</small></td>
+        <td data-t="Última apertura">${p.ultima_apertura ? `${fecha(p.ultima_apertura)}<small>${hace(p.ultima_apertura)}</small>` : '<span class="alerta">No la abrió</span>'}</td>
+        <td data-t="Visitas" class="num">${p.visitas || 0}</td>
+        <td data-t="Vio la tarifa">${siNo(p.vio_tarifa)}</td>
+        <td data-t="Vio cómo reservar">${siNo(p.vio_reserva)}</td>
+        <td data-t="Clic en reservar">${siNo(p.clic_reservar)}</td>
+        <td data-t="Clics en botones" class="num">${p.clics_cta || 0}</td>
+        <td data-t="PDF" class="num">${p.pdf || 0}</td>
+        <td data-t="Tiempo total" class="num">${dur(p.segundos)}</td>
+        <td data-t="Dispositivo">${esc((p.dispositivos || '').split(',').filter(Boolean).map((d) => DISP[d] || d).join(', ') || '—')}</td>
+        <td data-t="Vence">${p.valid_until ? `<span class="${vencida ? 'alerta' : ''}">${p.valid_until.slice(8, 10)}/${p.valid_until.slice(5, 7)}${vencida ? ' (vencida)' : ''}</span>` : '—'}</td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
+}
+const TXT_TIPO = { primera_apertura: 'Primera apertura', reapertura: 'Volvió a abrir', vio_inversion: 'Vio la tarifa', cta: 'Clic en un botón' };
+function pintarAvisos(j) {
+  const b = $('#badge'); b.hidden = !j.no_leidas; b.textContent = j.no_leidas;
+  $('#leidos').hidden = !j.no_leidas;
+  $('#avisos').innerHTML = j.alertas.length
+    ? j.alertas.map((a) => `<li class="${a.leida ? '' : 'nuevo'}"><span><b>${esc(TXT_TIPO[a.tipo] || a.tipo)}</b> · ${esc(a.texto)} · ${esc(DISP[a.dispositivo] || a.dispositivo || '')}</span><time>${fecha(a.creado_en)}</time></li>`).join('')
+    : '<li>Todavía no hay avisos. Llegan cuando el cliente abre la propuesta, vuelve a abrirla después de 24 h, mira la tarifa o toca un botón (como mucho 1 por tipo cada 6 h).</li>';
+}
+function pintarDiscord(j) {
+  const d = $('#discord'); d.hidden = false;
+  const estado = `<span class="estado ${j.discord ? 'on' : ''}">${j.discord ? 'Conectado' : 'Sin conectar'}</span>`;
+  d.innerHTML = `<p><b>Discord</b> · ${estado}. Los avisos siempre quedan acá; con un webhook también llegan a un canal de Discord (notificación en el teléfono).</p>` +
+    (j.rol === 'admin'
+      ? `<form id="fd"><input id="wh" type="password" placeholder="https://discord.com/api/webhooks/…" autocomplete="off"><button>Guardar</button>${j.discord ? '<button type="button" id="probar">Mandar prueba</button><button type="button" id="quitar">Quitar</button>' : ''}</form><div class="msg" id="msg"></div>`
+      : (j.discord ? '<form><button type="button" id="probar">Mandar prueba</button></form><div class="msg" id="msg"></div>' : '<p>Lo configura un administrador.</p>'));
+  const llamar = async (method, body) => {
+    const r = await fetch('/api/propuestas-config', { method, headers: { 'x-crm-token': token(), 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+    const x = await r.json().catch(() => ({}));
+    $('#msg').textContent = r.ok ? (method === 'POST' ? 'Mensaje de prueba enviado.' : 'Guardado.') : (x.error || 'Error ' + r.status);
+    if (r.ok && method !== 'POST') cargar();
+  };
+  if ($('#fd')) $('#fd').addEventListener('submit', (e) => { e.preventDefault(); llamar('PUT', { discord_webhook: $('#wh').value }); });
+  if ($('#probar')) $('#probar').addEventListener('click', () => llamar('POST', { prueba: true }));
+  if ($('#quitar')) $('#quitar').addEventListener('click', () => llamar('DELETE'));
+}
+$('#leidos').addEventListener('click', async () => { await fetch('/api/propuestas-alertas', { method: 'POST', headers: { 'x-crm-token': token() } }); cargar(); });
+$('#recargar').addEventListener('click', cargar);
+cargar();
+</script>
+</body>
+</html>
