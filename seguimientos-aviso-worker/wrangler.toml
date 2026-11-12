@@ -12,9 +12,11 @@ main = "src/index.js"
 compatibility_date = "2026-09-01"
 
 [triggers]
-# 9:00 y 9:30 de Lima (UTC-5, sin horario de verano). La segunda corrida es por si la primera falló:
-# el endpoint avisa una sola vez por día.
-crons = ["0 14 * * *", "30 14 * * *"]
+# 9:00 de Lima (UTC-5, sin horario de verano). OJO (12/11/2026): la cuenta está en el límite del plan
+# gratis (5 crons por cuenta) y Cloudflare no registró este horario. Hasta liberar un lugar, el aviso lo
+# dispara el primero que abre el Inbox después de las 9. Al liberar uno: npx wrangler deploy acá y cargar
+# AVISO_SECRET en el Worker y en Pages.
+crons = ["0 14 * * *"]
 
 [vars]
 CRM_URL = "https://crm-plantilla.pages.dev"
