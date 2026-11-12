@@ -24,6 +24,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
   if (!SLUG.test(slug) || slug.startsWith('_')) return json({ error: 'Propuesta inválida' }, 400);
   const d = await datosPublicados(env, slug);
   if (!d || !d.precio || !d.viaje) return json({ error: 'No encontramos esta propuesta' }, 404);
+  if (d.status === 'confirmada') return json({ error: 'Este viaje ya está confirmado. Si quieres cambiar algo, escríbenos por WhatsApp.' }, 409);
   if (d.validUntil && hoyPe() > d.validUntil) return json({ error: 'Esta propuesta venció. Escríbenos para actualizarla.', vencida: true }, 409);
 
   // ----- validación -----
