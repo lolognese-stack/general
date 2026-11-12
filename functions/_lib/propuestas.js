@@ -6,9 +6,9 @@ export const SLUG = /^[a-z0-9][a-z0-9-]{2,60}$/;
 
 // La primera vez que llega un slug se pide la página publicada: si no existe, se descartan sus eventos.
 // De la página salen el número, el cliente y el vencimiento (script#venta-datos y <title>).
-export async function propuestaVerificada(env, slug) {
-  const ya = await env.DB.prepare('SELECT slug, numero, cliente FROM propuestas WHERE slug = ?').bind(slug).first();
-  if (ya) return ya;
+// Datos que la propia página publicada declara (script#venta-datos): son la fuente confiable para
+// precios, pasajeros y vencimiento, no lo que mande el navegador.
+export async function datosPublicados(env, slug) {
   let html;
   try {
     const r = await fetch(`${PROPUESTAS_URL(env)}/${slug}/`, { redirect: 'manual', headers: { 'user-agent': 'crm-luna-llena-verificador' } });
@@ -20,8 +20,16 @@ export async function propuestaVerificada(env, slug) {
   let datos = {};
   try { datos = JSON.parse(m[1]); } catch { return null; }
   if (datos.slug !== slug) return null;
-  const cliente = (html.match(/<title>Propuesta para ([^—<]+?)\s+—/) || [])[1] || null;
-  const fila = { slug, numero: datos.numero || null, cliente, valid_until: datos.validUntil || null };
+  datos.cliente = datos.cliente || (html.match(/<title>Propuesta para ([^—<]+?)\s+—/) || [])[1] || null;
+  return datos;
+}
+
+export async function propuestaVerificada(env, slug) {
+  const ya = await env.DB.prepare('SELECT slug, numero, cliente FROM propuestas WHERE slug = ?').bind(slug).first();
+  if (ya) return ya;
+  const datos = await datosPublicados(env, slug);
+  if (!datos) return null;
+  const fila = { slug, numero: datos.numero || null, cliente: datos.cliente, valid_until: datos.validUntil || null };
   await env.DB.prepare('INSERT OR IGNORE INTO propuestas (slug, numero, cliente, valid_until) VALUES (?, ?, ?, ?)')
     .bind(fila.slug, fila.numero, fila.cliente, fila.valid_until).run();
   return fila;

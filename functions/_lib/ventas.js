@@ -94,7 +94,8 @@ export function calcular(v, ahora = Date.now()) {
     ...v,
     saldo_centavos: (v.total_centavos || 0) - (v.pagado_centavos || 0),
     viajeros_total: total,
-    abandonada: v.estado === 'pendiente_pago' && ahora - Date.parse(v.creado_en) > DOS_HORAS,
+    // Las reservas que llegan desde una propuesta se pagan por link o transferencia: no se dan por abandonadas a las 2 h.
+    abandonada: v.estado === 'pendiente_pago' && v.origen !== 'propuesta' && ahora - Date.parse(v.creado_en) > DOS_HORAS,
     confirmacion_vencida: v.estado === 'sena_pagada' && !!v.sena_pagada_en && ahora - Date.parse(v.sena_pagada_en) > UN_DIA,
   };
 }

@@ -1,5 +1,6 @@
 import { rolDe, json } from '../../../_lib/auth.js';
 import { cargar, evento, autorDe, SQL_VIAJERO_COMPLETO } from '../../../_lib/ventas.js';
+import { cifrar, descifrarViajeros, CAMPOS_CIFRADOS } from '../../../_lib/cifrado.js';
 
 const CAMPOS = ['nombre_completo', 'nacionalidad', 'doc_tipo', 'doc_numero', 'fecha_nacimiento', 'sexo'];
 
@@ -25,6 +26,8 @@ export async function onRequestPut({ request, env, params }) {
     if (w.sexo && !['F', 'M', 'X'].includes(w.sexo)) return json({ error: `Viajero ${orden}: sexo F, M o X` }, 400);
     if (w.doc_tipo && !['pasaporte', 'dni', 'ce', 'otro'].includes(w.doc_tipo)) return json({ error: `Viajero ${orden}: tipo de documento inválido` }, 400);
     const vals = CAMPOS.map((c) => (typeof w[c] === 'string' ? w[c].trim() : w[c]) || null);
+    // Pasaporte y fecha de nacimiento entran cifrados (si PASAPORTES_KEY está cargada).
+    for (const c of CAMPOS_CIFRADOS) { const i = CAMPOS.indexOf(c); vals[i] = await cifrar(env, vals[i]); }
     st.push(env.DB.prepare(
       `INSERT INTO venta_viajeros (venta_id, orden, ${CAMPOS.join(', ')}, es_menor, creado_en, actualizado_en)
        VALUES (?, ?, ${CAMPOS.map(() => '?').join(', ')}, ?, ?, ?)
@@ -40,5 +43,5 @@ export async function onRequestPut({ request, env, params }) {
     env.DB.prepare('UPDATE ventas SET actualizado_en = ? WHERE id = ?').bind(ahora, v.id),
   ]);
   const { results } = await env.DB.prepare('SELECT * FROM venta_viajeros WHERE venta_id = ? ORDER BY orden').bind(v.id).all();
-  return json({ viajeros: results, viajeros_completos: r.n, viajeros_total: v.viajeros_total });
+  return json({ viajeros: await descifrarViajeros(env, results), viajeros_completos: r.n, viajeros_total: v.viajeros_total });
 }

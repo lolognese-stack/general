@@ -86,7 +86,7 @@ async function cargar() {
   if (!propuestas.length) { $('#raiz').innerHTML = '<div class="vacio">Todavía no hay propuestas registradas.</div>'; return; }
   const hoy = new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10);
   $('#raiz').innerHTML = `<table><thead><tr>
-      <th>Propuesta</th><th>Última apertura</th><th class="num">Visitas</th><th>Vio la tarifa</th><th>Vio cómo reservar</th><th>Clic en reservar</th><th class="num">Clics en botones</th><th class="num">PDF</th><th class="num">Tiempo total</th><th>Dispositivo</th><th>Vence</th>
+      <th>Propuesta</th><th>Última apertura</th><th class="num">Visitas</th><th>Vio la tarifa</th><th>Vio cómo reservar</th><th>Clic en reservar</th><th>Envió la reserva</th><th class="num">Clics en botones</th><th class="num">PDF</th><th class="num">Tiempo total</th><th>Dispositivo</th><th>Vence</th>
     </tr></thead><tbody>${propuestas.map((p) => {
       const vencida = p.valid_until && p.valid_until < hoy;
       return `<tr>
@@ -96,6 +96,7 @@ async function cargar() {
         <td data-t="Vio la tarifa">${siNo(p.vio_tarifa)}</td>
         <td data-t="Vio cómo reservar">${siNo(p.vio_reserva)}</td>
         <td data-t="Clic en reservar">${siNo(p.clic_reservar)}</td>
+        <td data-t="Envió la reserva">${p.reservo ? '<span class="si">Sí · ver en Ventas</span>' : '<span class="no">No</span>'}</td>
         <td data-t="Clics en botones" class="num">${p.clics_cta || 0}</td>
         <td data-t="PDF" class="num">${p.pdf || 0}</td>
         <td data-t="Tiempo total" class="num">${dur(p.segundos)}</td>
@@ -104,7 +105,7 @@ async function cargar() {
       </tr>`;
     }).join('')}</tbody></table>`;
 }
-const TXT_TIPO = { primera_apertura: 'Primera apertura', reapertura: 'Volvió a abrir', vio_inversion: 'Vio la tarifa', cta: 'Clic en un botón' };
+const TXT_TIPO = { primera_apertura: 'Primera apertura', reapertura: 'Volvió a abrir', vio_inversion: 'Vio la tarifa', cta: 'Clic en un botón', reserva: 'Reserva enviada' };
 function pintarAvisos(j) {
   const b = $('#badge'); b.hidden = !j.no_leidas; b.textContent = j.no_leidas;
   $('#leidos').hidden = !j.no_leidas;

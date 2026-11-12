@@ -3,6 +3,7 @@ import {
   cargar, evento, leadGanado, sentenciasEstado, autorDe, venceDe, slug, formatoMonto,
   TRANSICIONES, ETIQUETA,
 } from '../../_lib/ventas.js';
+import { descifrarViajeros } from '../../_lib/cifrado.js';
 
 // Campos que el panel puede editar. Estado, montos cobrados, tokens y
 // marcas de tiempo van por sus propios caminos.
@@ -29,7 +30,7 @@ export async function onRequestGet({ request, env, params }) {
   ]);
   return json({
     ...v,
-    pagos: pagos.results, viajeros: viajeros.results, eventos: eventos.results,
+    pagos: pagos.results, viajeros: await descifrarViajeros(env, viajeros.results), eventos: eventos.results,
     lead: v.lead_id && v.lead_nombre !== null ? { id: v.lead_id, nombre: v.lead_nombre, etapa: v.lead_etapa } : null,
     web_url: (env.VENTAS_WEB_URL || '').replace(/\/+$/, '') || null,
   });

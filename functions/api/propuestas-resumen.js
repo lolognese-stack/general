@@ -14,6 +14,7 @@ export async function onRequestGet({ request, env }) {
            max(e.evento = 'seccion' AND e.detalle = 'inversion')                          AS vio_tarifa,
            max(e.evento = 'seccion' AND e.detalle = 'reserva')                            AS vio_reserva,
            max(e.evento = 'cta' AND e.detalle = 'reservar')                               AS clic_reservar,
+           max(e.evento = 'reserva')                                                     AS reservo,
            sum(e.evento = 'cta')                                                         AS clics_cta,
            sum(e.evento = 'pdf')                                                         AS pdf,
            sum(CASE WHEN e.evento = 'tiempo' THEN CAST(e.detalle AS INTEGER) ELSE 0 END) AS segundos,

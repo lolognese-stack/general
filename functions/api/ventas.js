@@ -1,4 +1,5 @@
 import { rolDe, json } from '../_lib/auth.js';
+import { purgarPasaportes } from '../_lib/cifrado.js';
 import { listar, calcular, cargar, evento, leadGanado, autorDe, tokenNuevo, venceDe, slug, ESTADOS } from '../_lib/ventas.js';
 
 // GET /api/ventas?estado=&desde=&hasta=&q=&lead_id=
@@ -11,6 +12,8 @@ export async function onRequestGet({ request, env }) {
   const f = Object.fromEntries(['estado', 'desde', 'hasta', 'q', 'lead_id'].map((k) => [k, u.searchParams.get(k) || '']));
   if (f.estado && !ESTADOS.includes(f.estado)) return json({ error: 'estado desconocido' }, 400);
 
+  // Borrado automático de pasaportes de viajes terminados hace más de 30 días (ventas desde propuestas).
+  await purgarPasaportes(env).catch(() => {});
   const ventas = await listar(env, f);
   const { results: pagos } = await env.DB.prepare(
     `SELECT venta_id, tipo, monto_centavos, moneda, proveedor, creado_en FROM venta_pagos WHERE estado = 'aprobado'`
