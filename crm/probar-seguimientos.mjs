@@ -51,3 +51,8 @@ assert.equal(secuencia(JSON.stringify([{ dia: 3, clave: 'x', tipo: 'texto', text
 // Hora de Lima (UTC-5): las 02:00 UTC del 13 todavía son el 12 en Lima.
 assert.equal(hoyLima(new Date('2026-11-13T02:00:00Z')), '2026-11-12'); ok('hoy en Lima');
 console.log(`\n${n} pruebas ok`);
+// Retomado guardado como momento ISO: vence ese día en Lima.
+{
+  const p2 = proximoToque({ estado: 'activa', dia0: '2026-11-01', retomado_desde: 60, retomado_en: '2026-12-12T03:00:00.000Z' }, [], sec, '2026-12-11');
+  assert.equal(p2.vence, '2026-12-11'); assert.equal(p2.vencido, true); console.log('ok retomado ISO: vence el día en Lima');
+}

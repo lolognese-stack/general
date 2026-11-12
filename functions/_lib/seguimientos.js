@@ -86,7 +86,8 @@ export function proximoToque(seg, toques, sec, hoy) {
   for (const t of sec) {
     if (t.dia < desde) continue;
     let vence;
-    if (desde && t.dia === desde) vence = seg.retomado_en || sumarDias(seg.dia0, t.dia);
+    // retomado_en puede venir como fecha (YYYY-MM-DD) o como momento ISO: vence ese día, hora de Lima.
+    if (desde && t.dia === desde) vence = seg.retomado_en ? (seg.retomado_en.length > 10 ? hoyLima(new Date(seg.retomado_en)) : seg.retomado_en) : sumarDias(seg.dia0, t.dia);
     else vence = [sumarDias(seg.dia0, t.dia), sumarDias(base, t.dia - diaBase)].sort().pop();
     if (hechos.has(t.dia)) { base = hechos.get(t.dia); diaBase = t.dia; continue; }
     const atraso = diasEntre(vence, hoy);
