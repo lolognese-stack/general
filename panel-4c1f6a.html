@@ -1939,6 +1939,7 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 .cz-op .pp{font-size:11.5px;color:var(--ink-3)}
 .cz-sinhotel{color:var(--danger);font-weight:600}
 #cz-root.cz-root-1{grid-template-columns:minmax(0,1fr);max-width:1100px}
+.cz-subir{cursor:pointer;display:inline-flex;align-items:center}
 .cz-ex-tabla input,.cz-ex-tabla select{border:1px solid var(--line);border-radius:var(--radius-sm);padding:5px 7px;background:var(--surface-2);font-size:12px;max-width:100%}
 .cz-ex-tabla select[data-ex="id"]{width:100%}
 .cz-ex-tabla tr[data-ok="0"] td{color:var(--ink-3);text-decoration:line-through}
@@ -13849,6 +13850,23 @@ const czExGuardar = () => { try{ localStorage.setItem('cz_excel', JSON.stringify
 let czExRes = null;
 const CZ_EX_ORIGEN = { tarifario:'Tarifario de Luna Llena', catalogo:'Catálogo de la web', entrada:'Entradas' };
 
+// Un .xlsx / .xls / .csv subido se pasa a texto con las celdas separadas por tabulaciones: lo mismo que da copiar y
+// pegar desde Excel. SheetJS (build oficial) se baja solo la primera vez que se sube un archivo.
+const CZ_XLSX_URL = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs';
+let czXlsx = null;
+async function czExcelATexto(file){
+  if(file.size > 5e6) throw new Error('El archivo pesa más de 5 MB.');
+  if(/\.(csv|tsv|txt)$/i.test(file.name)) return await file.text();
+  if(!/\.(xlsx|xlsm|xls|ods)$/i.test(file.name)) throw new Error('Subí un Excel (.xlsx, .xls) o un .csv.');
+  try{ czXlsx = czXlsx || await import(CZ_XLSX_URL); }
+  catch(e){ throw new Error('No se pudo cargar el lector de Excel. Probá de nuevo o copiá y pegá las celdas.'); }
+  const wb = czXlsx.read(await file.arrayBuffer(), { type:'array' });
+  const hojas = wb.SheetNames.map(n => czXlsx.utils.sheet_to_csv(wb.Sheets[n], { FS:'\t', blankrows:false }).trim()).filter(Boolean);
+  if(!hojas.length) throw new Error('El Excel está vacío.');
+  return hojas.join('\n\n');
+}
+const czSubirHtml = (id, texto) => `<label class="btn btn-ghost cz-subir" for="${id}">${texto}<input type="file" id="${id}" accept=".xlsx,.xlsm,.xls,.ods,.csv,.tsv,.txt" hidden></label>`;
+
 function renderExcel(host, modos){
   const x = czEx;
   const tar = x.modo === 'tarifario';
@@ -13883,6 +13901,7 @@ function renderExcel(host, modos){
           ? 'La IA sugiere a qué servicio corresponde cada fila (sin ver precios); el precio lo calcula el cotizador.'
           : 'Los importes salen tal cual del Excel: la cotización avisa que no vienen del tarifario.'}</div>
         <div class="cz-acciones"><button type="button" class="btn ${hayFilas ? 'btn-ghost' : 'btn-primary'}" id="cz-ex-leer">${hayFilas ? 'Volver a leer' : 'Leer tabla'}</button>
+          ${czSubirHtml('cz-ex-file', 'Subir el Excel')}
           ${hayFilas ? `<button type="button" class="btn btn-ghost" data-acc="ex-limpiar">Empezar de nuevo</button>` : ''}
           <span class="cz-err" id="cz-ex-err" role="alert"></span></div>
       </div>
@@ -13927,6 +13946,12 @@ function renderExcel(host, modos){
 function czEventosExcel(){
   const root = el('cz-root');
   el('cz-ex-txt').addEventListener('input', e => { czEx.texto = e.target.value; czExGuardar(); });
+  el('cz-ex-file').addEventListener('change', async e => {
+    const f = e.target.files[0]; e.target.value = '';
+    if(!f) return;
+    try{ const t = await czExcelATexto(f); el('cz-ex-txt').value = t; czEx.texto = t; czExGuardar(); czExLeer(); }
+    catch(ex){ el('cz-ex-err').textContent = ex.message; }
+  });
   root.addEventListener('input', e => {
     const t = e.target;
     if(t.dataset.exf){ czEx[t.dataset.exf] = t.value; czExGuardar(); return; }
@@ -14114,10 +14139,12 @@ function renderPropuesta(host, modos){
       <div class="cz-sec">
         <div class="cz-sec-tit">La cotización</div>
         <textarea class="cz-msg" id="cz-ar-txt" placeholder="Pegá el mail, el chat o la tabla copiada de Excel. Ej.: Hotel Palacio del Inka, 3 noches, 5★ · 1.250 dólares por pasajero en habitación doble · Vuelo LIM-CUZ 14 MAR…">${esc(a.texto)}</textarea>
-        <div class="cz-pie">Si no trae nombre, país o cantidad de personas, los completás en el paso siguiente. Lo que la IA no encuentra queda vacío: no lo inventa.</div>
+        <div class="cz-pie">Si no trae nombre, país o cantidad de personas, los completás en el paso siguiente. Lo que la IA no encuentra queda vacío: no lo inventa.<br>
+          <b>Subir Excel y armar:</b> lee el archivo y, si tiene todo lo necesario, arma la propuesta sola; si falta algo (apellido, hoteles, precio), te lo pide antes.</div>
       </div>
       <div class="cz-acciones">
         <button type="button" class="btn btn-primary" id="cz-ar-leer">Leer la cotización</button>
+        ${czSubirHtml('cz-ar-file', 'Subir Excel y armar')}
         <button type="button" class="btn btn-ghost" id="cz-ar-mano">Cargarla a mano</button>
         <span class="cz-err" id="cz-ar-err" role="alert"></span>
       </div>
@@ -14251,6 +14278,12 @@ function czArValidar(p){
 
 function czEventosPropuesta(){
   const root = el('cz-root');
+  if(el('cz-ar-file')) el('cz-ar-file').addEventListener('change', async e => {
+    const f = e.target.files[0]; e.target.value = '';
+    if(!f) return;
+    try{ const t = await czExcelATexto(f); el('cz-ar-txt').value = t; czAr.texto = t; czAr.autoArmar = true; czArLeer(); }
+    catch(ex){ el('cz-ar-err').textContent = ex.message; }
+  });
   root.addEventListener('input', e => {
     if(e.target.id === 'cz-ar-txt') czAr.texto = e.target.value;
     if(czAr.paso === 'revisar') czArCalc();
@@ -14308,6 +14341,15 @@ async function czArLeer(){
     czCotizando = false;
     if(el('cz-ar-leer')){ el('cz-ar-leer').disabled = false; el('cz-ar-leer').textContent = 'Leer la cotización'; }
   }
+  // "Subir Excel y armar": con todo lo obligatorio completo arma sola; si falta algo, queda en el formulario y lo dice.
+  if(czAr.autoArmar && czAr.paso === 'revisar' && el('cz-ar-armar')){
+    czAr.autoArmar = false;
+    const errs = czArValidar(czArRecolectar());
+    if(!errs.length) return czArArmar();
+    el('cz-ar-err').innerHTML = '<b>Para armarla falta:</b><br>' + errs.map(esc).join('<br>');
+    el('cz-ar-err').scrollIntoView({ behavior:'smooth', block:'center' });
+  }
+  czAr.autoArmar = false;
 }
 
 async function czArArmar(){
