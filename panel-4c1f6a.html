@@ -14719,14 +14719,23 @@ function ibSegTag(sg){
   return partes.join(' · ');
 }
 
-async function ibSegCargar(){
-  try{ ibSeg = await api('/api/seguimientos'); }catch(e){ return; }
+let ibSegAvisoPedido = false;
+let ibSegPedidoEn = 0;
+// forzar: después de una acción. Si no, como mucho una vez por minuto (la lista se pide con cada mensaje nuevo).
+async function ibSegCargar({ forzar = false } = {}){
+  // Aviso diario (9:00 Lima): lo manda el Worker seguimientos-aviso; si no corrió, lo dispara el primero que abre el Inbox.
+  if(!ibSegAvisoPedido){ ibSegAvisoPedido = true; api('/api/seguimientos-aviso', { method:'POST', body:'{}' }).catch(() => {}); }
+  if(!forzar && Date.now() - ibSegPedidoEn < 60000) return;
+  ibSegPedidoEn = Date.now();
+  try{ ibSeg = await api('/api/seguimientos'); }catch(e){ ibSegPedidoEn = 0; return; }
   const n = el('ib-seg-n');
   if(n) n.textContent = ibSeg.total ? String(ibSeg.total) : '';
   ibPintarLista();
 }
 
-function ibSegModoToggle(){
+async function ibSegModoToggle(){
+  // Al prender el modo se trae la lista al día (sin esperar el minuto).
+  if(!ibSegModo) await ibSegCargar({ forzar:true });
   ibSegModo = !ibSegModo;
   el('ib-seg-btn').setAttribute('aria-pressed', String(ibSegModo));
   ibSegCola = ibSegModo ? ibSeg.items.map(x => x.conversacion_id) : [];
@@ -14844,7 +14853,7 @@ async function ibSegPintarAlta(box){
       box.dataset.alta = '';
       toast('Listo: hoy es el Día 0. El primer seguimiento toca en 2 días.', { tipo:'ok' });
       await ibSegChat(ibSel);
-      ibSegCargar();
+      ibSegCargar({ forzar:true });
     }catch(e){ alert('No se pudo: ' + e.message); ok.disabled = false; }
   });
 }
@@ -14896,7 +14905,7 @@ async function ibSegAccion(accion, sg){
     if(accion === 'enviar') body.texto = ta ? ta.value.trim() : sg.texto;
     await api('/api/seguimientos', { method:'POST', body: JSON.stringify(body) });
     if(accion === 'enviar') await ibCargarHilo(ibSel, { silencioso:true });
-    await ibSegCargar();
+    await ibSegCargar({ forzar:true });
     // En el modo "Seguimientos hoy", al terminar uno se pasa solo al siguiente.
     if(ibSegModo && ['enviar', 'hecho', 'saltear', 'pausar', 'perdida'].includes(accion)){
       const sig = ibSegCola.find(id => id !== ibSel && ibSegDe(id));

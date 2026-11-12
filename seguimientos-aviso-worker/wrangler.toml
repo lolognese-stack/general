@@ -1,0 +1,20 @@
+# seguimientos-aviso: cron que dispara el aviso diario de seguimientos de propuestas del CRM de Luna Llena.
+# Solo hace un POST a /api/seguimientos-aviso (Pages); la lógica y la base están en el CRM.
+# No toca el setter-worker.
+#
+# Secret (el mismo valor en el Worker y en Pages):
+#   npx wrangler secret put AVISO_SECRET                                   (acá)
+#   npx wrangler pages secret put AVISO_SECRET --project-name crm-plantilla (en la raíz del CRM)
+# Deploy: npx wrangler deploy (en esta carpeta)
+
+name = "seguimientos-aviso"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+[triggers]
+# 9:00 y 9:30 de Lima (UTC-5, sin horario de verano). La segunda corrida es por si la primera falló:
+# el endpoint avisa una sola vez por día.
+crons = ["0 14 * * *", "30 14 * * *"]
+
+[vars]
+CRM_URL = "https://crm-plantilla.pages.dev"

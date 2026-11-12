@@ -105,7 +105,7 @@ async function cargar() {
       </tr>`;
     }).join('')}</tbody></table>`;
 }
-const TXT_TIPO = { primera_apertura: 'Primera apertura', reapertura: 'Volvió a abrir', vio_inversion: 'Vio la tarifa', cta: 'Clic en un botón', reserva: 'Reserva enviada' };
+const TXT_TIPO = { primera_apertura: 'Primera apertura', reapertura: 'Volvió a abrir', vio_inversion: 'Vio la tarifa', cta: 'Clic en un botón', reserva: 'Reserva enviada', seguimientos_hoy: 'Seguimientos de hoy' };
 function pintarAvisos(j) {
   const b = $('#badge'); b.hidden = !j.no_leidas; b.textContent = j.no_leidas;
   $('#leidos').hidden = !j.no_leidas;

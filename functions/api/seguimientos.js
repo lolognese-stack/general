@@ -78,10 +78,12 @@ async function fila(env, s, sec, hoy, { frenoAuto = true } = {}) {
   const { results: toques } = await env.DB.prepare('SELECT dia, accion, fecha, creado_en FROM propuesta_toques WHERE slug = ? ORDER BY creado_en').bind(s.slug).all();
   const ultimo = toques.length ? toques[toques.length - 1].creado_en : null;
   if (frenoAuto && s.estado === 'activa') await frenar(env, s, ultimo);
+  // Lecturas acotadas (cupo diario de D1): eventos de las últimas 48 h para "caliente", y aperturas contadas aparte.
   const { results: ev } = await env.DB.prepare(
-    `SELECT evento, detalle, creado_en FROM propuesta_eventos WHERE slug = ? ORDER BY creado_en DESC LIMIT 400`
+    `SELECT evento, detalle, creado_en FROM propuesta_eventos WHERE slug = ? AND creado_en >= datetime('now', '-2 days') ORDER BY creado_en DESC LIMIT 200`
   ).bind(s.slug).all();
-  const aperturas = ev.filter((e) => e.evento === 'apertura');
+  const ap = await env.DB.prepare(`SELECT count(*) AS n, max(creado_en) AS ultima FROM propuesta_eventos WHERE slug = ? AND evento = 'apertura'`).bind(s.slug).first();
+  const aperturas = { length: ap?.n || 0, ultima: ap?.ultima || null };
   const p = proximoToque(s, toques, sec, hoy);
   const nombre = s.nombre || s.cliente || '';
   const texto = p ? textoDe(p.toque, { nombre, abrio: aperturas.length > 0, revisoDisponibilidad: Boolean(s.reviso_disponibilidad) }) : null;
@@ -96,7 +98,7 @@ async function fila(env, s, sec, hoy, { frenoAuto = true } = {}) {
     vence: p?.vence || null, atraso: p?.atraso || 0, vencido: Boolean(p?.vencido),
     texto,
     caliente: s.estado === 'activa' && caliente(ev),
-    abrio: aperturas.length > 0, aperturas: aperturas.length, ultima_apertura: aperturas[0]?.creado_en || null,
+    abrio: aperturas.length > 0, aperturas: aperturas.length, ultima_apertura: aperturas.ultima,
     hechos: toques.length,
     ultimo_toque: toques.length ? toques[toques.length - 1].fecha : null,
     ventana_abierta: ventanaAbierta,
@@ -132,6 +134,12 @@ export async function onRequestGet({ request, env }) {
     return json({ hoy, items, secuencia: sec.map((t) => ({ dia: t.dia, titulo: t.titulo, tipo: t.tipo })) });
   }
 
+  return json(await listaHoy(env, hoy, sec));
+}
+
+// La lista de "Seguimientos hoy". La usa también el aviso diario (/api/seguimientos-aviso).
+export async function listaHoy(env, hoy = hoyLima(), sec = null) {
+  sec = sec || await secuenciaDe(env);
   const { results } = await env.DB.prepare(`${SELECT_SEG} WHERE s.estado = 'activa'`).all();
   const items = [];
   for (const s of results) {
@@ -141,12 +149,22 @@ export async function onRequestGet({ request, env }) {
   }
   // Primero los calientes, después los más atrasados.
   items.sort((a, b) => (b.caliente - a.caliente) || (b.vencido - a.vencido) || (b.atraso - a.atraso) || String(a.nombre).localeCompare(String(b.nombre)));
-  return json({
+  return {
     hoy, total: items.length,
     calientes: items.filter((i) => i.caliente).length,
     atrasados: items.filter((i) => i.atraso > 0).length,
     items,
-  });
+  };
+}
+
+// Mientras dure la secuencia, los follow-ups automáticos de la IA (setter-worker, correrSeguimientos)
+// saltean este chat hasta que el cliente vuelva a escribir: así no le llegan dos mensajes.
+async function omitirFollowupIA(env, conversacionId, leadId) {
+  if (!conversacionId) return;
+  try {
+    await env.DB.prepare('INSERT INTO setter_eventos (conversacion_id, lead_id, tipo, detalle, creado_en) VALUES (?, ?, ?, ?, ?)')
+      .bind(conversacionId, leadId ?? null, 'seguimiento_omitido', 'seguimiento de propuesta activo', new Date().toISOString()).run();
+  } catch { /* CRM sin setter: no hay follow-ups de IA que frenar */ }
 }
 
 export async function onRequestPost({ request, env }) {
@@ -175,6 +193,7 @@ export async function onRequestPost({ request, env }) {
           estado = 'activa', estado_motivo = excluded.estado_motivo, reviso_disponibilidad = 0, retomado_desde = NULL, retomado_en = NULL,
           creado_en = datetime('now'), actualizado_en = datetime('now')`).bind(slug, c.id, c.lead_id ?? null, hoy, `enviada por ${por}`),
     ]);
+    await omitirFollowupIA(env, c.id, c.lead_id);
     return json({ ok: true, dia0: hoy });
   }
 
@@ -190,6 +209,7 @@ export async function onRequestPost({ request, env }) {
     const desde = retomarDesde(s.dia0, hoy);
     await env.DB.prepare(`UPDATE propuesta_seguimientos SET estado = 'activa', estado_motivo = ?, retomado_desde = ?, retomado_en = ?, actualizado_en = datetime('now') WHERE slug = ?`)
       .bind(`retomada por ${por} el ${ddmm(hoy)}`, desde, new Date().toISOString(), slug).run();
+    await omitirFollowupIA(env, s.conversacion_id, s.lead_id);
     return json({ ok: true, desde });
   }
   if (accion === 'disponibilidad') {
@@ -230,6 +250,7 @@ export async function onRequestPost({ request, env }) {
     }
     await env.DB.prepare('INSERT INTO propuesta_toques (slug, dia, accion, texto, por, fecha) VALUES (?, ?, ?, ?, ?, ?)')
       .bind(slug, p.toque.dia, { enviar: 'enviado', hecho: 'manual', saltear: 'salteado' }[accion], texto, por, hoy).run();
+    await omitirFollowupIA(env, s.conversacion_id, s.lead_id);
     return json({ ok: true, dia: p.toque.dia });
   }
 
