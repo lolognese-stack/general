@@ -14,13 +14,22 @@ import { checkToken, json } from '../../_lib/auth.js';
 //   POST /api/cotizador/medida    -> { solicitud, categorias?, nombre?, idioma? } -> /v1/medida (la misma ruta en cada categoría)
 //   POST /api/cotizador/guardar   -> { lead_id, enviada?, quien?, pedido, nombre?, idioma?, ... } (recotiza y guarda)
 //   GET  /api/cotizador/lead/<id> -> cotizaciones guardadas de ese lead (tabla cotizador_cotizaciones, migración 048)
+//   POST /api/cotizador/excel     -> { texto, modo: excel|tarifario } -> /v1/excel (lee un presupuesto pegado de Excel)
+//   GET  /api/cotizador/armador/catalogo -> destinos, excursiones y paquetes del armador de propuestas
+//   POST /api/cotizador/armador/extraer  -> armador /api/propuesta-extraer (la IA lee la cotización)
+//   POST /api/cotizador/armador/generar  -> armador /api/propuesta-generar (arma el HTML de la propuesta)
+//
+// El armador (repo luna-llena-armador, Cloudflare Pages) se usa con el secret ARMADOR_TOKEN, que el navegador
+// nunca ve. Sin ese secret el modo Propuesta no aparece.
 //
 // Los precios los calcula el cotizador por código; esta Function no toca importes.
 
 const URL_COTIZADOR = 'https://luna-llena-cotizador.vercel.app';
 const URL_CATALOGO = 'https://lunallenatravel.vercel.app/data/catalogo.json';
 const URL_PROPUESTA = 'https://lunallenatravel.vercel.app/p/';   // la web reescribe /p/* a functions/p/[slug].js
+const URL_ARMADOR = 'https://luna-llena-armador.pages.dev';
 const MAX_CUERPO = 32 * 1024;
+const MAX_ARMADOR = 96 * 1024;
 
 const activo = env => !!env.COTIZADOR_TOKEN;
 
@@ -105,11 +114,27 @@ function serviciosLimpios(lista) {
 }
 
 // Lo que se manda a /v1/cotizar: solo los campos que entiende el motor.
+// Filas de un Excel pegado con su precio tal como estaba (modo "Usar precios del Excel", decisión del usuario del
+// 11/11/2026). Es la única cotización cuyo importe viene del navegador: la cotización lo avisa en sus alertas.
+function preciosFijosLimpios(lista) {
+  return lista.slice(0, 120).map(f => {
+    f = f && typeof f === 'object' ? f : {};
+    const o = { concepto: String(f.concepto || '').slice(0, 200), unitario_usd: String(f.unitario_usd || '').trim().slice(0, 14),
+      unidad: f.unidad === 'grupo' ? 'grupo' : 'persona' };
+    const d = entero(f.dia, 60); if (d) o.dia = d;
+    const c = entero(f.cantidad, 99); if (c) o.cantidad = c;
+    return o;
+  }).filter(f => f.concepto && /^\d{1,7}(\.\d{1,2})?$/.test(f.unitario_usd));
+}
+
 function cuerpoCotizar(b) {
   const p = b.pedido;
-  // Viaje a medida: trae servicios del tarifario y los días ya puestos, así que no se reordena.
-  const aMedida = !!p && Array.isArray(p.servicios) && p.servicios.length > 0;
-  if (!p || !Array.isArray(p.items) || (!p.items.length && !aMedida)) return { error: 'Elegí al menos un producto' };
+  // Viaje a medida o Excel: trae servicios del tarifario o precios fijos con los días ya puestos, así que no se reordena.
+  const conServicios = !!p && Array.isArray(p.servicios) && p.servicios.length > 0;
+  const conFijos = !!p && Array.isArray(p.precios_fijos) && p.precios_fijos.length > 0;
+  const aMedida = conServicios || conFijos;
+  if (p && !Array.isArray(p.items)) p.items = [];
+  if (!p || (!p.items.length && !aMedida)) return { error: 'Elegí al menos un producto' };
   if (!Array.isArray(p.viajeros) || !p.viajeros.length) return { error: 'Cargá al menos un viajero' };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(p.fecha_viaje || '')) return { error: 'Falta la fecha del viaje' };
 
@@ -119,7 +144,9 @@ function cuerpoCotizar(b) {
     viajeros: viajerosLimpios(p.viajeros),
     items: itemsLimpios(p.items, aMedida),
   };
-  if (aMedida) pedido.servicios = serviciosLimpios(p.servicios);
+  if (conServicios) pedido.servicios = serviciosLimpios(p.servicios);
+  if (conFijos) pedido.precios_fijos = preciosFijosLimpios(p.precios_fijos);
+  if (Array.isArray(p.entradas)) { const e = p.entradas.filter(x => x === 'MP' || x === 'MP_MONTANA').slice(0, 1); if (e.length) pedido.entradas = e; }
   if (p.llegada && /^\d{2}:\d{2}$/.test(p.llegada.hora || '')) pedido.llegada = { dia: 1, hora: p.llegada.hora };
 
   return {
@@ -204,7 +231,8 @@ async function guardar(request, env) {
   const quien = b.quien ? String(b.quien).slice(0, 60) : null;
   const nombres = Array.isArray(b.nombres) ? b.nombres : [];
   // Viaje a medida: el resumen arranca con la ruta y la categoría (los hoteles no están en el catálogo de la web).
-  const titulo = c.pedido.servicios ? (b.titulo ? String(b.titulo).slice(0, 120) : 'Viaje a medida') : '';
+  const titulo = c.pedido.servicios || c.pedido.precios_fijos
+    ? (b.titulo ? String(b.titulo).slice(0, 120) : c.pedido.precios_fijos ? 'Excel' : 'Viaje a medida') : '';
   const resumen = [titulo, ...(data.pedido && data.pedido.items || []).map(i => {
     const n = nombres.find(x => x && x.id === i.id);
     return n ? String(n.nombre).slice(0, 80) : i.id;
@@ -259,6 +287,57 @@ async function turno(request, env) {
   return llamar(env, '/v1/turno', { mensaje, estado, hoy: hoyLima() });
 }
 
+// Pegar Excel: el cotizador lee la tabla por código; en modo tarifario sugiere a qué servicio va cada fila.
+async function excel(request, env) {
+  const { b, error } = await leerCuerpo(request);
+  if (error) return error;
+  const texto = typeof b.texto === 'string' ? b.texto : '';
+  if (!texto.trim()) return json({ error: 'Pegá la tabla copiada del Excel' }, 400);
+  return llamar(env, '/v1/excel', { texto, modo: b.modo === 'tarifario' ? 'tarifario' : 'excel', hoy: hoyLima() });
+}
+
+// ---- Armador de propuestas (luna-llena-armador): la IA lee la cotización y arma la página con el diseño de Luna Llena ----
+const urlArmador = env => (env.ARMADOR_URL || URL_ARMADOR).replace(/\/$/, '');
+
+async function armadorCatalogo(env) {
+  try {
+    const [c, p] = await Promise.all(['/gem-propuesta/catalogo-ui.json', '/gem-propuesta/paquetes.json'].map(async ruta => {
+      const r = await fetch(urlArmador(env) + ruta, { cf: { cacheTtl: 300, cacheEverything: true } });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }));
+    return json({ destinos: c.destinos || [], excursiones: c.excursiones || [],
+      paquetes: (p || []).map(x => ({ id: x.id, titulo: x.titulo, dias: x.dias, ruta: x.ruta })) });
+  } catch (e) {
+    return json({ error: 'No se pudo leer el catálogo del armador (' + e.message + ')' }, 502);
+  }
+}
+
+// Extraer y generar tardan hasta un par de minutos: el armador responde con un stream (espacios de latido y el JSON al
+// final). Acá se pasa el stream tal cual, con el token del armador agregado del lado del servidor.
+async function armadorIA(request, env, paso) {
+  const crudo = await request.text();
+  if (crudo.length > MAX_ARMADOR) return json({ error: 'La cotización es demasiado larga' }, 413);
+  let b;
+  try { b = JSON.parse(crudo || '{}'); } catch { return json({ error: 'JSON inválido' }, 400); }
+  const cuerpo = paso === 'extraer'
+    ? { tipo: b.tipo, paquete_id: b.paquete_id, texto: typeof b.texto === 'string' ? b.texto : '' }
+    : { tipo: b.tipo, paquete_id: b.paquete_id, cotizacion: b.cotizacion };
+  let r;
+  try {
+    r = await fetch(urlArmador(env) + '/api/propuesta-' + paso, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-propuesta-token': env.ARMADOR_TOKEN },
+      body: JSON.stringify(cuerpo),
+    });
+  } catch (e) {
+    return json({ error: 'El armador de propuestas no respondió. Probá de nuevo en un rato.' }, 502);
+  }
+  if (r.status === 401) return json({ error: 'El CRM no tiene bien configurado el token del armador.' }, 502);
+  if (!r.ok) return json({ error: 'El armador respondió HTTP ' + r.status }, 502);
+  return new Response(r.body, { headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
+}
+
 // Llama al cotizador. Devuelve { status, data } con status ya traducido para el panel.
 async function pedir(env, ruta, cuerpo, metodo = 'POST') {
   let r;
@@ -292,7 +371,7 @@ export async function onRequest({ request, env, params }) {
   const ruta = (params.ruta || []).join('/');
   const metodo = request.method;
 
-  if (ruta === 'estado' && metodo === 'GET') return json({ activo: activo(env) });
+  if (ruta === 'estado' && metodo === 'GET') return json({ activo: activo(env), armador: activo(env) && !!env.ARMADOR_TOKEN });
   if (!activo(env)) return json({ error: 'Cotizador no disponible en este CRM' }, 404);
 
   if (ruta === 'catalogo' && metodo === 'GET') {
@@ -304,6 +383,12 @@ export async function onRequest({ request, env, params }) {
   if (ruta === 'rutas' && metodo === 'GET') { const { status, data } = await pedir(env, '/v1/rutas', null, 'GET'); return json(data, status); }
   if (ruta === 'medida' && metodo === 'POST') return medida(request, env);
   if (ruta === 'guardar' && metodo === 'POST') return guardar(request, env);
+  if (ruta === 'excel' && metodo === 'POST') return excel(request, env);
+  if (ruta.startsWith('armador/')) {
+    if (!env.ARMADOR_TOKEN) return json({ error: 'El armador de propuestas no está configurado en este CRM' }, 404);
+    if (ruta === 'armador/catalogo' && metodo === 'GET') return armadorCatalogo(env);
+    if ((ruta === 'armador/extraer' || ruta === 'armador/generar') && metodo === 'POST') return armadorIA(request, env, ruta.slice(8));
+  }
   const mLead = ruta.match(/^lead\/(\d+)$/);
   if (mLead && metodo === 'GET') return deLead(env, mLead[1]);
   return json({ error: 'no existe' }, 404);

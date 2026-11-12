@@ -1938,6 +1938,20 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 .cz-op .tot{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink)}
 .cz-op .pp{font-size:11.5px;color:var(--ink-3)}
 .cz-sinhotel{color:var(--danger);font-weight:600}
+#cz-root.cz-root-1{grid-template-columns:minmax(0,1fr);max-width:1100px}
+.cz-ex-tabla input,.cz-ex-tabla select{border:1px solid var(--line);border-radius:var(--radius-sm);padding:5px 7px;background:var(--surface-2);font-size:12px;max-width:100%}
+.cz-ex-tabla select[data-ex="id"]{width:100%}
+.cz-ex-tabla tr[data-ok="0"] td{color:var(--ink-3);text-decoration:line-through}
+.cz-ex-tabla tr[data-ok="0"] td:first-child{text-decoration:none}
+.cz-ar-row{display:grid;gap:8px;align-items:end;padding-bottom:8px;margin-bottom:8px;border-bottom:1px solid var(--line-soft)}
+.cz-ar-row .field{margin-bottom:0}
+.cz-ar-row .field input[hidden]{display:none}
+.cz-ar-row .field input + input,.cz-ar-row .field select + input{margin-top:6px}
+.cz-ar-ciudad{grid-template-columns:minmax(0,1.3fr) 80px minmax(0,1.4fr) minmax(0,1fr) 100px 30px}
+.cz-ar-vuelo{grid-template-columns:140px minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 80px minmax(0,1fr) 30px}
+.cz-ar-exc{grid-template-columns:70px minmax(0,1fr) 30px}
+@media (max-width:900px){ .cz-ar-ciudad,.cz-ar-vuelo{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} .cz-ar-row .cz-x{justify-self:end} }
+.cz-ar-frame{width:100%;height:72vh;min-height:420px;margin-top:var(--s3);border:1px solid var(--line);border-radius:var(--radius-sm);background:#fff}
 
 
 
@@ -13087,8 +13101,8 @@ let czCatalogo = null;      // productos de la web: [{id, nombre, categoria, dur
 let czCargandoCat = false;
 let czRes = null;           // última respuesta del cotizador
 let czCotizando = false;
-let czModo = 'manual';      // 'manual' (formulario) | 'chat' (pegar el mensaje del cliente) | 'medida' (ruta + hoteles del tarifario)
-try{ const m = localStorage.getItem('cz_modo'); if(m === 'chat' || m === 'medida') czModo = m; }catch(e){}
+let czModo = 'manual';      // 'manual' (formulario) | 'chat' (pegar el mensaje del cliente) | 'medida' (ruta + hoteles del tarifario) | 'excel' (pegar un presupuesto) | 'propuesta' (armador)
+try{ const m = localStorage.getItem('cz_modo'); if(['chat', 'medida', 'excel', 'propuesta'].includes(m)) czModo = m; }catch(e){}
 // Conversación de "Pegar chat": solo en memoria (tiene nombre e intereses del cliente).
 let czChat = { estado:null, mensajes:0, res:null, borrador:'' };
 const CZ_VACIO = () => ({ nombre:'', idioma:'es', whatsapp:'', fecha:'', dias:'', llegada:'',
@@ -13118,7 +13132,7 @@ function czDesde(p){
 }
 
 async function cotizadorInit(){
-  try{ czActivo = !!(await api('/api/cotizador/estado')).activo; }
+  try{ const est = await api('/api/cotizador/estado'); czActivo = !!est.activo; czArActivo = !!est.armador; }
   catch(e){ czActivo = false; }   // CRM sin cotizador (otros clientes): la pestaña no aparece
   el('nav-cotizador').hidden = !czActivo;
   if(!czActivo){ if(seccion === 'cotizador') irA('leads'); return; }
@@ -13147,11 +13161,15 @@ function renderCotizador(forzar){
   const f = czForm;
   const modos = `<div class="ag-sec-h cv-toolbar-top">
     <div class="cv-vswitch" id="cz-modo" role="group" aria-label="Cómo cotizar">
-      ${[['manual','Armar a mano'],['chat','Pegar chat'],['medida','A medida']].map(([v, t]) => `<button type="button" data-v="${v}" aria-current="${String(czModo === v)}">${t}</button>`).join('')}
+      ${[['manual','Armar a mano'],['chat','Pegar chat'],['medida','A medida'],['excel','Pegar Excel'], ...(czArActivo ? [['propuesta','Propuesta']] : [])].map(([v, t]) => `<button type="button" data-v="${v}" aria-current="${String(czModo === v)}">${t}</button>`).join('')}
     </div>
-    <span class="hint">${czModo === 'chat' ? 'la IA lee el mensaje; los precios los sigue calculando el cotizador' : czModo === 'medida' ? 'varias ciudades con hotel: económico, confort y premium' : 'productos del catálogo de la web'}</span>
+    <span class="hint">${({ chat:'la IA lee el mensaje; los precios los sigue calculando el cotizador', medida:'varias ciudades con hotel: económico, confort y premium',
+      excel:'un presupuesto copiado de Excel: con sus precios o recalculado con el tarifario', propuesta:'la página de la propuesta con el diseño de Luna Llena' })[czModo] || 'productos del catálogo de la web'}</span>
   </div>`;
+  if(czModo === 'propuesta' && !czArActivo) czModo = 'manual';
   if(czModo === 'medida'){ renderMedida(host, modos); return; }
+  if(czModo === 'excel'){ renderExcel(host, modos); return; }
+  if(czModo === 'propuesta'){ renderPropuesta(host, modos); return; }
   if(czModo === 'chat'){
     host.innerHTML = modos + `<div id="cz-root">
       <div>
@@ -13497,6 +13515,11 @@ function czPintarResultado(){
   if(!box) return;
   if(czModo === 'chat'){ czPintarChat(); return; }
   if(czModo === 'medida'){ box.innerHTML = czMedResultadoHtml(); return; }
+  if(czModo === 'excel'){
+    box.innerHTML = czExRes ? czResultadoHtml(czExRes)
+      : `<div class="ag-sec-h"><h2>Resultado</h2></div><div class="wb-panel"><div class="pf2-empty">Pegá la tabla, tocá <b>Leer tabla</b>, revisá las filas y tocá <b>Cotizar</b>.<br>Con los precios del Excel o recalculado con el tarifario de Luna Llena.</div></div>`;
+    return;
+  }
   box.innerHTML = czRes ? czResultadoHtml(czRes)
     : `<div class="ag-sec-h"><h2>Resultado</h2></div><div class="wb-panel"><div class="pf2-empty">Completá el pedido y tocá <b>Cotizar</b>.<br>Acá vas a ver el itinerario, el desglose con de dónde sale cada número, las alertas y el mensaje listo para mandar.</div></div>`;
 }
@@ -13512,6 +13535,10 @@ function czResultadoHtml(r){
   // Itinerario: los días los puso el cotizador.
   const dias = {};
   for(const it of (r.pedido && r.pedido.items) || []){ const p = czProd(it.id); (dias[it.dia || 0] = dias[it.dia || 0] || []).push(p ? p.nombre : it.id); }
+  if(czModo === 'excel'){   // Excel: las filas con precio fijo y los servicios del tarifario también tienen día
+    for(const f of (r.pedido && r.pedido.precios_fijos) || []) (dias[f.dia || 0] = dias[f.dia || 0] || []).push(f.concepto);
+    for(const sv of (r.pedido && r.pedido.servicios) || []){ const l = (c.lineas || []).find(x => x.id === sv.id); (dias[sv.dia || 0] = dias[sv.dia || 0] || []).push(l ? String(l.concepto).split(' · ')[0] : sv.id); }
+  }
   const aMedida = !!(r.pedido && (r.pedido.servicios || []).length);   // el viaje no arranca necesariamente en Cusco
   if(Object.keys(dias).length && !dias[1] && !aMedida) dias[1] = ['Llegada a Cusco y descanso'];
   const itin = Object.keys(dias).map(Number).sort((a, b) => a - b)
@@ -13525,7 +13552,7 @@ function czResultadoHtml(r){
       <td>${esc(CZ_ESTADO[l.estado] || l.estado)}</td>
     </tr>`).join('');
   const b = r.borrador || {};
-  const wa = (czForm.whatsapp || '').replace(/\D/g, '');
+  const wa = ((czModo === 'excel' ? czEx.whatsapp : czForm.whatsapp) || '').replace(/\D/g, '');
   const waUrl = `https://wa.me/${wa}?text=${encodeURIComponent(b.texto || '')}`;
   const v = c.versiones || {};
   return `
@@ -13548,6 +13575,7 @@ function czResultadoHtml(r){
       <div class="cz-acciones" style="margin-top:var(--s3)">
         <button type="button" class="btn btn-primary" data-acc="copiar">Copiar mensaje</button>
         <a class="btn btn-ghost" href="${waUrl}" target="_blank" rel="noopener">${wa ? 'Abrir chat en WhatsApp' : 'Abrir en WhatsApp'}</a>
+        ${czArActivo && conTotal ? `<button type="button" class="btn btn-ghost" data-acc="a-propuesta" title="Abre el armador con esta cotización">Armar propuesta</button>` : ''}
       </div>
       <div class="cz-pie">Revisalo antes de mandarlo: nada sale solo. Si cambiás algo del pedido, volvé a cotizar (los importes no se editan a mano).<br>
         Cotizado ${new Date(r._cuando || Date.now()).toLocaleString('es-AR', { timeZone:'America/Lima', day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
@@ -13810,6 +13838,538 @@ function czMedResultadoHtml(){
     ${czResultadoHtml(op)}` : `<div class="wb-panel"><div class="cz-alerta" data-n="pend">${esc(op.motivo || '')}</div></div>`}`;
 }
 
+/* ---- Pegar Excel: /api/cotizador/excel (el cotizador lee la tabla por código) ---- */
+// Dos modos (decisión del usuario del 11/11/2026): usar los precios del Excel tal cual o recalcular con el tarifario.
+
+const CZ_EX_VACIO = () => ({ texto:'', modo:'excel', filas:[], opciones:[], avisos:[], sin_precio:[], total:null, suma:null,
+  unidad:'persona', nombre:'', idioma:'es', whatsapp:'', fecha:'', pax:'2', nacionalidad:'' });
+let czEx = CZ_EX_VACIO();
+try{ const g = JSON.parse(localStorage.getItem('cz_excel') || 'null'); if(g && Array.isArray(g.filas)) czEx = { ...CZ_EX_VACIO(), ...g }; }catch(e){}
+const czExGuardar = () => { try{ localStorage.setItem('cz_excel', JSON.stringify(czEx)); }catch(e){} };
+let czExRes = null;
+const CZ_EX_ORIGEN = { tarifario:'Tarifario de Luna Llena', catalogo:'Catálogo de la web', entrada:'Entradas' };
+
+function renderExcel(host, modos){
+  const x = czEx;
+  const tar = x.modo === 'tarifario';
+  const hayFilas = x.filas.length > 0;
+  const grupos = Object.entries(CZ_EX_ORIGEN).map(([k, t]) => {
+    const ops = x.opciones.filter(o => o.origen === k);
+    return ops.length ? [t, ops] : null;
+  }).filter(Boolean);
+  const selServicio = f => `<select data-ex="id" data-n="${f.n}" aria-label="Servicio de la fila ${f.n}"><option value="">— sin asignar (no se cotiza) —</option>${
+    grupos.map(([t, ops]) => `<optgroup label="${esc(t)}">${ops.map(o => `<option value="${esc(o.id)}" ${f.id === o.id ? 'selected' : ''}>${esc(o.nombre)}</option>`).join('')}</optgroup>`).join('')}</select>`;
+  const filas = x.filas.map(f => `<tr data-ok="${f.incluir ? 1 : 0}">
+      <td><input type="checkbox" data-ex="incluir" data-n="${f.n}" ${f.incluir ? 'checked' : ''} aria-label="Incluir fila ${f.n}"></td>
+      <td><input type="number" min="1" max="60" data-ex="dia" data-n="${f.n}" value="${esc(f.dia)}" aria-label="Día de la fila ${f.n}" style="width:56px"></td>
+      <td>${esc(f.concepto)}${tar ? `<div style="margin-top:4px">${selServicio(f)}</div>` : ''}</td>
+      ${tar ? `<td class="num" style="color:var(--ink-3)">${czUsd(f.precio)}</td>`
+        : `<td class="num">${czUsd(f.precio)}</td>
+           <td><select data-ex="unidad" data-n="${f.n}" aria-label="Unidad de la fila ${f.n}"><option value="persona" ${f.unidad === 'persona' ? 'selected' : ''}>por persona</option><option value="grupo" ${f.unidad === 'grupo' ? 'selected' : ''}>por grupo</option></select></td>`}
+    </tr>`).join('');
+  const avisos = [...x.avisos.map(t => `<div class="cz-alerta">${esc(t)}</div>`),
+    ...(x.sin_precio.length ? [`<div class="cz-alerta"><b>Sin precio en el Excel (no se cotizan):</b> ${x.sin_precio.map(s => esc((s.dia ? 'día ' + s.dia + ': ' : '') + s.concepto)).join(' · ')}</div>`] : [])];
+  host.innerHTML = modos + `<div id="cz-root">
+    <div>
+    <div class="ag-sec-h"><h2>Presupuesto en Excel</h2><span class="hint">seleccioná las celdas en Excel, copiá y pegá acá</span></div>
+    <div class="wb-panel" id="cz-form">
+      <div class="cz-sec">
+        <textarea class="cz-msg" id="cz-ex-txt" style="min-height:140px" placeholder="DIA 05 DE NOVIEMBRE&#9;RECOJO AEROPUERTO DE LIMA&#9;SEGÚN VUELO&#9;PRIVADO&#9;…&#9;US$.20 DOLARES">${esc(x.texto)}</textarea>
+        <div class="cz-chips" role="radiogroup" aria-label="Precios" style="margin-top:var(--s3)">
+          <button type="button" class="cz-chip" data-exmodo="excel" aria-pressed="${!tar}">Usar los precios del Excel</button>
+          <button type="button" class="cz-chip" data-exmodo="tarifario" aria-pressed="${tar}">Recalcular con el tarifario</button>
+        </div>
+        <div class="hint" style="font-size:11px;color:var(--ink-3);margin-top:6px">${tar
+          ? 'La IA sugiere a qué servicio corresponde cada fila (sin ver precios); el precio lo calcula el cotizador.'
+          : 'Los importes salen tal cual del Excel: la cotización avisa que no vienen del tarifario.'}</div>
+        <div class="cz-acciones"><button type="button" class="btn ${hayFilas ? 'btn-ghost' : 'btn-primary'}" id="cz-ex-leer">${hayFilas ? 'Volver a leer' : 'Leer tabla'}</button>
+          ${hayFilas ? `<button type="button" class="btn btn-ghost" data-acc="ex-limpiar">Empezar de nuevo</button>` : ''}
+          <span class="cz-err" id="cz-ex-err" role="alert"></span></div>
+      </div>
+      ${hayFilas ? `
+      <div class="cz-sec">
+        <div class="cz-sec-tit">Cliente</div>
+        <div class="cz-grid3">
+          <div class="field"><label for="cz-ex-nombre">Nombre</label><input id="cz-ex-nombre" data-exf="nombre" value="${esc(x.nombre)}" placeholder="Ulises" maxlength="80"></div>
+          <div class="field"><label for="cz-ex-idioma">Idioma del mensaje</label><select id="cz-ex-idioma" data-exf="idioma">
+            ${[['es','Español'],['en','Inglés'],['pt','Portugués']].map(([v, t]) => `<option value="${v}" ${x.idioma === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+          <div class="field"><label for="cz-ex-wa">WhatsApp (opcional)</label><input id="cz-ex-wa" data-exf="whatsapp" value="${esc(x.whatsapp)}" inputmode="tel"></div>
+        </div>
+      </div>
+      <div class="cz-sec">
+        <div class="cz-sec-tit">Viaje</div>
+        <div class="cz-grid3">
+          <div class="field"><label for="cz-ex-fecha">Fecha del día 1</label><input id="cz-ex-fecha" type="date" data-exf="fecha" value="${esc(x.fecha)}"></div>
+          <div class="field"><label for="cz-ex-pax">Viajeros (adultos)</label><input id="cz-ex-pax" type="number" min="1" max="40" data-exf="pax" value="${esc(x.pax)}"></div>
+          <div class="field"><label for="cz-ex-nac">Nacionalidad</label><input id="cz-ex-nac" data-exf="nacionalidad" list="cz-paises" value="${esc(x.nacionalidad)}" placeholder="México">
+            <datalist id="cz-paises">${CZ_PAISES.map(p => `<option value="${esc(p)}">`).join('')}</datalist></div>
+        </div>
+      </div>
+      <div class="cz-sec">
+        <div class="cz-sec-tit">Filas leídas <span class="spacer"></span><span class="hint" style="font-weight:400">${x.total !== null ? `total del Excel ${czUsd(x.total)} · ` : ''}suma de filas ${czUsd(x.suma)}${x.unidad === 'persona' ? ' por persona' : ''}</span></div>
+        ${avisos.length ? `<div class="cz-alertas">${avisos.join('')}</div>` : ''}
+        <div class="cv-tblwrap"><table class="cz-tabla cz-ex-tabla"><thead><tr><th></th><th>Día</th><th>Concepto</th>${tar ? '<th class="num">Excel</th>' : '<th class="num">Precio</th><th>Unidad</th>'}</tr></thead><tbody>${filas}</tbody></table></div>
+      </div>
+      <div class="cz-acciones">
+        <button type="button" class="btn btn-primary" id="cz-ex-btn">Cotizar</button>
+        <span class="cz-err" id="cz-err" role="alert"></span>
+      </div>` : ''}
+    </div>
+    </div>
+    <div id="cz-res" aria-live="polite"></div>
+  </div>`;
+  czPintarResultado();
+  czEventosExcel();
+  czEventosModo();
+  czEventosGuardar();
+}
+
+function czEventosExcel(){
+  const root = el('cz-root');
+  el('cz-ex-txt').addEventListener('input', e => { czEx.texto = e.target.value; czExGuardar(); });
+  root.addEventListener('input', e => {
+    const t = e.target;
+    if(t.dataset.exf){ czEx[t.dataset.exf] = t.value; czExGuardar(); return; }
+    if(t.dataset.ex === 'dia'){ const f = czEx.filas.find(x => x.n === Number(t.dataset.n)); if(f){ f.dia = t.value; czExGuardar(); } }
+  });
+  root.addEventListener('change', e => {
+    const t = e.target, f = t.dataset.ex && czEx.filas.find(x => x.n === Number(t.dataset.n));
+    if(!f) return;
+    if(t.dataset.ex === 'incluir'){ f.incluir = t.checked; t.closest('tr').dataset.ok = t.checked ? 1 : 0; }
+    if(t.dataset.ex === 'unidad') f.unidad = t.value;
+    if(t.dataset.ex === 'id'){ f.id = t.value; f.origen = (czEx.opciones.find(o => o.id === t.value) || {}).origen || null; }
+    czExGuardar();
+  });
+  root.addEventListener('click', e => {
+    const m = e.target.closest('[data-exmodo]');
+    if(m){
+      if(m.dataset.exmodo === czEx.modo) return;
+      czEx.modo = m.dataset.exmodo; czExRes = null;
+      // Las filas cambian según el modo (en tarifario cada una lleva su servicio): se vuelve a leer.
+      if(czEx.filas.length && czEx.texto.trim()){ czExGuardar(); czExLeer(); return; }
+      czExGuardar(); renderCotizador(true); return;
+    }
+    if(e.target.id === 'cz-ex-leer') return czExLeer();
+    if(e.target.id === 'cz-ex-btn') return czExCotizar();
+    const b = e.target.closest('[data-acc]');
+    if(!b) return;
+    if(b.dataset.acc === 'copiar') czCopiar();
+    if(b.dataset.acc === 'ex-limpiar'){ czEx = { ...CZ_EX_VACIO(), modo: czEx.modo }; czExRes = null; czExGuardar(); renderCotizador(true); }
+  });
+}
+
+async function czExLeer(){
+  if(czCotizando) return;
+  const texto = (el('cz-ex-txt') ? el('cz-ex-txt').value : czEx.texto).trim();
+  const err = el('cz-ex-err');
+  if(!texto){ err.textContent = 'Pegá la tabla copiada del Excel.'; return; }
+  czCotizando = true;
+  const btn = el('cz-ex-leer');
+  btn.disabled = true; btn.textContent = czEx.modo === 'tarifario' ? 'Leyendo y asignando…' : 'Leyendo…';
+  try{
+    const r = await api('/api/cotizador/excel', { method:'POST', body: JSON.stringify({ texto, modo: czEx.modo }) });
+    const pax = String(r.pax || czEx.pax || 2);
+    czEx = { ...czEx, texto, modo: r.modo, opciones: r.opciones || [], avisos: r.avisos || [], sin_precio: r.sin_precio || [],
+      total: r.total_excel, suma: r.suma_filas, unidad: r.unidad || 'persona', pax,
+      fecha: czEx.fecha || r.fecha_viaje || '',
+      filas: (r.filas || []).map(f => ({ n: f.n, incluir: r.modo === 'excel' || !!f.id, dia: f.dia ? String(f.dia) : '', concepto: f.concepto,
+        precio: f.precio_usd, unidad: r.unidad || 'persona', id: f.id || '', origen: f.origen || null })) };
+    if(r.fecha_viaje) czEx.fecha = r.fecha_viaje;
+    czExRes = null;
+    czExGuardar();
+    renderCotizador(true);
+  }catch(e){
+    if(e.message !== 'unauthorized' && el('cz-ex-err')) el('cz-ex-err').textContent = e.message;
+  }finally{
+    czCotizando = false;
+    if(el('cz-ex-leer')) el('cz-ex-leer').disabled = false;
+  }
+}
+
+function czExPedido(){
+  const x = czEx;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(x.fecha)) return { error: 'Falta la fecha del día 1 del viaje.' };
+  if(x.fecha < new Date().toLocaleDateString('en-CA', { timeZone:'America/Lima' })) return { error: 'La fecha del día 1 ya pasó: poné la del viaje nuevo.' };
+  const pax = Number(x.pax);
+  if(!(Number.isInteger(pax) && pax >= 1 && pax <= 40)) return { error: 'Poné cuántos viajeros son (1 a 40).' };
+  if(!x.nacionalidad.trim()) return { error: 'Falta la nacionalidad (cambia entradas y tarifas).' };
+  const usar = x.filas.filter(f => f.incluir);
+  if(!usar.length) return { error: 'Marcá al menos una fila.' };
+  const pedido = { fecha_viaje: x.fecha, viajeros: Array.from({ length: pax }, () => ({ adulto: true, nacionalidad: x.nacionalidad.trim() })), items: [] };
+  if(x.modo === 'excel'){
+    pedido.precios_fijos = usar.map(f => ({ concepto: f.concepto, unitario_usd: String(f.precio), unidad: f.unidad, ...(Number(f.dia) >= 1 ? { dia: Number(f.dia) } : {}) }));
+    return { pedido };
+  }
+  const sinAsignar = usar.filter(f => !f.id);
+  if(sinAsignar.length) return { error: `Asigná un servicio a ${sinAsignar.length === 1 ? 'la fila' : 'las filas'} ${sinAsignar.map(f => f.n).join(', ')} o desmarcala${sinAsignar.length === 1 ? '' : 's'}.` };
+  const sinDia = usar.filter(f => f.origen !== 'entrada' && !(Number(f.dia) >= 1));
+  if(sinDia.length) return { error: `Poné el día de ${sinDia.map(f => f.concepto).join(', ')}.` };
+  pedido.servicios = usar.filter(f => f.origen === 'tarifario').map(f => ({ id: f.id, dia: Number(f.dia) }));
+  pedido.items = usar.filter(f => f.origen === 'catalogo').map(f => ({ id: f.id, dia: Number(f.dia) }));
+  if(usar.some(f => f.origen === 'entrada')) pedido.entradas = ['MP'];
+  if(!pedido.servicios.length) delete pedido.servicios;
+  return { pedido };
+}
+
+async function czExCotizar(){
+  if(czCotizando) return;
+  const { pedido, error } = czExPedido();
+  el('cz-err').textContent = error || '';
+  if(error) return;
+  czCotizando = true;
+  const btn = el('cz-ex-btn');
+  btn.disabled = true; btn.textContent = 'Cotizando…';
+  try{
+    czExRes = await api('/api/cotizador/cotizar', { method:'POST', body: JSON.stringify({ pedido, nombre: czEx.nombre.trim() || null, idioma: czEx.idioma }) });
+    czExRes._cuando = new Date().toISOString();
+    czPintarResultado();
+    if(window.matchMedia('(max-width:1100px)').matches) el('cz-res').scrollIntoView({ behavior:'smooth', block:'start' });
+  }catch(e){
+    if(e.message !== 'unauthorized') el('cz-err').textContent = e.message;
+  }finally{
+    czCotizando = false;
+    if(el('cz-ex-btn')){ el('cz-ex-btn').disabled = false; el('cz-ex-btn').textContent = 'Cotizar'; }
+  }
+}
+
+/* ---- Propuesta: armador de propuestas de Luna Llena (luna-llena-armador, por /api/cotizador/armador/*) ---- */
+// Pegás la cotización (mail, chat, Excel o la que salió del cotizador), la IA la lee, la revisás y arma la página
+// con el diseño de Luna Llena. Es una vista previa para descargar: no publica nada.
+
+let czArActivo = false;
+let czArCat = null;          // { destinos:[{slug,nombre}], excursiones:[{slug,nombre,zona,dias}], paquetes:[{id,titulo,dias,ruta}] }
+let czArCatErr = '';
+const CZ_AR_VACIO = () => ({ paso:'pegar', tipo:'medida', paquete_id:'', texto:'', cot:null, faltantes:[], supuestos:[], res:null, auto:false });
+let czAr = CZ_AR_VACIO();
+const CZ_AR_CATS = ['3★','4★','4★ superior','5★','Boutique','Lodge / hostal'];
+
+async function czArCargarCat(){
+  try{ czArCat = await api('/api/cotizador/armador/catalogo'); czArCatErr = ''; }
+  catch(e){ if(e.message === 'unauthorized') return; czArCatErr = e.message; }
+  if(seccion === 'cotizador' && czModo === 'propuesta') renderCotizador(true);
+}
+
+const czArOpts = (list, sel) => list.map(([v, l]) => `<option value="${esc(v)}" ${v === sel ? 'selected' : ''}>${esc(l)}</option>`).join('');
+const czArDestinos = () => (czArCat.destinos || []).map(d => [d.slug, d.nombre]);
+function czArExcGrupos(sel){
+  const g = {};
+  for(const e of czArCat.excursiones || []) (g[e.zona] = g[e.zona] || []).push([e.slug, e.nombre + (e.dias > 1 ? ` (${e.dias} días)` : '')]);
+  return Object.entries(g).map(([z, l]) => `<optgroup label="${esc(z)}">${czArOpts(l, sel)}</optgroup>`).join('');
+}
+function czArRowCiudad(d = {}){
+  const otra = d.slug === 'otra' || (d.nombre && !d.slug);
+  return `<div class="cz-ar-row cz-ar-ciudad">
+    <div class="field"><label>Ciudad</label><select data-ar="c_slug">${czArOpts(czArDestinos(), d.slug)}<option value="otra" ${otra ? 'selected' : ''}>Otra ciudad…</option></select>
+      <input data-ar="c_otra" placeholder="Nombre de la ciudad" value="${esc(otra ? (d.otra || d.nombre || '') : '')}" ${otra ? '' : 'hidden'}></div>
+    <div class="field"><label>Noches</label><input data-ar="c_noches" type="number" min="1" max="30" value="${esc(d.noches ?? 2)}"></div>
+    <div class="field"><label>Hotel</label><input data-ar="c_hotel" placeholder="Nombre del hotel" value="${esc(d.hotel || '')}"></div>
+    <div class="field"><label>Categoría</label><select data-ar="c_cat">${czArOpts([['','—'], ...CZ_AR_CATS.map(c => [c, c])], d.categoria || '')}</select></div>
+    <div class="field"><label>USD hab/noche</label><input data-ar="c_precio" type="number" min="0" placeholder="opcional" value="${esc(d.precio_noche || '')}"></div>
+    <button type="button" class="cz-x" data-ar-del title="Quitar" aria-label="Quitar ciudad">×</button></div>`;
+}
+function czArRowVuelo(d = {}){
+  return `<div class="cz-ar-row cz-ar-vuelo">
+    <div class="field"><label>Fecha</label><input data-ar="v_fecha" type="date" value="${esc(d.fecha || '')}"></div>
+    <div class="field"><label>Aerolínea y vuelo</label><input data-ar="v_vuelo" placeholder="LA 2013" value="${esc(d.vuelo || '')}"></div>
+    <div class="field"><label>Tramo</label><input data-ar="v_tramo" placeholder="LIM → CUZ" value="${esc(d.tramo || '')}"></div>
+    <div class="field"><label>Horario</label><input data-ar="v_horario" placeholder="06:00 – 07:25" value="${esc(d.horario || '')}"></div>
+    <div class="field"><label>USD p/p</label><input data-ar="v_costo" type="number" min="0" value="${esc(d.costo_pp || '')}"></div>
+    <div class="field"><label>Equipaje</label><input data-ar="v_equipaje" placeholder="23 kg + carry-on" value="${esc(d.equipaje || '')}"></div>
+    <button type="button" class="cz-x" data-ar-del title="Quitar" aria-label="Quitar vuelo">×</button></div>`;
+}
+function czArRowExc(d = {}){
+  const slugs = new Set((czArCat.excursiones || []).map(e => e.slug));
+  const otra = !d.slug || !slugs.has(d.slug);
+  return `<div class="cz-ar-row cz-ar-exc">
+    <div class="field"><label>Día</label><input data-ar="e_dia" type="number" min="1" max="60" value="${esc(d.dia || '')}"></div>
+    <div class="field"><label>Excursión</label><select data-ar="e_slug">${czArExcGrupos(otra ? '' : d.slug)}<option value="otra" ${otra ? 'selected' : ''}>Otra excursión (escribir)…</option></select>
+      <input data-ar="e_otra" placeholder="Nombre de la excursión, como la cotizaste" value="${esc(otra ? (d.nombre || '') : '')}" ${otra ? '' : 'hidden'}></div>
+    <button type="button" class="cz-x" data-ar-del title="Quitar" aria-label="Quitar excursión">×</button></div>`;
+}
+
+function renderPropuesta(host, modos){
+  if(!czArCat){
+    host.innerHTML = modos + `<div id="cz-root" class="cz-root-1"><div class="wb-panel"><div class="pf2-empty">${czArCatErr
+      ? `No se pudo abrir el armador: ${esc(czArCatErr)}<br><button type="button" class="btn btn-ghost" id="cz-ar-reintentar" style="margin-top:var(--s3)">Probar de nuevo</button>`
+      : 'Cargando el armador de propuestas…'}</div></div></div>`;
+    czEventosModo();
+    if(czArCatErr) el('cz-ar-reintentar').addEventListener('click', () => { czArCatErr = ''; renderCotizador(true); });
+    else czArCargarCat();
+    return;
+  }
+  const a = czAr;
+  let cuerpo = '';
+  if(a.paso === 'pegar'){
+    cuerpo = `<div class="ag-sec-h"><h2>Armar una propuesta</h2><span class="hint">la IA lee la cotización; vos la revisás y sale la página con el diseño de Luna Llena</span></div>
+    <div class="wb-panel" id="cz-ar">
+      <div class="cz-sec">
+        <div class="cz-sec-tit">Tipo de propuesta</div>
+        <div class="cz-chips" role="radiogroup" aria-label="Tipo de propuesta">
+          <button type="button" class="cz-chip" data-artipo="medida" aria-pressed="${a.tipo === 'medida'}">Viaje a medida</button>
+          <button type="button" class="cz-chip" data-artipo="paquete" aria-pressed="${a.tipo === 'paquete'}">Paquete de la web</button>
+        </div>
+        ${a.tipo === 'paquete' ? `<div class="field" style="margin-top:var(--s3)"><label for="cz-ar-paq">Paquete</label><select id="cz-ar-paq"><option value="">Elegí un paquete…</option>${
+          (czArCat.paquetes || []).map(p => `<option value="${esc(p.id)}" ${a.paquete_id === p.id ? 'selected' : ''}>${esc(p.titulo)} · ${esc(p.dias)} días · ${esc(p.ruta)}</option>`).join('')}</select></div>` : ''}
+      </div>
+      <div class="cz-sec">
+        <div class="cz-sec-tit">La cotización</div>
+        <textarea class="cz-msg" id="cz-ar-txt" placeholder="Pegá el mail, el chat o la tabla copiada de Excel. Ej.: Hotel Palacio del Inka, 3 noches, 5★ · 1.250 dólares por pasajero en habitación doble · Vuelo LIM-CUZ 14 MAR…">${esc(a.texto)}</textarea>
+        <div class="cz-pie">Si no trae nombre, país o cantidad de personas, los completás en el paso siguiente. Lo que la IA no encuentra queda vacío: no lo inventa.</div>
+      </div>
+      <div class="cz-acciones">
+        <button type="button" class="btn btn-primary" id="cz-ar-leer">Leer la cotización</button>
+        <button type="button" class="btn btn-ghost" id="cz-ar-mano">Cargarla a mano</button>
+        <span class="cz-err" id="cz-ar-err" role="alert"></span>
+      </div>
+    </div>`;
+  } else if(a.paso === 'revisar'){
+    const c = a.cot || {};
+    const p = c.pasajero || {}, v = c.viaje || {}, pr = c.precio || {};
+    const ent = [...(a.faltantes.length ? [`<div class="cz-alerta" data-n="pend"><b>No lo encontró en la cotización:</b> ${a.faltantes.map(esc).join(' · ')}</div>`] : []),
+      ...(a.supuestos.length ? [`<div class="cz-alerta"><b>Interpretó esto, confirmalo:</b> ${a.supuestos.map(esc).join(' · ')}</div>`] : [])];
+    const fld = (id, label, val, extra = '') => `<div class="field"><label for="cz-ar-${id}">${label}</label><input id="cz-ar-${id}" data-arf="${id}" value="${esc(val ?? '')}" ${extra}></div>`;
+    cuerpo = `<div class="ag-sec-h"><h2>Revisá lo que entendió</h2><span class="hint">${a.tipo === 'paquete' ? 'paquete de la web' : 'viaje a medida'} · corregí lo que haga falta</span></div>
+    ${ent.length ? `<div class="cz-alertas">${ent.join('')}</div>` : ''}
+    <div class="wb-panel" id="cz-ar">
+      <div class="cz-sec"><div class="cz-sec-tit">Pasajero</div>
+        <div class="cz-grid3">${fld('nombre', 'Nombre *', p.nombre)}${fld('apellido', 'Apellido *', p.apellido)}${fld('pais', 'País de origen *', p.pais, 'list="cz-paises"')}
+          ${fld('personas', 'Cantidad de personas *', p.personas || 2, 'type="number" min="1" max="30"')}${fld('email', 'Email', p.email, 'type="email"')}${fld('whatsapp', 'WhatsApp', p.whatsapp, 'inputmode="tel"')}</div>
+        <datalist id="cz-paises">${CZ_PAISES.map(x => `<option value="${esc(x)}">`).join('')}</datalist></div>
+      <div class="cz-sec"><div class="cz-sec-tit">Fechas del viaje</div>
+        <div class="cz-grid3">${fld('fecha_inicio', 'Llegada *', v.fecha_inicio, 'type="date"')}${fld('fecha_fin', a.tipo === 'paquete' ? 'Salida' : 'Salida *', v.fecha_fin, 'type="date"')}
+          <div class="field"><label>&nbsp;</label><div class="hint" id="cz-ar-calc"></div></div></div></div>
+      <div class="cz-sec"><div class="cz-sec-tit">Ciudades, en el orden del viaje</div>
+        <div id="cz-ar-ciudades">${(c.ciudades || []).map(czArRowCiudad).join('') || czArRowCiudad({ noches: 2 })}</div>
+        <button type="button" class="btn btn-ghost btn-sm" data-ar-add="ciudad">+ Agregar ciudad</button></div>
+      <div class="cz-sec"><div class="cz-sec-tit">Vuelos internos</div>
+        <div id="cz-ar-vuelos">${(c.vuelos || []).map(czArRowVuelo).join('')}</div>
+        <button type="button" class="btn btn-ghost btn-sm" data-ar-add="vuelo">+ Agregar vuelo</button></div>
+      ${a.tipo === 'paquete' ? '' : `<div class="cz-sec"><div class="cz-sec-tit">Excursiones y actividades <span class="spacer"></span><span class="hint" style="font-weight:400">1 = día de llegada; los días sin excursión quedan libres</span></div>
+        <div id="cz-ar-exc">${(c.excursiones || []).map(czArRowExc).join('')}</div>
+        <button type="button" class="btn btn-ghost btn-sm" data-ar-add="excursion">+ Agregar excursión</button></div>`}
+      <div class="cz-sec"><div class="cz-sec-tit">Precio <span class="spacer"></span><span class="hint" style="font-weight:400">por persona en habitación doble, en dólares</span></div>
+        <div class="cz-grid3">${fld('total_pp', 'Total por persona *', pr.total_pp || '', 'type="number" min="1" step="1"')}${fld('hoteles_pp', 'Hoteles por persona', pr.hoteles_pp || '', 'type="number" min="0" step="1"')}${fld('vuelos_pp', 'Vuelos internos por persona', pr.vuelos_pp || '', 'type="number" min="0" step="1"')}</div></div>
+      <div class="cz-sec"><div class="cz-sec-tit">Incluye / no incluye</div>
+        <div class="field"><label for="cz-ar-incluye">Incluye *</label><textarea id="cz-ar-incluye" data-arf="incluye" placeholder="Un ítem por línea">${esc(c.incluye || '')}</textarea></div>
+        <div class="field"><label for="cz-ar-no_incluye">No incluye</label><textarea id="cz-ar-no_incluye" data-arf="no_incluye">${esc(c.no_incluye || '')}</textarea></div>
+        <div class="field"><label for="cz-ar-notas">Notas para quien arma la propuesta</label><textarea id="cz-ar-notas" data-arf="notas" placeholder="Ocasión del viaje, ritmo, algo que enfatizar…">${esc(c.notas || '')}</textarea></div></div>
+      <div class="cz-acciones">
+        <button type="button" class="btn btn-primary" id="cz-ar-armar">Armar la propuesta</button>
+        <button type="button" class="btn btn-ghost" id="cz-ar-volver">← Volver a la cotización</button>
+        <span class="cz-err" id="cz-ar-err" role="alert"></span>
+      </div>
+      <div class="cz-pie">Puede tardar unos minutos. Podés seguir en otra pestaña del CRM, pero no recargues la página.</div>
+    </div>`;
+  } else {
+    const r = a.res || {};
+    const p = (a.cot && a.cot.pasajero) || {};
+    cuerpo = `<div class="ag-sec-h"><h2>Propuesta lista para revisar</h2><span class="hint">${esc([p.nombre, p.apellido].filter(Boolean).join(' '))} · vista previa: todavía no está publicada</span></div>
+    ${(r.warnings || []).length ? `<div class="cz-alertas"><div class="cz-alerta"><b>Antes de mandarla, revisá esto:</b><ul style="margin:4px 0 0 18px;padding:0">${r.warnings.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div></div>` : ''}
+    <div class="wb-panel" id="cz-ar">
+      <div class="cz-acciones" style="margin-top:0;flex-wrap:wrap">
+        <button type="button" class="btn btn-primary" id="cz-ar-bajar">Descargar HTML</button>
+        <button type="button" class="btn btn-ghost" id="cz-ar-abrir">Abrir en una pestaña</button>
+        <button type="button" class="btn btn-ghost" id="cz-ar-copiarhtml">Copiar HTML</button>
+        <button type="button" class="btn btn-ghost" id="cz-ar-editar">← Corregir datos</button>
+        <button type="button" class="btn btn-ghost" id="cz-ar-otra">Armar otra</button>
+      </div>
+      <iframe class="cz-ar-frame" id="cz-ar-frame" sandbox="allow-scripts allow-popups" title="Vista previa de la propuesta"></iframe>
+      <div class="cz-sec-tit" style="margin-top:var(--s4)">Mensaje para el pasajero</div>
+      <textarea class="cz-msg" id="cz-msg" readonly style="min-height:90px">${esc(r.whatsapp || '')}</textarea>
+      <div class="cz-acciones"><button type="button" class="btn btn-ghost" data-acc="copiar">Copiar mensaje</button></div>
+      <div class="cz-pie">Descargá el archivo y mandáselo al pasajero, o reemplazá [LINK DE LA PROPUESTA] por el link donde la subas.</div>
+    </div>`;
+  }
+  host.innerHTML = modos + `<div id="cz-root" class="cz-root-1"><div>${cuerpo}</div></div>`;
+  if(a.paso === 'listo') el('cz-ar-frame').srcdoc = (a.res && a.res.html) || '';
+  if(a.paso === 'revisar') czArCalc();
+  czEventosPropuesta();
+  czEventosModo();
+  if(a.paso === 'pegar' && a.auto){ a.auto = false; czArLeer(); }
+}
+
+function czArDias(){
+  const i = (el('cz-ar-fecha_inicio') || {}).value, f = (el('cz-ar-fecha_fin') || {}).value;
+  if(!i || !f) return null;
+  const d = Math.round((new Date(f) - new Date(i)) / 86400000);
+  return d > 0 ? d + 1 : null;
+}
+function czArCalc(){
+  const box = el('cz-ar-calc');
+  if(!box) return;
+  const dias = czArDias();
+  const noches = [...document.querySelectorAll('#cz-ar-ciudades [data-ar="c_noches"]')].reduce((s, i) => s + (Number(i.value) || 0), 0);
+  box.innerHTML = dias ? `${dias} días · ${dias - 1} noches · noches cargadas en ciudades: <b style="color:${noches && noches !== dias - 1 ? 'var(--danger)' : 'inherit'}">${noches}</b>` : '';
+}
+
+// Lee el formulario de revisión (la forma que espera el armador en /api/propuesta-generar).
+function czArRecolectar(){
+  const F = id => ((el('cz-ar-' + id) || {}).value || '').trim();
+  const root = el('cz-ar');
+  const q = (r, k) => r.querySelector(`[data-ar="${k}"]`);
+  const dest = czArDestinos();
+  const ciudades = [...root.querySelectorAll('.cz-ar-ciudad')].map(r => {
+    const slug = q(r, 'c_slug').value;
+    const nombre = slug === 'otra' ? q(r, 'c_otra').value.trim() : ((dest.find(d => d[0] === slug) || [])[1] || '');
+    return { slug: slug === 'otra' ? null : slug, nombre, noches: Number(q(r, 'c_noches').value) || 0, hotel: q(r, 'c_hotel').value.trim(),
+      categoria: q(r, 'c_cat').value, precio_noche: Number(q(r, 'c_precio').value) || null };
+  });
+  const vuelos = [...root.querySelectorAll('.cz-ar-vuelo')].map(r => ({ fecha: q(r, 'v_fecha').value, vuelo: q(r, 'v_vuelo').value.trim(), tramo: q(r, 'v_tramo').value.trim(),
+    horario: q(r, 'v_horario').value.trim(), costo_pp: Number(q(r, 'v_costo').value) || 0, equipaje: q(r, 'v_equipaje').value.trim() })).filter(v => v.vuelo || v.tramo);
+  const excs = czArCat.excursiones || [];
+  const excursiones = [...root.querySelectorAll('.cz-ar-exc')].map(r => {
+    const slug = q(r, 'e_slug').value;
+    const nombre = slug === 'otra' ? q(r, 'e_otra').value.trim() : ((excs.find(e => e.slug === slug) || {}).nombre || '');
+    return { dia: Number(q(r, 'e_dia').value) || 0, slug: slug === 'otra' ? null : slug, nombre };
+  }).filter(e => e.nombre);
+  return {
+    pasajero: { nombre: F('nombre'), apellido: F('apellido'), pais: F('pais'), personas: Number(F('personas')) || 0, email: F('email'), whatsapp: F('whatsapp') },
+    viaje: { fecha_inicio: F('fecha_inicio'), fecha_fin: F('fecha_fin'), dias: czArDias() },
+    ciudades, vuelos, excursiones,
+    precio: { moneda: 'USD', total_pp: Number(F('total_pp')) || 0, hoteles_pp: Number(F('hoteles_pp')) || null, vuelos_pp: Number(F('vuelos_pp')) || null },
+    incluye: F('incluye'), no_incluye: F('no_incluye'), notas: F('notas'),
+  };
+}
+
+function czArValidar(p){
+  const e = [];
+  const paq = czAr.tipo === 'paquete';
+  if(!p.pasajero.nombre) e.push('Falta el nombre del pasajero.');
+  if(!p.pasajero.apellido) e.push('Falta el apellido.');
+  if(!p.pasajero.pais) e.push('Falta el país de origen.');
+  if(!p.pasajero.personas) e.push('Falta la cantidad de personas.');
+  if(paq){ if(!p.viaje.fecha_inicio) e.push('Falta la fecha de llegada: el paquete toma de ahí todas las fechas.'); if(!czAr.paquete_id) e.push('Elegí el paquete.'); }
+  else if(!p.viaje.dias) e.push('Las fechas del viaje no cierran (la salida tiene que ser después de la llegada).');
+  if(!p.ciudades.length) e.push('Cargá al menos una ciudad.');
+  p.ciudades.forEach((c, i) => { if(!c.nombre) e.push(`Ciudad ${i + 1}: falta el nombre.`); if(!c.hotel) e.push(`Ciudad ${i + 1} (${c.nombre || '?'}): falta el hotel.`); if(!c.noches && !paq) e.push(`Ciudad ${i + 1}: faltan las noches.`); });
+  if(!p.precio.total_pp) e.push('Falta el precio total por persona.');
+  if(p.precio.total_pp && p.precio.total_pp - (p.precio.hoteles_pp || 0) - (p.precio.vuelos_pp || 0) < 0) e.push('Hoteles + vuelos superan el total por persona.');
+  if(!p.incluye) e.push('Falta qué incluye.');
+  if(!paq) p.excursiones.forEach(x => { if(!x.dia) e.push(`La excursión "${x.nombre}" no tiene día.`); else if(p.viaje.dias && x.dia > p.viaje.dias) e.push(`La excursión "${x.nombre}" está en el día ${x.dia} pero el viaje tiene ${p.viaje.dias} días.`); });
+  return e;
+}
+
+function czEventosPropuesta(){
+  const root = el('cz-root');
+  root.addEventListener('input', e => {
+    if(e.target.id === 'cz-ar-txt') czAr.texto = e.target.value;
+    if(czAr.paso === 'revisar') czArCalc();
+  });
+  root.addEventListener('change', e => {
+    const t = e.target;
+    if(t.id === 'cz-ar-paq') czAr.paquete_id = t.value;
+    if(t.dataset.ar === 'c_slug') t.parentElement.querySelector('[data-ar="c_otra"]').hidden = t.value !== 'otra';
+    if(t.dataset.ar === 'e_slug') t.parentElement.querySelector('[data-ar="e_otra"]').hidden = t.value !== 'otra';
+  });
+  root.addEventListener('click', e => {
+    const t = e.target;
+    const tipo = t.closest('[data-artipo]');
+    if(tipo){ czAr.tipo = tipo.dataset.artipo; if(el('cz-ar-txt')) czAr.texto = el('cz-ar-txt').value; renderCotizador(true); return; }
+    const add = t.closest('[data-ar-add]');
+    if(add){
+      const [box, fila] = { ciudad:['cz-ar-ciudades', () => czArRowCiudad({ noches: 2 })], vuelo:['cz-ar-vuelos', () => czArRowVuelo()], excursion:['cz-ar-exc', () => czArRowExc({ dia: 2 })] }[add.dataset.arAdd];
+      el(box).insertAdjacentHTML('beforeend', fila());
+      czArCalc();
+      return;
+    }
+    if(t.closest('[data-ar-del]')){ t.closest('.cz-ar-row').remove(); czArCalc(); return; }
+    if(t.id === 'cz-ar-leer') return czArLeer();
+    if(t.id === 'cz-ar-mano'){ if(czAr.tipo === 'paquete' && !czAr.paquete_id){ el('cz-ar-err').textContent = 'Elegí el paquete.'; return; } czAr = { ...czAr, paso:'revisar', cot:null, faltantes:[], supuestos:[] }; renderCotizador(true); return; }
+    if(t.id === 'cz-ar-volver'){ czAr.cot = czArRecolectar(); czAr.paso = 'pegar'; renderCotizador(true); return; }
+    if(t.id === 'cz-ar-armar') return czArArmar();
+    if(t.id === 'cz-ar-editar'){ czAr.paso = 'revisar'; renderCotizador(true); return; }
+    if(t.id === 'cz-ar-otra'){ if(!confirm('¿Armar otra propuesta? Se borra esta vista previa.')) return; czAr = CZ_AR_VACIO(); renderCotizador(true); return; }
+    if(t.id === 'cz-ar-bajar') return czArBajar();
+    if(t.id === 'cz-ar-abrir'){ const u = URL.createObjectURL(new Blob([czAr.res.html], { type:'text/html;charset=utf-8' })); window.open(u, '_blank', 'noopener'); setTimeout(() => URL.revokeObjectURL(u), 60000); return; }
+    if(t.id === 'cz-ar-copiarhtml'){ navigator.clipboard.writeText(czAr.res.html).then(() => toast('HTML copiado')).catch(() => {}); return; }
+    const b = t.closest('[data-acc]');
+    if(b && b.dataset.acc === 'copiar') czCopiar();
+  });
+}
+
+async function czArLeer(){
+  if(czCotizando) return;
+  const err = el('cz-ar-err');
+  const texto = (el('cz-ar-txt') ? el('cz-ar-txt').value : czAr.texto).trim();
+  czAr.texto = texto;
+  if(czAr.tipo === 'paquete' && !czAr.paquete_id){ err.textContent = 'Elegí el paquete.'; return; }
+  if(texto.length < 20){ err.textContent = 'Pegá la cotización (mail, chat o tabla de Excel).'; return; }
+  czCotizando = true;
+  const btn = el('cz-ar-leer');
+  btn.disabled = true; btn.textContent = 'Leyendo la cotización… (hasta un minuto)';
+  try{
+    const d = await api('/api/cotizador/armador/extraer', { method:'POST', body: JSON.stringify({ tipo: czAr.tipo, paquete_id: czAr.paquete_id, texto }) });
+    if(!d.ok) throw new Error(d.error || 'No se pudo leer la cotización.');
+    czAr = { ...czAr, paso:'revisar', cot: d.cotizacion, faltantes: d.faltantes || [], supuestos: d.supuestos || [] };
+    if(seccion === 'cotizador' && czModo === 'propuesta') renderCotizador(true);
+  }catch(e){
+    if(e.message !== 'unauthorized' && el('cz-ar-err')) el('cz-ar-err').textContent = e.message;
+  }finally{
+    czCotizando = false;
+    if(el('cz-ar-leer')){ el('cz-ar-leer').disabled = false; el('cz-ar-leer').textContent = 'Leer la cotización'; }
+  }
+}
+
+async function czArArmar(){
+  if(czCotizando) return;
+  const p = czArRecolectar();
+  const errs = czArValidar(p);
+  el('cz-ar-err').innerHTML = errs.map(esc).join('<br>');
+  if(errs.length) return;
+  czAr.cot = p;
+  czCotizando = true;
+  const btn = el('cz-ar-armar');
+  btn.disabled = true; btn.textContent = 'Armando la propuesta… (unos minutos)';
+  try{
+    const d = await api('/api/cotizador/armador/generar', { method:'POST', body: JSON.stringify({ tipo: czAr.tipo, paquete_id: czAr.paquete_id, cotizacion: p }) });
+    if(!d.ok) throw new Error(d.error || 'No se pudo armar la propuesta.');
+    czAr = { ...czAr, paso:'listo', res: d };
+    if(seccion === 'cotizador' && czModo === 'propuesta') renderCotizador(true);
+    else toast('La propuesta está lista en Cotizador › Propuesta');
+  }catch(e){
+    if(e.message !== 'unauthorized' && el('cz-ar-err')) el('cz-ar-err').textContent = e.message + ' Tus datos siguen cargados: probá de nuevo en un minuto.';
+  }finally{
+    czCotizando = false;
+    if(el('cz-ar-armar')){ el('cz-ar-armar').disabled = false; el('cz-ar-armar').textContent = 'Armar la propuesta'; }
+  }
+}
+
+function czArBajar(){
+  const p = (czAr.cot && czAr.cot.pasajero) || {};
+  const nombre = 'propuesta-' + [p.nombre, p.apellido].filter(Boolean).join('-').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '.html';
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([czAr.res.html], { type:'text/html;charset=utf-8' }));
+  a.download = nombre; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+
+// "Armar propuesta" desde una cotización: se arma el texto con lo cotizado y el armador lo lee.
+function czArDesdeCotizacion(r){
+  const p = r.pedido || {}, c = r.cotizacion || {};
+  const nombre = czModo === 'excel' ? czEx.nombre : czModo === 'chat' ? (((czChat.estado || {}).solicitud || {}).nombre || '') : czForm.nombre;
+  const vjs = p.viajeros || [];
+  const nacs = [...new Set(vjs.map(v => v.nacionalidad).filter(Boolean))];
+  const nomServ = id => { const l = (c.lineas || []).find(x => x.id === id); return l ? String(l.concepto).split(' · ')[0] : id; };
+  const filas = [];
+  for(const s of p.servicios || []) filas.push([s.dia || 0, s.noches ? `${nomServ(s.id)}: ${s.noches} noche${s.noches === 1 ? '' : 's'}` : nomServ(s.id)]);
+  for(const it of p.items || []) filas.push([it.dia || 0, (czProd(it.id) || {}).nombre || it.id]);
+  for(const f of p.precios_fijos || []) filas.push([f.dia || 0, f.concepto]);
+  filas.sort((a, b) => a[0] - b[0]);
+  const texto = [
+    `Pasajero: ${nombre || '(sin nombre)'} · ${vjs.length} persona${vjs.length === 1 ? '' : 's'}${nacs.length ? ' · ' + nacs.join(', ') : ''}`,
+    p.fecha_viaje ? `Fecha de llegada (día 1): ${p.fecha_viaje}` : '',
+    '', 'Itinerario:',
+    ...filas.map(([d, t]) => `${d ? 'Día ' + d : 'Sin día'}: ${t}`),
+    '',
+    c.por_persona_usd ? `Precio total por persona: USD ${c.por_persona_usd} (total del grupo USD ${c.total_usd})` : '',
+    'Incluye: ' + [...new Set((c.lineas || []).map(l => String(l.concepto).split(' · ')[0]))].join('; '),
+  ].filter(x => x !== null).join('\n');
+  czAr = { ...CZ_AR_VACIO(), texto, auto: true };
+  czModo = 'propuesta';
+  try{ localStorage.setItem('cz_modo', czModo); }catch(e){}
+  renderCotizador(true);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 /* ---- Guardar en lead (tabla cotizador_cotizaciones; el servidor recotiza antes de guardar) ---- */
 
 let czLeadSel = null;   // id del lead al que se va a guardar (viene de "Cotizar para este lead" o del buscador)
@@ -13849,6 +14409,11 @@ function czEventosGuardar(){
     const b = e.target.closest('[data-lead]');
     if(b){ czLeadSel = Number(b.dataset.lead); const l = leads.find(x => x.id === czLeadSel); el('cz-lead-q').value = l ? leadNombre(l) : ''; el('cz-lead-sug').hidden = true; return; }
     if(e.target.id === 'cz-guardar-btn') czGuardarEnLead();
+    if(e.target.closest('[data-acc="a-propuesta"]')){
+      const r = czModo === 'chat' ? czChat.res : czModo === 'medida' ? czMedOpcion() : czModo === 'excel' ? czExRes : czRes;
+      if(r) czArDesdeCotizacion(r);
+      return;
+    }
     if(el('cz-lead-sug') && !e.target.closest('#cz-guardar .cz-busca')) el('cz-lead-sug').hidden = true;
   });
   res.addEventListener('keydown', e => {
@@ -13861,8 +14426,8 @@ function czEventosGuardar(){
 async function czGuardarEnLead(){
   const err = el('cz-g-err');
   if(!czLeadSel){ err.textContent = 'Elegí el lead.'; return; }
-  const chat = czModo === 'chat', medida = czModo === 'medida';
-  const r = chat ? czChat.res : medida ? czMedOpcion() : czRes;
+  const chat = czModo === 'chat', medida = czModo === 'medida', excel = czModo === 'excel';
+  const r = chat ? czChat.res : medida ? czMedOpcion() : excel ? czExRes : czRes;
   if(!r || !r.pedido){ err.textContent = 'Primero cotizá.'; return; }
   const s = chat ? ((czChat.estado && czChat.estado.solicitud) || {}) : null;
   const cuerpo = {
@@ -13870,10 +14435,11 @@ async function czGuardarEnLead(){
     enviada: el('cz-enviada').checked,
     quien: (typeof ibYo === 'function' ? ibYo() : '') || null,
     pedido: r.pedido,
-    nombre: chat ? s.nombre : (czForm.nombre.trim() || null),
-    idioma: chat ? (s.idioma || 'es') : czForm.idioma,
-    dias_disponibles: chat ? s.dias_disponibles : medida ? null : (Number(czForm.dias) || null),
+    nombre: chat ? s.nombre : excel ? (czEx.nombre.trim() || null) : (czForm.nombre.trim() || null),
+    idioma: chat ? (s.idioma || 'es') : excel ? czEx.idioma : czForm.idioma,
+    dias_disponibles: chat ? s.dias_disponibles : (medida || excel) ? null : (Number(czForm.dias) || null),
     ...(medida ? { titulo: ['A medida', r.ruta && r.ruta.nombre, CZ_CAT_HOTEL[r.categoria]].filter(Boolean).join(' · ') } : {}),
+    ...(excel ? { titulo: czEx.modo === 'tarifario' ? 'Excel · recalculado con el tarifario' : 'Excel · precios del Excel' } : {}),
     nombres: (r.pedido.items || []).map(i => ({ id: i.id, nombre: (czProd(i.id) || {}).nombre || i.id })),
     pagina: !!(el('cz-pagina') && el('cz-pagina').checked),
   };
@@ -13888,7 +14454,8 @@ async function czGuardarEnLead(){
       if(el('cz-msg') && g.mensaje) el('cz-msg').value = g.mensaje;
       const wa = (czForm.whatsapp || '').replace(/\D/g, '');
       const waBtn = el('cz-res').querySelector('a.btn[href^="https://wa.me/"]');
-      if(waBtn && g.mensaje) waBtn.href = `https://wa.me/${czModo === 'chat' ? '' : wa}?text=${encodeURIComponent(g.mensaje)}`;
+      const waDe = czModo === 'chat' ? '' : czModo === 'excel' ? (czEx.whatsapp || '').replace(/\D/g, '') : wa;
+      if(waBtn && g.mensaje) waBtn.href = `https://wa.me/${waDe}?text=${encodeURIComponent(g.mensaje)}`;
       el('cz-g-ok').innerHTML = `<div class="cz-link-ok"><b>Página lista:</b> <a href="${esc(g.link)}" target="_blank" rel="noopener">${esc(g.link)}</a>
         <button type="button" class="btn btn-ghost btn-sm" id="cz-copiar-link">Copiar link</button><span>El mensaje de arriba ya lo incluye.</span></div>`;
       el('cz-copiar-link').addEventListener('click', async () => { try{ await navigator.clipboard.writeText(g.link); toast('Link copiado'); }catch(e){} });
@@ -13942,6 +14509,25 @@ function czAbrirGuardada(l, c){
   if(!czForm.viajeros.length) czForm.viajeros = CZ_VACIO().viajeros;
   czRes = null;
   czGuardar();
+  if(String(c.resumen || '').startsWith('Excel')){
+    // Vuelven las filas tal como se cotizaron; con "recalcular", cada fila con su servicio (los precios salen de nuevo del tarifario).
+    const fijos = p.precios_fijos || [];
+    const nombreDe = id => (czProd(id) || {}).nombre || id;
+    const filas = fijos.length
+      ? fijos.map((f, i) => ({ n: i + 1, incluir: true, dia: f.dia ? String(f.dia) : '', concepto: f.concepto, precio: f.unitario_usd, unidad: f.unidad || 'persona', id: '', origen: null }))
+      : [...(p.servicios || []).map(sv => ({ id: sv.id, dia: sv.dia, origen: 'tarifario' })), ...(p.items || []).map(it => ({ id: it.id, dia: it.dia, origen: 'catalogo' })),
+         ...((p.entradas || []).length ? [{ id: 'entrada:MP', dia: '', origen: 'entrada' }] : [])]
+          .map((f, i) => ({ n: i + 1, incluir: true, dia: f.dia ? String(f.dia) : '', concepto: nombreDe(f.id), precio: null, unidad: 'persona', id: f.id, origen: f.origen }));
+    czEx = { ...CZ_EX_VACIO(), modo: fijos.length ? 'excel' : 'tarifario', filas,
+      opciones: fijos.length ? [] : filas.map(f => ({ id: f.id, origen: f.origen, nombre: f.concepto })),
+      nombre: (l.nombre || '').trim(), idioma: c.idioma || 'es', fecha: p.fecha_viaje || '', pax: String((p.viajeros || []).length || 2),
+      nacionalidad: ((p.viajeros || [])[0] || {}).nacionalidad || '' };
+    czExRes = null;
+    czExGuardar();
+    czIrConLead(l, 'excel');
+    toast('Cotización del Excel cargada: revisá las filas y tocá Cotizar');
+    return;
+  }
   if((p.servicios || []).length){
     // Viaje a medida: se guardó el pedido armado (hoteles y días), no la solicitud. Vuelven los viajeros, la fecha y los
     // tours; los días salen de las estadías guardadas y la ruta se elige de nuevo con los precios de hoy.
