@@ -8,6 +8,9 @@ import { codigoIg } from '../_lib/ig-foto.js';
 //      Los posts que ya están en Ideas (mismo código) no se muestran.
 // POST { filas:[{url, usuario, publicado_en, likes, comentarios, reposts, views, caption}], lote }
 //      agrega a la cola; un post que ya estaba (en cualquier estado) se ignora.
+//      Regla: un post con menos de LIKES_MINIMO likes entra ya descartado.
+
+export const LIKES_MINIMO = 1000;
 
 const num = (v) => {
   const n = Number(String(v ?? '').replace(/[^\d.-]/g, ''));
@@ -34,26 +37,35 @@ export async function onRequestPost({ request, env }) {
   if (!Array.isArray(filas) || !filas.length) return json({ error: 'sin filas' }, 400);
   const now = new Date().toISOString();
   const stmts = [];
+  const flojos = []; // índice de los que entran descartados por likes
   const vistos = new Set();
   for (const f of filas) {
     const codigo = codigoIg(f.url);
     if (!codigo || vistos.has(codigo)) continue;
     vistos.add(codigo);
     const tipo = /\/reels?\//.test(f.url) ? 'reel' : 'p';
+    const likes = num(f.likes);
+    const flojo = likes != null && likes < LIKES_MINIMO;
+    if (flojo) flojos.push(stmts.length);
     stmts.push(env.DB.prepare(
       `INSERT OR IGNORE INTO revisar_cola
-       (codigo, url, usuario, publicado_en, likes, comentarios, reposts, views, caption, lote, creado_en, actualizado_en)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       (codigo, url, usuario, publicado_en, likes, comentarios, reposts, views, caption, lote, estado, creado_en, actualizado_en)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       codigo, `https://www.instagram.com/${tipo}/${codigo}/`, String(f.usuario || '').replace(/^@/, '') || null,
-      f.publicado_en || null, num(f.likes), num(f.comentarios), num(f.reposts), num(f.views),
-      f.caption || null, String(lote).slice(0, 120) || null, now, now,
+      f.publicado_en || null, likes, num(f.comentarios), num(f.reposts), num(f.views),
+      f.caption || null, String(lote).slice(0, 120) || null, flojo ? 'descartado' : 'pendiente', now, now,
     ));
   }
-  let nuevos = 0;
+  let nuevos = 0, pocosLikes = 0;
+  const esFlojo = new Set(flojos);
   for (let i = 0; i < stmts.length; i += 50) {
     const rs = await env.DB.batch(stmts.slice(i, i + 50));
-    nuevos += rs.reduce((s, r) => s + (r.meta?.changes || 0), 0);
+    rs.forEach((r, k) => {
+      const c = r.meta?.changes || 0;
+      nuevos += c;
+      if (esFlojo.has(i + k)) pocosLikes += c;
+    });
   }
-  return json({ ok: true, filas: vistos.size, nuevos, repetidos: vistos.size - nuevos });
+  return json({ ok: true, filas: vistos.size, nuevos, pocos_likes: pocosLikes, likes_minimo: LIKES_MINIMO, repetidos: vistos.size - nuevos });
 }

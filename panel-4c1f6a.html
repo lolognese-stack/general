@@ -6056,7 +6056,8 @@ async function rvSubirCsv(file){
     const filas = rvParsearCsv(await file.text());
     if(!filas.length){ toast('El CSV no tiene posts de Instagram.', { tipo:'error' }); return; }
     const r = await api('/api/revisar', { method:'POST', body:JSON.stringify({ filas, lote:file.name }) });
-    toast(`${r.nuevos} ${r.nuevos === 1 ? 'post nuevo' : 'posts nuevos'} para filtrar${r.repetidos ? ` · ${r.repetidos} ya estaban` : ''}.`);
+    const aFiltrar = r.nuevos - (r.pocos_likes || 0);
+    toast(`${aFiltrar} ${aFiltrar === 1 ? 'post nuevo' : 'posts nuevos'} para filtrar${r.pocos_likes ? ` · ${r.pocos_likes} descartados solos (menos de ${numAbrev(r.likes_minimo)} likes)` : ''}${r.repetidos ? ` · ${r.repetidos} ya estaban` : ''}.`);
     rvPaso = 'descarte';
     await rvCargar();
   }catch(e){
