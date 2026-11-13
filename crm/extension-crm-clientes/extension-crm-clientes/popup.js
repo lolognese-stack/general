@@ -292,13 +292,10 @@ async function cargarExistentes() {
   existentesHook = new Map(ideas.filter((i) => i.tipo === 'hook').map((i) => [i.codigo, i]));
 }
 
-// Por defecto se guarda una idea (formato + ángulo). Tildando "hook" se guarda
-// aparte, en la sección Hooks del CRM, con el texto del hook.
+// Por defecto se guarda una idea. Tildando "hook" se guarda aparte, en la
+// sección Hooks del CRM, con el mismo formulario (formato, ángulo, aplicación).
 function pintarModo() {
   const hook = esHook();
-  document.querySelectorAll('.solo-idea').forEach((n) => { n.hidden = hook; });
-  document.querySelectorAll('.solo-hook').forEach((n) => { n.hidden = !hook; });
-  if (hook) cerrarCombo();
   $('guardar').textContent = hook ? 'Guardar hook' : 'Guardar';
   const codigo = codigoIg($('url').value);
   $('ya-guardada').textContent = hook ? 'Ya está como hook. Al guardar se actualiza.' : 'Ya está en el ideador. Al guardar se actualiza.';
@@ -315,7 +312,6 @@ function precargar(idea) {
   anguloElegido = anguloPorId(id) ? id : '';
   pintarAngulos();
   $('aplicacion').value = idea?.aplicacion || '';
-  $('hook').value = idea?.tipo === 'hook' ? (idea.texto || '') : '';
 }
 
 // --- Vista previa ----------------------------------------------------------
@@ -407,8 +403,8 @@ $('form').addEventListener('submit', async (e) => {
       body: {
         url: urlCanonica(url),
         tipo: hook ? 'hook' : 'post',
-        // Un hook no lleva formato ni ángulo: eso es de la idea.
-        ...(hook ? { texto: $('hook').value.trim() } : { formato: formatoElegido, angulo_ids: angulo ? [angulo] : [] }),
+        formato: formatoElegido,
+        angulo_ids: angulo ? [angulo] : [],
         aplicacion: $('aplicacion').value.trim(),
         caption: vista?.caption || undefined,
         creador: vista?.creador || undefined,
