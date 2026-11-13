@@ -3,7 +3,8 @@ import { codigoIg } from '../_lib/ig-foto.js';
 // Ideas > Revisar: cola de posts subidos desde un CSV de Instagram
 // (ver crm/migracion-057-revisar.sql).
 //
-// GET  la cola pendiente, más likes primero, y cuántos hay en cada estado.
+// GET  lo que falta filtrar (pendiente) o clasificar (pasa), más likes primero,
+//      y cuántos hay en cada estado.
 //      Los posts que ya están en Ideas (mismo código) no se muestran.
 // POST { filas:[{url, usuario, publicado_en, likes, comentarios, reposts, views, caption}], lote }
 //      agrega a la cola; un post que ya estaba (en cualquier estado) se ignora.
@@ -18,7 +19,7 @@ export async function onRequestGet({ request, env }) {
   const [{ results: cola }, { results: conteo }] = await Promise.all([
     env.DB.prepare(
       `SELECT * FROM revisar_cola r
-       WHERE r.estado = 'pendiente'
+       WHERE r.estado IN ('pendiente', 'pasa')
          AND NOT EXISTS (SELECT 1 FROM ideas i WHERE i.codigo = r.codigo)
        ORDER BY COALESCE(r.likes, -1) DESC, r.codigo`
     ).all(),

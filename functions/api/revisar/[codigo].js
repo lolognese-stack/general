@@ -1,8 +1,8 @@
 import { checkToken, json } from '../../_lib/auth.js';
-// PATCH { estado: 'pendiente'|'guardado'|'descartado', idea_id? }
-// "pendiente" es el deshacer del panel.
+// PATCH { estado: 'pendiente'|'pasa'|'guardado'|'descartado', idea_id? }
+// pasa = superó el descarte rápido y espera que se lo clasifique.
 
-const ESTADOS = ['pendiente', 'guardado', 'descartado'];
+const ESTADOS = ['pendiente', 'pasa', 'guardado', 'descartado'];
 
 export async function onRequestPatch({ request, env, params }) {
   if (!checkToken(request, env)) return json({ error: 'unauthorized' }, 401);

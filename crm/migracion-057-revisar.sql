@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS revisar_cola (
   views INTEGER,
   caption TEXT,
   lote TEXT,
-  estado TEXT NOT NULL DEFAULT 'pendiente', -- pendiente | guardado | descartado
+  estado TEXT NOT NULL DEFAULT 'pendiente', -- pendiente | pasa | guardado | descartado
   idea_id INTEGER,
   creado_en TEXT NOT NULL,
   actualizado_en TEXT NOT NULL

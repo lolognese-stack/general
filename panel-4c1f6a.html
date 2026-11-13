@@ -827,7 +827,7 @@ tr:hover .pz-link-edit,.pz-link-edit:focus-visible{opacity:1}
 .id-resumen-fila .id-resumen{margin:0}
 .id-resumen-acc{display:flex;gap:var(--s2);flex-wrap:wrap}
 .id-tipo-audio{position:absolute;top:10px;left:10px;display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;padding:4px 9px;border-radius:7px;background:var(--brand);color:var(--brand-on);box-shadow:var(--shadow)}
-/* Ideas > Revisar (CSV) */
+/* Planificador > Filtro (CSV) */
 .rv-barra{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;margin:0 0 var(--s4)}
 .rv-cuenta{flex:1;min-width:180px;font-size:13px;color:var(--ink-3)}
 .rv-cuenta b{color:var(--ink);font-variant-numeric:tabular-nums}
@@ -852,6 +852,9 @@ tr:hover .pz-link-edit,.pz-link-edit:focus-visible{opacity:1}
 .rv-hook{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-3);cursor:pointer;user-select:none}
 .rv-acciones{display:flex;gap:var(--s2)}
 .rv-acciones .btn{flex:1;justify-content:center}
+.rv-acciones-grandes .btn{min-height:52px;font-size:16px;font-weight:700}
+.rv-acciones kbd{font:inherit;font-size:12px;opacity:.6;margin-left:6px}
+.rv-rapido .rv-panel{max-width:420px}
 @media (max-width:760px){.rv{grid-template-columns:1fr}.rv-video iframe{height:560px}}
 .id-audio-vacio{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--ink-3);background:linear-gradient(160deg,var(--surface-sunk),var(--glacier-soft))}
 .id-audio-artista{font-size:13px;color:var(--ink-2);margin-top:-4px}
@@ -3572,6 +3575,8 @@ function render(){
   // Las ideas no cambian con el polling de leads: si la grilla ya está
   // dibujada no se repinta (perdería el foco del buscador y el scroll).
   if(seccion === 'planificador' && pzVista === 'ideas' && el('id-q')) return;
+  // El filtro tampoco: repintarlo recargaría el video y borraría lo escrito.
+  if(seccion === 'planificador' && pzVista === 'filtro' && el('rv-root')) return;
 
   if(seccion === 'leads') renderLeads();
   else if(seccion === 'ventas') renderVentas();
@@ -3752,7 +3757,7 @@ function sincronizarHash(){
   if(seccion === 'inbox' && ibSel) q.set('c', ibSel);
   if(seccion === 'planificador'){
     q.set('vista', pzVista);
-    if(pzVista !== 'matriz' && pzVista !== 'ideas'){
+    if(pzVista !== 'matriz' && pzVista !== 'ideas' && pzVista !== 'filtro'){
       q.set('periodoTipo', pzFiltro.periodoTipo);
       q.set('periodo', pzFiltro.periodo || 'todos');
       ['estado','formato','lugar'].forEach(k => { if(pzFiltro[k]) q.set(k, pzFiltro[k]); });
@@ -5230,7 +5235,6 @@ function renderIdeador(){
   const body = el('pz-body');
   if(!body) return;
   if(!ideasCargado){ body.innerHTML = `<div class="ag-empty">Cargando ideas…</div>`; cargarIdeas(); return; }
-  if(rvModo){ renderRevisar(); return; }
 
   const lista = idListaFiltrada();
   const nSeccion = idDeSeccion().length;
@@ -5965,6 +5969,7 @@ function pzToolbarIzqHtml(idBoton, textoBoton){
       <button data-v="tabla" aria-current="${pzVista==='tabla'}">Tabla</button>
       <button data-v="calendario" aria-current="${pzVista==='calendario'}">Calendario</button>
       <button data-v="matriz" aria-current="${pzVista==='matriz'}">Matriz de Ángulos</button>
+      <button data-v="filtro" aria-current="${pzVista==='filtro'}">Filtro</button>
       <button data-v="ideas" aria-current="${pzVista==='ideas'}">Ideas</button>
       <button data-v="historias" aria-current="false">Historias</button>
     </div>
@@ -5980,20 +5985,22 @@ function pzWireVswitch(){
   });
 }
 
-/* ---------------- Ideas > Revisar (CSV de Instagram) ----------------
-   Se sube el CSV de un reporte de Instagram (POST URL, LIKES, VIEWS,
-   USERNAME, POST CAPTION…), los posts quedan en una cola en la D1
-   (/api/revisar) y se pasan de a uno: Descartar o Guardar como idea (o hook)
-   con formato, ángulo y aplicación. Lo descartado no vuelve aunque se
-   suba otro CSV con el mismo post. */
+/* ---------------- Filtro (CSV de Instagram, antes de Ideas) ----------------
+   Sección aparte del Planificador. Se sube el CSV de un reporte de Instagram
+   (POST URL, LIKES, VIEWS, USERNAME, POST CAPTION…) y los posts quedan en
+   una cola en la D1 (/api/revisar). Dos pasos:
+     1. Descarte rápido: de a uno, más likes primero, "No va" / "Va".
+     2. Clasificar: a los que pasaron se les pone formato, ángulo y cómo lo
+        aplicaríamos, y recién ahí entran a Ideas (o a Hooks).
+   Lo descartado no vuelve aunque se suba otro CSV con el mismo post. */
 const RV_FORMATOS = ['Narrativo', 'Broll Texto', 'Carrusel', 'Clip/s Paisaje'];
 const RV_ANGULOS = ['Paisaje', 'Itinerario', 'Peru no es solo Machupichu', 'Trekking'];
-let rvModo = false;      // true = Ideas muestra el revisador en vez de la grilla
-let rvCola = null;       // null = sin cargar
+let rvPaso = 'descarte';  // descarte | clasificar
+let rvCola = null;        // null = sin cargar; filas en estado pendiente o pasa
 let rvConteo = {};
 let rvCargando = false;
 let rvDraft = { formato:'', angulo:'', aplicacion:'', hook:false };
-let rvUltimo = null;     // { fila, estado, idea_id } para deshacer
+let rvUltimo = null;      // { fila, estado, antes, idea_id } para deshacer
 let rvOcupado = false;
 
 // CSV con comillas, "" escapadas y saltos de línea dentro del caption.
@@ -6037,10 +6044,10 @@ async function rvCargar(){
     const r = await api('/api/revisar');
     rvCola = r.cola; rvConteo = r.conteo || {};
   }catch(e){
-    if(e.message !== 'unauthorized') toast('No se pudo cargar la cola: ' + e.message, { tipo:'error' });
+    if(e.message !== 'unauthorized') toast('No se pudo cargar el filtro: ' + e.message, { tipo:'error' });
     rvCola = rvCola || [];
   }finally{ rvCargando = false; }
-  if(rvModo && seccion === 'planificador' && pzVista === 'ideas') renderIdeador();
+  if(seccion === 'planificador' && pzVista === 'filtro') renderFiltro();
 }
 
 async function rvSubirCsv(file){
@@ -6049,83 +6056,107 @@ async function rvSubirCsv(file){
     const filas = rvParsearCsv(await file.text());
     if(!filas.length){ toast('El CSV no tiene posts de Instagram.', { tipo:'error' }); return; }
     const r = await api('/api/revisar', { method:'POST', body:JSON.stringify({ filas, lote:file.name }) });
-    toast(`${r.nuevos} ${r.nuevos === 1 ? 'post nuevo' : 'posts nuevos'} para revisar${r.repetidos ? ` · ${r.repetidos} ya estaban` : ''}.`);
+    toast(`${r.nuevos} ${r.nuevos === 1 ? 'post nuevo' : 'posts nuevos'} para filtrar${r.repetidos ? ` · ${r.repetidos} ya estaban` : ''}.`);
+    rvPaso = 'descarte';
     await rvCargar();
   }catch(e){
     if(e.message !== 'unauthorized') toast('No se pudo subir el CSV: ' + e.message, { tipo:'error' });
   }
 }
 
-// La cola sin lo que ya está en Ideas (por si se guardó desde la extensión).
-function rvPendientes(){
+// Lo que ya está en Ideas (por ejemplo, guardado desde la extensión) no se muestra.
+function rvDe(estado){
   const enIdeas = new Set(ideas.map(i => i.codigo).filter(Boolean));
-  return (rvCola || []).filter(f => !enIdeas.has(f.codigo));
+  return (rvCola || []).filter(f => f.estado === estado && !enIdeas.has(f.codigo));
 }
+const rvActual = () => rvDe(rvPaso === 'descarte' ? 'pendiente' : 'pasa')[0];
 
 function rvBtns(lista, elegido, attr){
   return lista.map(([v, l]) => `<button type="button" ${attr}="${esc(v)}" aria-pressed="${String(v) === String(elegido)}">${esc(l)}</button>`).join('');
 }
 
-function renderRevisar(){
+function renderPlanificadorFiltro(){
+  el('view-planificador').innerHTML = `
+    <div class="ag-sec-h">${pzToolbarIzqHtml('rv-subir-btn', 'Subir CSV')}
+      <input type="file" accept=".csv,text/csv" hidden id="rv-csv"></div>
+    <div id="pz-body"></div>`;
+  el('rv-subir-btn').addEventListener('click', () => el('rv-csv').click());
+  el('rv-csv').addEventListener('change', e => { rvSubirCsv(e.target.files[0]); e.target.value = ''; });
+  pzWireVswitch();
+  if(!ideasCargado) cargarIdeas();
+  renderFiltro();
+  sincronizarHash();
+}
+
+function renderFiltro(){
   const body = el('pz-body');
   if(!body) return;
-  if(rvCola === null){ body.innerHTML = `<div class="ag-empty">Cargando la cola…</div>`; rvCargar(); return; }
-  const pend = rvPendientes();
-  const f = pend[0];
-  const hechos = (rvConteo.guardado || 0) + (rvConteo.descartado || 0);
-  const barra = `<div class="rv-barra">
-      <button type="button" class="btn btn-ghost btn-sm" id="rv-salir">← Volver a Ideas</button>
-      <span class="rv-cuenta">${pend.length ? `<b>${pend.length}</b> por revisar` : 'Nada por revisar'} · ${rvConteo.guardado || 0} guardados · ${rvConteo.descartado || 0} descartados</span>
+  if(rvCola === null){ body.innerHTML = `<div class="ag-empty">Cargando el filtro…</div>`; rvCargar(); return; }
+  const nPend = rvDe('pendiente').length, nPasa = rvDe('pasa').length;
+  const f = rvActual();
+  const pasos = `<div class="rv-barra" id="rv-root">
+      <div class="cv-vswitch" id="rv-pasos" role="group" aria-label="Paso del filtro">
+        <button data-paso="descarte" aria-current="${rvPaso === 'descarte'}">1 · Descarte rápido <span class="id-vista-n">${nPend}</span></button>
+        <button data-paso="clasificar" aria-current="${rvPaso === 'clasificar'}">2 · Clasificar <span class="id-vista-n">${nPasa}</span></button>
+      </div>
+      <span class="rv-cuenta">${rvConteo.guardado || 0} pasados a Ideas · ${rvConteo.descartado || 0} descartados</span>
       ${rvUltimo ? `<button type="button" class="btn btn-ghost btn-sm" id="rv-deshacer">Deshacer</button>` : ''}
-      <label class="btn btn-ghost btn-sm rv-subir">Subir CSV<input type="file" accept=".csv,text/csv" hidden id="rv-csv"></label>
     </div>`;
   if(!f){
-    body.innerHTML = barra + `<div class="ag-empty">${hechos ? 'Listo, no queda nada en la cola. Subí otro CSV para seguir.' : 'Subí un CSV de Instagram (el reporte con POST URL, LIKES, VIEWS, USERNAME y POST CAPTION) para revisar los posts de a uno, del que tiene más likes al que tiene menos.'}</div>`;
+    const vacio = rvPaso === 'descarte'
+      ? (nPasa ? `No queda nada por descartar. Seguí con <b>2 · Clasificar</b> (${nPasa}).` : 'Subí un CSV de Instagram (el reporte con POST URL, LIKES, VIEWS, USERNAME y POST CAPTION). Primero descartás rápido los que no van, del de más likes al de menos; después clasificás los que quedaron y pasan a Ideas.')
+      : (nPend ? `No hay nada para clasificar todavía. Pasá primero por <b>1 · Descarte rápido</b> (${nPend}).` : 'Nada para clasificar. Subí otro CSV para seguir.');
+    body.innerHTML = pasos + `<div class="ag-empty">${vacio}</div>`;
     rvWire(null);
     return;
   }
-  body.innerHTML = barra + `
-    <div class="rv">
-      <div class="rv-video"><iframe src="https://www.instagram.com/p/${esc(f.codigo)}/embed/" title="Post de @${esc(f.usuario || '')}" allowfullscreen scrolling="no"></iframe></div>
-      <div class="rv-panel" id="rv-panel">${rvPanelHtml(f)}</div>
-    </div>`;
+  const video = `<div class="rv-video"><iframe src="https://www.instagram.com/p/${esc(f.codigo)}/embed/" title="Post de @${esc(f.usuario || '')}" allowfullscreen scrolling="no"></iframe></div>`;
+  body.innerHTML = pasos + `<div class="rv ${rvPaso === 'descarte' ? 'rv-rapido' : ''}">${video}<div class="rv-panel" id="rv-panel">${rvPanelHtml(f)}</div></div>`;
   rvWire(f);
 }
 
+function rvInfoHtml(f){
+  const n = (v, t) => v != null ? `<span><b>${numAbrev(v)}</b> ${t}</span>` : '';
+  const fecha = f.publicado_en ? new Date(f.publicado_en).toLocaleDateString('es-AR', { day:'numeric', month:'short', year:'numeric' }) : '';
+  return `<div class="rv-cab">
+      <a href="${esc(f.url)}" target="_blank" rel="noopener" class="rv-usuario">@${esc(f.usuario || 'sin usuario')} ↗</a>
+      <span class="rv-fecha">${fecha}</span>
+    </div>
+    <div class="rv-nums">${n(f.views, 'views')}${n(f.likes, 'likes')}${n(f.comentarios, 'com.')}${n(f.reposts, 'reposts')}</div>
+    ${f.caption ? `<details class="rv-caption"><summary>Caption</summary>${esc(f.caption)}</details>` : ''}`;
+}
+
 function rvPanelHtml(f){
+  if(rvPaso === 'descarte') return `${rvInfoHtml(f)}
+    <div class="rv-acciones rv-acciones-grandes">
+      <button type="button" class="btn btn-ghost" id="rv-no">No va <kbd>←</kbd></button>
+      <button type="button" class="btn btn-primary" id="rv-si">Va <kbd>→</kbd></button>
+    </div>
+    <p class="hint">Solo decidís si sirve. Formato, ángulo y aplicación van en el paso 2.</p>`;
   const d = rvDraft;
   const otrosFmt = [...new Set([...FORMATOS, d.formato].filter(x => x && !RV_FORMATOS.includes(x)))];
   const angPrinc = RV_ANGULOS.map(nm => angulosCache.find(a => angNormalizar(a.nombre) === angNormalizar(nm))).filter(Boolean);
   const angEsOtro = !!d.angulo && !angPrinc.some(a => String(a.id) === String(d.angulo));
-  const n = (v, t) => v != null ? `<span><b>${numAbrev(v)}</b> ${t}</span>` : '';
-  const fecha = f.publicado_en ? new Date(f.publicado_en).toLocaleDateString('es-AR', { day:'numeric', month:'short', year:'numeric' }) : '';
-  return `
-        <div class="rv-cab">
-          <a href="${esc(f.url)}" target="_blank" rel="noopener" class="rv-usuario">@${esc(f.usuario || 'sin usuario')} ↗</a>
-          <span class="rv-fecha">${fecha}</span>
-        </div>
-        <div class="rv-nums">${n(f.views, 'views')}${n(f.likes, 'likes')}${n(f.comentarios, 'com.')}${n(f.reposts, 'reposts')}</div>
-        ${f.caption ? `<details class="rv-caption"><summary>Caption</summary>${esc(f.caption)}</details>` : ''}
-        <div class="field"><label>Formato</label>
-          <div class="rv-chips" id="rv-fmt">${rvBtns(RV_FORMATOS.map(x => [x, x]), d.formato, 'data-fmt')}
-            <select id="rv-fmt-otro" aria-label="Otro formato" class="${otrosFmt.includes(d.formato) ? 'on' : ''}"><option value="">Otro…</option>${otrosFmt.map(x => `<option ${x === d.formato ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>
-          </div>
-        </div>
-        <div class="field"><label>Ángulo</label>
-          <div class="rv-chips" id="rv-ang">${rvBtns(angPrinc.map(a => [a.id, a.nombre]), d.angulo, 'data-ang')}
-            <select id="rv-ang-otro" aria-label="Otro ángulo" class="${angEsOtro ? 'on' : ''}"><option value="">Otro…</option>${idOpcionesAngulo(angEsOtro ? d.angulo : '')}</select>
-          </div>
-        </div>
-        <div class="field"><label for="rv-aplicacion">Cómo lo aplicaríamos</label>
-          <textarea id="rv-aplicacion" rows="3" placeholder="Adaptación a la marca, qué cambiaría…">${esc(d.aplicacion)}</textarea>
-        </div>
-        <label class="rv-hook"><input type="checkbox" id="rv-hook" ${d.hook ? 'checked' : ''}> Guardar como hook, no como idea</label>
-        <div class="rv-acciones">
-          <button type="button" class="btn btn-ghost" id="rv-descartar">Descartar</button>
-          <button type="button" class="btn btn-primary" id="rv-guardar">${d.hook ? 'Guardar hook' : 'Guardar idea'}</button>
-        </div>
-        <p class="hint">Atajos: ← descartar · → guardar · Ctrl+Enter en el texto guarda</p>
-`;
+  return `${rvInfoHtml(f)}
+    <div class="field"><label>Formato</label>
+      <div class="rv-chips" id="rv-fmt">${rvBtns(RV_FORMATOS.map(x => [x, x]), d.formato, 'data-fmt')}
+        <select id="rv-fmt-otro" aria-label="Otro formato" class="${otrosFmt.includes(d.formato) ? 'on' : ''}"><option value="">Otro…</option>${otrosFmt.map(x => `<option ${x === d.formato ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>
+      </div>
+    </div>
+    <div class="field"><label>Ángulo</label>
+      <div class="rv-chips" id="rv-ang">${rvBtns(angPrinc.map(a => [a.id, a.nombre]), d.angulo, 'data-ang')}
+        <select id="rv-ang-otro" aria-label="Otro ángulo" class="${angEsOtro ? 'on' : ''}"><option value="">Otro…</option>${idOpcionesAngulo(angEsOtro ? d.angulo : '')}</select>
+      </div>
+    </div>
+    <div class="field"><label for="rv-aplicacion">Cómo lo aplicaríamos</label>
+      <textarea id="rv-aplicacion" rows="3" placeholder="Adaptación a la marca, qué cambiaría…">${esc(d.aplicacion)}</textarea>
+    </div>
+    <label class="rv-hook"><input type="checkbox" id="rv-hook" ${d.hook ? 'checked' : ''}> Guardar como hook, no como idea</label>
+    <div class="rv-acciones">
+      <button type="button" class="btn btn-ghost" id="rv-descartar">Descartar</button>
+      <button type="button" class="btn btn-primary" id="rv-guardar">${d.hook ? 'Pasar a Hooks' : 'Pasar a Ideas'}</button>
+    </div>
+    <p class="hint">Ctrl+Enter en el texto pasa a Ideas.</p>`;
 }
 
 function rvLeer(){
@@ -6134,51 +6165,60 @@ function rvLeer(){
 }
 
 function rvWire(f){
-  el('rv-salir').addEventListener('click', () => { rvModo = false; renderIdeador(); });
-  el('rv-csv').addEventListener('change', e => rvSubirCsv(e.target.files[0]));
+  el('rv-pasos').querySelectorAll('[data-paso]').forEach(b => b.addEventListener('click', () => {
+    rvLeer(); rvPaso = b.dataset.paso; renderFiltro();
+  }));
   const dh = el('rv-deshacer');
   if(dh) dh.addEventListener('click', rvDeshacer);
   if(f) rvWirePanel(f);
 }
 
 function rvWirePanel(f){
+  if(rvPaso === 'descarte'){
+    el('rv-no').addEventListener('click', () => rvMarcar(f, 'descartado'));
+    el('rv-si').addEventListener('click', () => rvMarcar(f, 'pasa'));
+    return;
+  }
   el('rv-fmt').querySelectorAll('[data-fmt]').forEach(b => b.addEventListener('click', () => {
-    rvLeer(); rvDraft.formato = rvDraft.formato === b.dataset.fmt ? '' : b.dataset.fmt; rvRepintarCampos();
+    rvLeer(); rvDraft.formato = rvDraft.formato === b.dataset.fmt ? '' : b.dataset.fmt; rvRepintarPanel();
   }));
-  el('rv-fmt-otro').addEventListener('change', e => { rvLeer(); rvDraft.formato = e.target.value; rvRepintarCampos(); });
+  el('rv-fmt-otro').addEventListener('change', e => { rvLeer(); rvDraft.formato = e.target.value; rvRepintarPanel(); });
   el('rv-ang').querySelectorAll('[data-ang]').forEach(b => b.addEventListener('click', () => {
-    rvLeer(); rvDraft.angulo = rvDraft.angulo === b.dataset.ang ? '' : b.dataset.ang; rvRepintarCampos();
+    rvLeer(); rvDraft.angulo = rvDraft.angulo === b.dataset.ang ? '' : b.dataset.ang; rvRepintarPanel();
   }));
-  el('rv-ang-otro').addEventListener('change', e => { rvLeer(); rvDraft.angulo = e.target.value; rvRepintarCampos(); });
-  el('rv-hook').addEventListener('change', e => { rvLeer(); rvDraft.hook = e.target.checked; rvRepintarCampos(); });
+  el('rv-ang-otro').addEventListener('change', e => { rvLeer(); rvDraft.angulo = e.target.value; rvRepintarPanel(); });
+  el('rv-hook').addEventListener('change', e => { rvLeer(); rvDraft.hook = e.target.checked; rvRepintarPanel(); });
   el('rv-aplicacion').addEventListener('keydown', e => { if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); rvGuardar(f); } });
-  el('rv-descartar').addEventListener('click', () => rvDescartar(f));
+  el('rv-descartar').addEventListener('click', () => rvMarcar(f, 'descartado'));
   el('rv-guardar').addEventListener('click', () => rvGuardar(f));
 }
 
 // Elegir formato o ángulo no recarga el video: solo se re-pinta el panel.
-function rvRepintarCampos(){
-  const f = rvPendientes()[0], p = el('rv-panel');
-  if(!f || !p){ renderRevisar(); return; }
+function rvRepintarPanel(){
+  const f = rvActual(), p = el('rv-panel');
+  if(!f || !p){ renderFiltro(); return; }
   p.innerHTML = rvPanelHtml(f);
   rvWirePanel(f);
 }
 
-function rvSacar(f, estado, idea_id = null){
-  rvCola = rvCola.filter(x => x.codigo !== f.codigo);
+function rvMover(f, estado, idea_id = null){
+  const antes = f.estado;
+  rvConteo[antes] = Math.max(0, (rvConteo[antes] || 1) - 1);
   rvConteo[estado] = (rvConteo[estado] || 0) + 1;
-  rvUltimo = { fila:f, estado, idea_id };
-  rvDraft = { formato:'', angulo:'', aplicacion:'', hook:false };
+  if(estado === 'pasa' || estado === 'pendiente') f.estado = estado;
+  else rvCola = rvCola.filter(x => x.codigo !== f.codigo);
+  rvUltimo = { fila:{ ...f, estado:antes }, estado, antes, idea_id };
+  if(rvPaso === 'clasificar') rvDraft = { formato:'', angulo:'', aplicacion:'', hook:false };
 }
 
-async function rvDescartar(f){
+async function rvMarcar(f, estado){
   if(rvOcupado) return;
   rvOcupado = true;
   try{
-    await api('/api/revisar/' + encodeURIComponent(f.codigo), { method:'PATCH', body:JSON.stringify({ estado:'descartado' }) });
-    rvSacar(f, 'descartado');
-    renderRevisar();
-  }catch(e){ if(e.message !== 'unauthorized') toast('No se pudo descartar: ' + e.message, { tipo:'error' }); }
+    await api('/api/revisar/' + encodeURIComponent(f.codigo), { method:'PATCH', body:JSON.stringify({ estado }) });
+    rvMover(f, estado);
+    renderFiltro();
+  }catch(e){ if(e.message !== 'unauthorized') toast('No se pudo guardar: ' + e.message, { tipo:'error' }); }
   finally{ rvOcupado = false; }
 }
 
@@ -6198,17 +6238,18 @@ async function rvGuardar(f){
     idReemplazar(row);
     await api('/api/revisar/' + encodeURIComponent(f.codigo), { method:'PATCH', body:JSON.stringify({ estado:'guardado', idea_id:row.id }) });
     if(!row.foto_v) api('/api/foto-idea/' + row.id, { method:'POST', body:'{}' }).then(r => { row.foto_v = r.foto_v; }).catch(() => {});
-    rvSacar(f, 'guardado', row.id);
-    renderRevisar();
-    toast(d.hook ? 'Hook guardado.' : 'Idea guardada.');
+    const hook = d.hook;
+    rvMover(f, 'guardado', row.id);
+    renderFiltro();
+    toast(hook ? 'Pasó a Hooks.' : 'Pasó a Ideas.');
   }catch(e){
-    if(e.message !== 'unauthorized') toast('No se pudo guardar: ' + e.message, { tipo:'error' });
+    if(e.message !== 'unauthorized') toast('No se pudo pasar a Ideas: ' + e.message, { tipo:'error' });
     if(btn) btn.disabled = false;
   }finally{ rvOcupado = false; }
 }
 
-// Deshacer: el post vuelve a la cola; si se había guardado, se borra la idea
-// que se creó recién.
+// Deshacer: el post vuelve al estado que tenía; si se había pasado a Ideas,
+// se borra la idea que se creó recién.
 async function rvDeshacer(){
   const u = rvUltimo;
   if(!u || rvOcupado) return;
@@ -6218,33 +6259,33 @@ async function rvDeshacer(){
       await api('/api/ideas/' + u.idea_id, { method:'DELETE' });
       ideas = ideas.filter(i => i.id !== u.idea_id);
     }
-    await api('/api/revisar/' + encodeURIComponent(u.fila.codigo), { method:'PATCH', body:JSON.stringify({ estado:'pendiente' }) });
-    rvCola = [u.fila, ...rvCola];
+    await api('/api/revisar/' + encodeURIComponent(u.fila.codigo), { method:'PATCH', body:JSON.stringify({ estado:u.antes }) });
+    rvCola = [u.fila, ...rvCola.filter(x => x.codigo !== u.fila.codigo)];
     rvConteo[u.estado] = Math.max(0, (rvConteo[u.estado] || 1) - 1);
+    rvConteo[u.antes] = (rvConteo[u.antes] || 0) + 1;
+    rvPaso = u.antes === 'pendiente' ? 'descarte' : 'clasificar';
     rvUltimo = null;
-    renderRevisar();
+    renderFiltro();
   }catch(e){ if(e.message !== 'unauthorized') toast('No se pudo deshacer: ' + e.message, { tipo:'error' }); }
   finally{ rvOcupado = false; }
 }
 
 document.addEventListener('keydown', e => {
-  if(!rvModo || seccion !== 'planificador' || pzVista !== 'ideas' || idDrawerAbierto) return;
+  if(seccion !== 'planificador' || pzVista !== 'filtro' || rvPaso !== 'descarte' || idDrawerAbierto) return;
   if(e.target.closest && e.target.closest('input, textarea, select')) return;
-  const f = rvPendientes()[0];
+  const f = rvActual();
   if(!f) return;
-  if(e.key === 'ArrowLeft'){ e.preventDefault(); rvDescartar(f); }
-  else if(e.key === 'ArrowRight'){ e.preventDefault(); rvGuardar(f); }
+  if(e.key === 'ArrowLeft'){ e.preventDefault(); rvMarcar(f, 'descartado'); }
+  else if(e.key === 'ArrowRight'){ e.preventDefault(); rvMarcar(f, 'pasa'); }
 });
 
 function renderPlanificadorIdeas(){
   el('view-planificador').innerHTML = `
     <div class="ag-sec-h">${pzToolbarIzqHtml('id-add-btn', 'Nueva idea')}
-      <button type="button" class="btn btn-ghost" id="id-add-audio">${ID_NOTA_SVG} Guardar un audio</button>
-      <button type="button" class="btn btn-ghost" id="id-revisar" aria-pressed="${rvModo}">Revisar CSV</button></div>
+      <button type="button" class="btn btn-ghost" id="id-add-audio">${ID_NOTA_SVG} Guardar un audio</button></div>
     <div id="pz-body"></div>`;
   el('id-add-btn').addEventListener('click', () => abrirDrawerIdea(null, idFiltro.tipo === 'hook' ? 'hook' : 'post'));
   el('id-add-audio').addEventListener('click', () => abrirDrawerIdea(null, 'audio'));
-  el('id-revisar').addEventListener('click', () => { rvModo = !rvModo; el('id-revisar').setAttribute('aria-pressed', String(rvModo)); renderIdeador(); });
   pzWireVswitch();
   renderIdeador();
   sincronizarHash();
@@ -6256,6 +6297,7 @@ function renderPlanificador(){
   const tiraViva = document.querySelector('.pz-bandeja-lista');
   if(tiraViva && pzBandejaX !== null) pzBandejaX = tiraViva.scrollLeft;
   if(pzVista === 'ideas'){ renderPlanificadorIdeas(); return; }
+  if(pzVista === 'filtro'){ renderPlanificadorFiltro(); return; }
   const lista = pzFilteredList();
   const enMatriz = pzVista === 'matriz';
   const conPeriodo = pzFiltro.periodoTipo !== 'todo' && !!pzFiltro.periodo;
@@ -8102,6 +8144,7 @@ function renderHistorias(){
           <button data-v="tabla">Tabla</button>
           <button data-v="calendario">Calendario</button>
           <button data-v="matriz">Matriz de Ángulos</button>
+          <button data-v="filtro">Filtro</button>
           <button data-v="ideas">Ideas</button>
           <button data-v="historias" aria-current="true">Historias</button>
         </div>
