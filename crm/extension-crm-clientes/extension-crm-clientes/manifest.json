@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Ideador · CRM de clientes",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Guarda referencias de Instagram en el Ideador del CRM del cliente. Se conecta sola al abrir el panel del CRM.",
   "permissions": ["storage", "activeTab"],
   "host_permissions": ["https://*.pages.dev/*"],

@@ -5,7 +5,7 @@ importScripts('comun.js');
 chrome.runtime.onMessage.addListener((msg, _sender, responder) => {
   if (msg?.tipo !== 'guardados') return false;
   apiCrm('/api/ideas')
-    .then((ideas) => responder({ ok: true, codigos: ideas.map((i) => i.codigo).filter(Boolean) }))
+    .then((ideas) => responder({ ok: true, codigos: ideas.filter((i) => i.tipo !== 'hook').map((i) => i.codigo).filter(Boolean) }))
     .catch((e) => responder({ ok: false, sinConexion: !!e.sinConexion, error: e.message }));
   return true;
 });

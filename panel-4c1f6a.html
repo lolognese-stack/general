@@ -2993,7 +2993,7 @@ const CAMPOS_FORM = [
 // en vez de tabla de lookup. Los ángulos sí son tabla (37, crecen, tienen
 // categoría/relevancia propia): ver angulosCache.
 const ESTADOS  = ["IDEA","Por definir","Definido","Por Hacer","Guionando","Guionado","Editando","Editado","Subido"];
-const FORMATOS = ["Broll Narrativo","Broll Texto","Clips Plan/Experiencia","Clip/s Paisaje","POV Paisaje","Carrusel","Foto con copy","MEME","GRWM","3ra Persona","Versus Victor H","Talking Head"];
+const FORMATOS = ["Narrativo","Broll Texto","Clips Plan/Experiencia","Clip/s Paisaje","POV Paisaje","Carrusel","Foto con copy","MEME","GRWM","3ra Persona","Versus Victor H","Talking Head"];
 // PLANTILLA: pisar por los 10 destinos reales del cliente.
 const LUGARES  = ["Destino 1","Destino 2","Destino 3","Destino 4","Destino 5","Destino 6","Destino 7","Destino 8","Destino 9","Destino 10"];
 
@@ -5019,9 +5019,12 @@ function idPiezaDe(i){
   return i.pieza_id ? piezas.find(p => p.id === i.pieza_id) : null;
 }
 
-// Ideas de la sección en la que se está: los audios son una sección aparte,
-// no cuentan ni aparecen en "Todas".
-const idDeSeccion = (f = idFiltro) => ideas.filter(i => (f.tipo === 'audio') === (i.tipo === 'audio'));
+// Ideas de la sección en la que se está: los audios y los hooks son secciones
+// aparte, no cuentan ni aparecen en "Todas".
+const ID_TIPOS_APARTE = ['audio', 'hook'];
+const idEnSeccion = (i, f = idFiltro) => ID_TIPOS_APARTE.includes(f.tipo) ? i.tipo === f.tipo : !ID_TIPOS_APARTE.includes(i.tipo);
+const idDeSeccion = (f = idFiltro) => ideas.filter(i => idEnSeccion(i, f));
+const ID_NOMBRE_TIPO = { audio:['audio','audios'], hook:['hook','hooks'] };
 
 function idListaFiltrada(f = idFiltro){
   f = { ...ID_FILTRO_BASE, ...f };
@@ -5035,7 +5038,7 @@ function idListaFiltrada(f = idFiltro){
     (!f.angulo || i.angulo_ids.includes(Number(f.angulo))) &&
     (f.uso === 'plan' ? agendada(i) : !agendada(i)) &&
     (f.uso === '' || f.uso === 'todas' || f.uso === 'plan' ? true : (i.uso || '') === (f.uso === 'sin' ? '' : f.uso)) &&
-    (f.tipo === 'audio' ? i.tipo === 'audio' : i.tipo !== 'audio') &&
+    idEnSeccion(i, f) &&
     (!q || angNormalizar([i.texto, i.aplicacion, i.caption, i.transcripcion, i.creador, i.formato, i.audio_nombre, i.audio_artista, ...i.angulo_ids.map(id => (idAngulo(id) || {}).nombre)].join(' ')).includes(q))
   );
   const desc = (k) => (a, b) => (b[k] ?? -1) - (a[k] ?? -1);
@@ -5171,7 +5174,7 @@ function idCardHtml(i){
     : i.uso ? `<span class="id-uso" data-uso="${i.uso}">${i.uso === 'usado' ? 'Usada' : 'Para usar'}</span>` : '';
   const estrellas = (i.formato_score || 0) + (i.angulo_score || 0);
   return `<article class="id-card" data-id="${i.id}" tabindex="0" role="button" aria-label="${esc(titulo || 'Idea')}">
-    <div class="id-media">${foto}${uso}</div>
+    <div class="id-media">${foto}${i.tipo === 'hook' ? '<span class="id-tipo-audio">Hook</span>' : ''}${uso}</div>
     <div class="id-body">
       ${i.formato ? `<span class="id-fmt" style="${pzChipEstiloAttr('formato', i.formato).replace(/^style="|"$/g,'')}">${esc(i.formato)}${i.formato_score ? ` <span class="id-estrellas-mini">${'★'.repeat(i.formato_score)}</span>` : ''}</span>` : ''}
       <p class="id-texto ${titulo ? '' : 'vacio'}">${esc(titulo || 'Sin texto')}</p>
@@ -5226,7 +5229,7 @@ function renderIdeador(){
       </div>
     </div>
     <div class="id-resumen-fila">
-      <p class="id-resumen"><b>${lista.length}</b> ${lista.length === 1 ? (idFiltro.tipo === 'audio' ? 'audio' : 'idea') : (idFiltro.tipo === 'audio' ? 'audios' : 'ideas')}${lista.length !== nSeccion ? ` de ${nSeccion}` : ''} · ${usar} para usar</p>
+      <p class="id-resumen"><b>${lista.length}</b> ${(ID_NOMBRE_TIPO[idFiltro.tipo] || ['idea','ideas'])[lista.length === 1 ? 0 : 1]}${lista.length !== nSeccion ? ` de ${nSeccion}` : ''} · ${usar} para usar</p>
       <span class="id-resumen-acc">
       ${pendientesViews ? `<button type="button" class="btn btn-ghost btn-sm" id="id-traer-views" title="Vuelve a pedirle a Instagram las views de los videos que quedaron sin views (a veces trae solo likes y comentarios)">Traer views de ${pendientesViews} ${pendientesViews === 1 ? 'video' : 'videos'}</button>` : ''}
       ${pendientesDatos ? `<button type="button" class="btn btn-ghost btn-sm" id="id-traer-todo" title="Trae portada, likes, comentarios, creador y caption de Instagram para las ideas que no los tienen">Traer datos de ${pendientesDatos} ${pendientesDatos === 1 ? 'idea' : 'ideas'}</button>` : ''}
@@ -5400,8 +5403,11 @@ function idPintarDrawerAudio(){
 // Lo que comparten los dos formularios: uso, estrellas, ángulos, traer datos.
 function idWireDrawerComun(){
   const host = el('id-drawer-body');
-  host.querySelectorAll('.id-uso-sw button').forEach(b => b.addEventListener('click', () => {
+  host.querySelectorAll('.id-uso-sw button[data-v]').forEach(b => b.addEventListener('click', () => {
     idLeerCampos(); idDraft.uso = b.dataset.v; idPintarDrawer();
+  }));
+  host.querySelectorAll('#id-tipo-sw button').forEach(b => b.addEventListener('click', () => {
+    idLeerCampos(); idDraft.tipo = b.dataset.tipo; idPintarDrawer();
   }));
   host.querySelectorAll('.id-stars').forEach(g => g.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
     const n = Number(b.dataset.n);
@@ -5466,6 +5472,9 @@ function idPintarDrawer(){
         <div class="id-audio-fila"><span class="id-audio-linea">${ID_NOTA_SVG}${esc(idAudioTexto(d))}</span>
         <button type="button" class="btn btn-ghost btn-sm" id="id-guardar-audio">Guardar este audio</button></div>
       </div>` : ''}
+      <div class="field"><label>Guardar como</label>
+        <div class="id-uso-sw" id="id-tipo-sw">${[['post','Idea'],['hook','Hook']].map(([v,l]) => `<button type="button" data-tipo="${v}" aria-pressed="${(d.tipo === 'hook' ? 'hook' : 'post') === v}">${l}</button>`).join('')}</div>
+      </div>
       <div class="field"><label>¿Se usó?</label>
         <div class="id-uso-sw">${ID_USOS.map(u => `<button type="button" data-v="${u.v}" aria-pressed="${(d.uso||'') === u.v}">${u.label}</button>`).join('')}</div>
       </div>
@@ -5482,8 +5491,8 @@ function idPintarDrawer(){
       </div>
     </fieldset>
     <fieldset class="fieldset">
-      <legend>Idea</legend>
-      <div class="field"><label for="id-f-texto">Texto / gancho del video</label><textarea id="id-f-texto" placeholder="Lo que dice en pantalla o el gancho">${esc(d.texto || '')}</textarea></div>
+      <legend>${d.tipo === 'hook' ? 'Hook' : 'Idea'}</legend>
+      <div class="field"><label for="id-f-texto">${d.tipo === 'hook' ? 'El hook: qué dice o muestra en los primeros segundos' : 'Texto / gancho del video'}</label><textarea id="id-f-texto" placeholder="Lo que dice en pantalla o el gancho">${esc(d.texto || '')}</textarea></div>
       <div class="field"><label for="id-f-aplicacion">Cómo lo aplicaría yo</label><textarea id="id-f-aplicacion" placeholder="Adaptación a la marca, qué cambiaría…">${esc(d.aplicacion || '')}</textarea></div>
     </fieldset>
     <fieldset class="fieldset">
@@ -5507,8 +5516,11 @@ function idPintarDrawer(){
     </fieldset>`;
 
   const host = el('id-drawer-body');
-  host.querySelectorAll('.id-uso-sw button').forEach(b => b.addEventListener('click', () => {
+  host.querySelectorAll('.id-uso-sw button[data-v]').forEach(b => b.addEventListener('click', () => {
     idLeerCampos(); idDraft.uso = b.dataset.v; idPintarDrawer();
+  }));
+  host.querySelectorAll('#id-tipo-sw button').forEach(b => b.addEventListener('click', () => {
+    idLeerCampos(); idDraft.tipo = b.dataset.tipo; idPintarDrawer();
   }));
   host.querySelectorAll('.id-stars').forEach(g => g.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
     const n = Number(b.dataset.n);
@@ -5539,7 +5551,7 @@ function idPintarDrawer(){
   const arch = el('id-f-archivo');
   if(arch) arch.addEventListener('change', () => idSubirCaptura(arch.files[0]));
 
-  el('id-drawer-title').textContent = d.id ? 'Idea' : 'Nueva idea';
+  el('id-drawer-title').textContent = d.tipo === 'hook' ? (d.id ? 'Hook' : 'Nuevo hook') : (d.id ? 'Idea' : 'Nueva idea');
   el('id-delete-btn').style.display = d.id ? '' : 'none';
   el('id-pieza-btn').textContent = d.pieza_id && piezas.some(p => p.id === d.pieza_id) ? 'Ver pieza' : 'Pasar a pieza';
 }
@@ -5613,7 +5625,8 @@ async function guardarIdea({ cerrar = true, avisar = true } = {}){
     if(nueva && row.url && !row.foto_v) idTraerDatos({ silencioso:true });
     if(cerrar) cerrarDrawerIdea();
     else idPintarDrawer();
-    if(avisar) toast(row.actualizada ? 'Ese post ya estaba: se actualizó la idea.' : 'Idea guardada.');
+    const h = row.tipo === 'hook';
+    if(avisar) toast(row.actualizada ? `Ese post ya estaba: se actualizó ${h ? 'el hook' : 'la idea'}.` : (h ? 'Hook guardado.' : 'Idea guardada.'));
     return row;
   }catch(e){
     if(e.message !== 'unauthorized') toast('No se pudo guardar: ' + e.message, { tipo:'error' });
@@ -5945,7 +5958,7 @@ function renderPlanificadorIdeas(){
     <div class="ag-sec-h">${pzToolbarIzqHtml('id-add-btn', 'Nueva idea')}
       <button type="button" class="btn btn-ghost" id="id-add-audio">${ID_NOTA_SVG} Guardar un audio</button></div>
     <div id="pz-body"></div>`;
-  el('id-add-btn').addEventListener('click', () => abrirDrawerIdea(null));
+  el('id-add-btn').addEventListener('click', () => abrirDrawerIdea(null, idFiltro.tipo === 'hook' ? 'hook' : 'post'));
   el('id-add-audio').addEventListener('click', () => abrirDrawerIdea(null, 'audio'));
   pzWireVswitch();
   renderIdeador();

@@ -43,7 +43,7 @@
     </div>
     <p id="ya-guardada" class="ya" hidden>Ya está en el ideador. Al guardar se actualiza.</p>
 
-    <div class="campo">
+    <div class="campo solo-idea">
       <span id="formato-tit">Formato</span>
       <div class="chips" role="group" aria-labelledby="formato-tit">
         <span id="formato-chips" class="chips-in"></span>
@@ -51,7 +51,7 @@
       </div>
     </div>
 
-    <div class="campo">
+    <div class="campo solo-idea">
       <span id="angulo-tit">Ángulo</span>
       <div class="chips" role="group" aria-labelledby="angulo-tit">
         <span id="angulo-chips" class="chips-in"></span>
@@ -81,10 +81,17 @@
       </div>
     </div>
 
+    <label class="campo solo-hook" hidden>
+      <span>Hook</span>
+      <textarea id="hook" rows="2" placeholder="Qué dice o muestra en los primeros segundos"></textarea>
+    </label>
+
     <label class="campo">
       <span>Aplicación</span>
       <textarea id="aplicacion" rows="3" placeholder="¿Cómo lo usaríamos?"></textarea>
     </label>
+
+    <label class="es-hook"><input type="checkbox" id="es-hook"> Guardar como hook, no como idea</label>
 
     <button id="guardar" type="submit" class="primario">Guardar</button>
     <p id="estado" class="estado" role="status"></p>

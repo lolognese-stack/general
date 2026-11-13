@@ -7,11 +7,15 @@ const EMBEBIDO = params.has('embebido');
 const $ = (id) => document.getElementById(id);
 
 // Los que más se usan van como botones; el resto, en "Otro…".
-const FORMATOS_PRINCIPALES = ['Broll Texto', 'Carrusel', 'Clip/s Paisaje'];
-const ANGULOS_PRINCIPALES = ['Paisaje', 'Itinerario'];
+const FORMATOS_PRINCIPALES = ['Narrativo', 'Broll Texto', 'Carrusel', 'Clip/s Paisaje'];
+// Por nombre, tal como está en el CRM (sin importar tildes ni mayúsculas).
+const ANGULOS_PRINCIPALES = ['Paisaje', 'Itinerario', 'Peru no es solo Machupichu', 'Trekking'];
 
 let formatoElegido = '';
 let existentes = new Map(); // codigo -> idea ya guardada
+let existentesHook = new Map(); // codigo -> hook ya guardado (es otra ficha del mismo post)
+const esHook = () => $('es-hook').checked;
+const guardadas = () => (esHook() ? existentesHook : existentes);
 let vista = null;           // lo que devolvió /api/ig-datos para el link actual
 let pedidoVista = 0;
 
@@ -283,9 +287,25 @@ $('nuevo-nombre').addEventListener('keydown', (e) => {
 for (const c of CATEGORIAS_ANGULO) $('nuevo-categoria').append(opcion(c, c));
 
 async function cargarExistentes() {
-  const ideas = await apiCrm('/api/ideas');
-  existentes = new Map(ideas.filter((i) => i.codigo).map((i) => [i.codigo, i]));
+  const ideas = (await apiCrm('/api/ideas')).filter((i) => i.codigo && i.tipo !== 'audio');
+  existentes = new Map(ideas.filter((i) => i.tipo !== 'hook').map((i) => [i.codigo, i]));
+  existentesHook = new Map(ideas.filter((i) => i.tipo === 'hook').map((i) => [i.codigo, i]));
 }
+
+// Por defecto se guarda una idea (formato + ángulo). Tildando "hook" se guarda
+// aparte, en la sección Hooks del CRM, con el texto del hook.
+function pintarModo() {
+  const hook = esHook();
+  document.querySelectorAll('.solo-idea').forEach((n) => { n.hidden = hook; });
+  document.querySelectorAll('.solo-hook').forEach((n) => { n.hidden = !hook; });
+  if (hook) cerrarCombo();
+  $('guardar').textContent = hook ? 'Guardar hook' : 'Guardar';
+  const codigo = codigoIg($('url').value);
+  $('ya-guardada').textContent = hook ? 'Ya está como hook. Al guardar se actualiza.' : 'Ya está en el ideador. Al guardar se actualiza.';
+  $('ya-guardada').hidden = !(codigo && guardadas().has(codigo));
+  if (codigo && guardadas().has(codigo)) precargar(guardadas().get(codigo));
+}
+$('es-hook').addEventListener('change', pintarModo);
 
 // Si el post ya estaba, el formulario arranca con lo que tiene en el CRM.
 function precargar(idea) {
@@ -295,6 +315,7 @@ function precargar(idea) {
   anguloElegido = anguloPorId(id) ? id : '';
   pintarAngulos();
   $('aplicacion').value = idea?.aplicacion || '';
+  $('hook').value = idea?.tipo === 'hook' ? (idea.texto || '') : '';
 }
 
 // --- Vista previa ----------------------------------------------------------
@@ -307,10 +328,10 @@ async function actualizarVista() {
   const codigo = codigoIg($('url').value);
   const pedido = ++pedidoVista;
   vista = null;
-  $('ya-guardada').hidden = !(codigo && existentes.has(codigo));
+  $('ya-guardada').hidden = !(codigo && guardadas().has(codigo));
   if (!codigo) { $('vista').hidden = true; return; }
 
-  if (existentes.has(codigo)) precargar(existentes.get(codigo));
+  if (guardadas().has(codigo)) precargar(guardadas().get(codigo));
   $('vista').hidden = false;
   $('vista').classList.add('cargando');
   $('vista-img').removeAttribute('src');
@@ -380,12 +401,14 @@ $('form').addEventListener('submit', async (e) => {
   $('estado').className = 'estado';
   try {
     const angulo = Number(anguloElegido);
+    const hook = esHook();
     const idea = await apiCrm('/api/ideas', {
       method: 'POST',
       body: {
         url: urlCanonica(url),
-        formato: formatoElegido,
-        angulo_ids: angulo ? [angulo] : [],
+        tipo: hook ? 'hook' : 'post',
+        // Un hook no lleva formato ni ángulo: eso es de la idea.
+        ...(hook ? { texto: $('hook').value.trim() } : { formato: formatoElegido, angulo_ids: angulo ? [angulo] : [] }),
         aplicacion: $('aplicacion').value.trim(),
         caption: vista?.caption || undefined,
         creador: vista?.creador || undefined,
@@ -395,14 +418,19 @@ $('form').addEventListener('submit', async (e) => {
       },
     });
     const conPortada = await guardarPortada(idea);
-    existentes.set(codigo, idea);
+    guardadas().set(codigo, idea);
     $('ya-guardada').hidden = false;
-    $('estado').textContent = (idea.actualizada ? 'Actualizada en el ideador' : 'Guardada en el ideador')
+    $('estado').textContent = (hook
+      ? (idea.actualizada ? 'Hook actualizado' : 'Hook guardado')
+      : (idea.actualizada ? 'Actualizada en el ideador' : 'Guardada en el ideador'))
       + (conPortada ? '' : ' (sin portada)');
     $('estado').className = 'estado ok';
     // El content script de Instagram escucha esto para marcar el botón.
-    chrome.storage.local.set({ ultimaGuardada: { codigo, t: Date.now() } });
-    avisarPadre({ tipo: 'guardada', codigo });
+    // (un hook no marca el botón: el botón dice si el post está como idea)
+    if (!hook) {
+      chrome.storage.local.set({ ultimaGuardada: { codigo, t: Date.now() } });
+      avisarPadre({ tipo: 'guardada', codigo });
+    }
     if (EMBEBIDO) setTimeout(cerrar, 1400);
   } catch (err) {
     manejarError(err);

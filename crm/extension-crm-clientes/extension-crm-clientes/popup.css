@@ -9,7 +9,6 @@
 }
 
 * { box-sizing: border-box; }
-[hidden] { display: none !important; }
 
 body {
   width: 360px;
@@ -162,3 +161,8 @@ input:focus, select:focus, textarea:focus, button:focus-visible {
 .estado.ok { color: var(--crm-tinta); font-weight: 600; }
 .estado.error { color: #B42318; }
 
+
+/* Guardar como hook (excepción: por defecto se guarda una idea) */
+.es-hook { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--apagado); cursor: pointer; user-select: none; }
+.es-hook input { margin: 0; accent-color: var(--crm-tinta); }
+[hidden] { display: none !important; }

@@ -57,7 +57,11 @@ export async function onRequestPost({ request, env }) {
       `SELECT id, angulo_ids FROM ideas WHERE tipo = 'audio' AND lower(audio_nombre) = lower(?) AND lower(COALESCE(audio_artista, '')) = lower(?)`
     ).bind(datos.audio_nombre, datos.audio_artista || '').first();
   } else if (datos.codigo) {
-    previa = await env.DB.prepare(`SELECT id, angulo_ids FROM ideas WHERE codigo = ? AND COALESCE(tipo, 'post') != 'audio'`).bind(datos.codigo).first();
+    // Un hook es otra ficha del mismo post: se puede guardar como idea y,
+    // aparte, como hook, sin que una pise a la otra.
+    previa = datos.tipo === 'hook'
+      ? await env.DB.prepare(`SELECT id, angulo_ids FROM ideas WHERE codigo = ? AND tipo = 'hook'`).bind(datos.codigo).first()
+      : await env.DB.prepare(`SELECT id, angulo_ids FROM ideas WHERE codigo = ? AND COALESCE(tipo, 'post') NOT IN ('audio', 'hook')`).bind(datos.codigo).first();
   }
   if (previa) {
     // Los ángulos se suman: volver a guardar desde la extensión (un solo
