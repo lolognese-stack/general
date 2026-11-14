@@ -24,13 +24,14 @@ import {
   TIPOS_SERVICIO, CATEGORIAS,
 } from '../../_lib/tarifario.js';
 import {
-  listarPedidos, pedidosDe, crearPedido, verPedido, editarPedido, estadoPedido, rearmar, nuevaVersion,
+  listarPedidos, pedidosDe, crearPedido, crearPedidoExcel, verPedido, editarPedido, estadoPedido, rearmar, nuevaVersion,
   vistaCotizacion, editarCotizacion, agregarLinea, editarLinea, borrarLinea, cambiosCotizacion,
 } from '../../_lib/ct-cotizaciones.js';
 import { mandarARevision, aprobar, pedirCambios } from '../../_lib/ct-revision.js';
 import { paraPropuesta } from '../../_lib/ct-propuesta.js';
 import { cargarCatalogo, esVigente, elegirVariante } from '../../_lib/ct-cotizaciones.js';
 import { leerTanda, vistaDiferencias, aplicarTanda, cerrarLectura, listaWeb } from '../../_lib/ct-web.js';
+import { leerTexto } from '../../_lib/ct-importar.js';
 import { propuestaDePedido, generarPropuesta, verPropuesta, listarPropuestas, vistaPropuesta, editarPropuesta, publicarPropuesta, retirarPropuesta } from '../../_lib/ct-propuestas.js';
 
 const CONFIG = {
@@ -350,6 +351,9 @@ export async function onRequest({ request, env, params }) {
 
   try {
     if (recurso === 'tarifario' && m === 'GET') return json(await getTarifario(env));
+    // Fase 5: pegar un chat o subir un Excel (la IA solo lee; el panel muestra lo leído antes de crear nada)
+    if (recurso === 'leer-texto' && m === 'POST') return leerTexto(env, body);
+    if (recurso === 'pedido-excel' && m === 'POST') return crearPedidoExcel(env, body, por);
     if (recurso === 'pedidos') {
       if (!id && !sub && m === 'GET') {
         const q = new URL(request.url).searchParams;

@@ -230,18 +230,45 @@ export async function pedidosDe(env, leadId, convId) {
   return json({ pedidos: r.results });
 }
 
-export async function crearPedido(env, body, por) {
-  const { errores, d } = leerPedido(body);
-  if (errores.length) return json({ error: errores.join('; ') }, 400);
+async function insertarPedido(env, d, por) {
   const r = await env.DB.prepare(`INSERT INTO ct_pedidos (lead_id, nombre, pais, fecha_inicio, fecha_fin, pasajeros, destinos, servicios, categoria_hotel, pedidos_especiales, creado_por, dias, fecha_tentativa, conversacion_id, origen)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(d.lead_id, d.nombre, d.pais, d.fecha_inicio, d.fecha_fin, d.pasajeros, JSON.stringify(d.destinos), JSON.stringify(d.servicios), d.categoria_hotel, d.pedidos_especiales, por, d.dias, d.fecha_tentativa, d.conversacion_id, d.origen).run();
   const id = r.meta.last_row_id;
   await env.DB.prepare(`INSERT INTO ct_pedido_estados (pedido_id, estado, por) VALUES (?, 'nuevo', ?)`).bind(id, por).run();
+  return id;
+}
+
+export async function crearPedido(env, body, por) {
+  const { errores, d } = leerPedido(body);
+  if (errores.length) return json({ error: errores.join('; ') }, 400);
+  const id = await insertarPedido(env, d, por);
   // El sistema arma el borrador solo.
   const ids = await generarCotizaciones(env, { ...d, id }, 'sistema');
   await cambiarEstado(env, id, 'borrador_listo', 'sistema', ids.length > 1 ? 'Dos borradores armados (A y B): los días no alcanzan' : 'Borrador armado automáticamente');
   for (const cid of ids) await vistaCotizacion(env, cid);
   return json({ ok: true, id, cotizacion_id: ids[0], cotizaciones: ids });
+}
+
+// Fase 5: cotización desde un Excel. Los precios son los del Excel (de venta, sin margen); no se arma itinerario ni se mira el tarifario.
+// body = { pedido, lineas: [{ dia, descripcion, total_grupo_cent }] } (lo que devolvió /api/ct/leer-texto, ya revisado en el panel).
+export async function crearPedidoExcel(env, body, por) {
+  const { errores, d } = leerPedido({ ...(body.pedido || {}), origen: 'excel' });
+  const filas = (Array.isArray(body.lineas) ? body.lineas : []).slice(0, 120).map((l) => ({
+    dia: Number.isInteger(Number(l && l.dia)) && Number(l.dia) >= 1 && Number(l.dia) <= 90 ? Number(l.dia) : 1,
+    descripcion: texto(l && l.descripcion, 200), cent: Math.round(Number(l && l.total_grupo_cent)),
+  })).filter((l) => l.descripcion && Number.isFinite(l.cent) && l.cent >= 0);
+  if (!filas.length) errores.push('el Excel no trajo líneas con precio');
+  if (errores.length) return json({ error: errores.join('; ') }, 400);
+  const id = await insertarPedido(env, d, por);
+  const lineas = filas.map((l, i) => ({
+    dia: l.dia, orden: i, fecha: d.fecha_inicio ? new Date(Date.parse(d.fecha_inicio + 'T12:00:00Z') + (l.dia - 1) * 86400e3).toISOString().slice(0, 10) : null,
+    tipo: 'manual', descripcion: l.descripcion, pasajeros: d.pasajeros, cantidad: 1, neto_cent: l.cent, precio_es_venta: 1,
+    origen_precio: 'excel', nota: 'Precio del Excel (de venta)',
+  }));
+  const cid = await crearCotizacion(env, { ...d, id }, por, { lineas, extra: { avisos: ['Cotización importada de un Excel: los precios son los del Excel, sin margen. No se armó itinerario ni se miró el tarifario.'] } });
+  await cambiarEstado(env, id, 'borrador_listo', por, 'Importado de un Excel');
+  const v = await vistaCotizacion(env, cid);
+  return json({ ok: true, id, cotizacion_id: cid, total_venta_cent: v.totales.venta_cent });
 }
 
 export async function verPedido(env, id) {
@@ -290,6 +317,7 @@ export async function estadoPedido(env, id, body, por) {
 export async function rearmar(env, id, por) {
   const p = pedidoDe(await env.DB.prepare(`SELECT * FROM ct_pedidos WHERE id = ?`).bind(id).first());
   if (!p) return json({ error: 'No existe' }, 404);
+  if (p.origen === 'excel') return json({ error: 'Este pedido viene de un Excel: se corrige editando sus líneas, no se vuelve a armar' }, 409);
   const cot = await ultimaCotizacion(env, id);
   if (cot && !EDITABLES.includes(cot.estado)) return json({ error: 'La última versión está aprobada: creá una versión nueva' }, 409);
   if (!cot) { const ids = await generarCotizaciones(env, p, por); return json({ ok: true, cotizacion_id: ids[0], cotizaciones: ids }); }

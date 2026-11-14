@@ -2574,10 +2574,6 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
         <span>Web</span>
       </button>
-      <button type="button" onclick="location.href='/propuestas-4c1f6a'" title="Quién abrió cada propuesta">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg>
-        <span>Propuestas</span>
-      </button>
       <button data-seccion="cotizaciones" title="Tarifario, pedidos y cotizaciones internas">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.5 7h7M8.5 11h1M12 11h1M15.5 11h0M8.5 14.5h1M12 14.5h1M8.5 18h1M12 18h1M15.5 14.5v3.5"/></svg>
         <span>Cotizaciones</span>
@@ -13795,7 +13791,7 @@ function czDesde(p){
 async function cotizadorInit(){
   try{ const est = await api('/api/cotizador/estado'); czActivo = !!est.activo; czArActivo = !!est.armador; }
   catch(e){ czActivo = false; }   // CRM sin cotizador (otros clientes): la pestaña no aparece
-  el('nav-cotizador').hidden = !czActivo;
+  el('nav-cotizador').hidden = true;   // fase 5: el cotizador viejo se retira del menú; sus cotizaciones guardadas se siguen viendo en cada lead
   if(!czActivo){ if(seccion === 'cotizador') irA('leads'); return; }
   // Viene de Cotizaciones (cotización aprobada, "Abrir en el armador"): abre Propuesta con el texto ya cargado.
   // Sin auto: la lectura con IA (API paga) la dispara la persona con el botón.
@@ -17507,6 +17503,8 @@ async function pintar() {
   try {
     if (tab === 'pedidos') return await pintarPedidos();
     if (tab === 'nuevo') return await pintarFormPedido(null);
+    if (tab === 'pegar-chat') return pintarPegar('chat');
+    if (tab === 'pegar-excel') return pintarPegar('excel');
     let m;
     if ((m = tab.match(/^pedido\/(\d+)$/))) return await pintarPedido(Number(m[1]));
     if ((m = tab.match(/^editar\/(\d+)$/))) return await pintarFormPedido((await api(`pedidos/${m[1]}`)).pedido);
@@ -17578,23 +17576,103 @@ async function pintarPedidos() {
       <small>${esc(p.destinos.map((d) => d.ciudad).join(' · '))}</small>
       ${p.total_venta_cent ? `<small><b>${usd(Math.round(p.total_venta_cent / p.pasajeros))}</b> p/p · v${p.version}${p.problemas ? ` · <span class="err">${p.problemas} sin precio</span>` : ''}</small>` : ''}
       <span class="hace" title="Tiempo en este estado">hace ${haceCuanto(p.estado_desde)}</span></a>`;
-  $('#ct-raiz').innerHTML = `<div class="barra"><button class="prim" type="button" id="ct-nuevo-ped">+ Pedido</button><span style="flex:1"></span>
+  $('#ct-raiz').innerHTML = `<div class="barra"><button class="prim" type="button" id="ct-nuevo-ped">+ Pedido</button><button type="button" id="ct-pegar-chat" title="Pega la conversación con el cliente y la IA saca los datos del viaje">Pegar chat</button><button type="button" id="ct-pegar-excel" title="Sube o pega un presupuesto en Excel: entra como cotización con sus precios">Pegar / subir Excel</button><span style="flex:1"></span>
       <label class="check"><input type="checkbox" id="ct-ver-cerr" ${verCerrados ? 'checked' : ''}> Ver cerrados y perdidos</label></div>
     <div class="tablero">${visibles.map(([k, n]) => { const ps = j.pedidos.filter((p) => p.estado === k); return `<section class="col"><h4>${n} <span>${ps.length}</span></h4>${ps.map(tarjeta).join('') || '<p class="nota">—</p>'}</section>`; }).join('')}</div>`;
   $('#ct-nuevo-ped').addEventListener('click', () => irA('nuevo'));
+  $('#ct-pegar-chat').addEventListener('click', () => irA('pegar-chat'));
+  $('#ct-pegar-excel').addEventListener('click', () => irA('pegar-excel'));
   $('#ct-ver-cerr').addEventListener('change', (e) => { verCerrados = e.target.checked; pintarPedidos(); });
 }
 
 function irA(h) { location.hash = '#/cotizaciones/' + h; }
 
+// ---------- fase 5: pegar un chat / subir un Excel ----------
+const MAX_TEXTO_PEGADO = 24000;
+async function excelATexto(file) {
+  const X = await xlsx();
+  const buf = await file.arrayBuffer();
+  const esCsv = /\.csv$/i.test(file.name) || file.type === 'text/csv';
+  const wb = esCsv ? X.read(new TextDecoder('utf-8').decode(buf), { type: 'string', raw: true }) : X.read(buf, { type: 'array', cellDates: true });
+  return wb.SheetNames.map((n) => `## ${n}\n${X.utils.sheet_to_csv(wb.Sheets[n], { FS: '\t', blankrows: false })}`).join('\n\n');
+}
+
+function pintarPegar(modo) {
+  const ex = modo === 'excel';
+  $('#ct-raiz').innerHTML = `<p><a href="#/cotizaciones/pedidos">← Volver</a></p>
+    <div class="panel"><h2>${ex ? 'Cotización desde un Excel' : 'Pedido desde un chat'}</h2>
+      <p class="nota">${ex ? 'Sube el Excel (.xlsx o .csv) o pega la tabla. La IA lee los precios tal como están (en dólares) y la cotización queda con esos precios, sin margen ni tarifario. Antes de crear se muestra lo que leyó.' : 'Pega la conversación con el cliente. La IA saca los datos del viaje y abre el formulario del pedido para que lo revises. No cotiza.'}</p>
+      ${ex ? '<p><input type="file" id="ct-pg-arch" accept=".xlsx,.xls,.csv"></p>' : ''}
+      <textarea id="ct-pg-txt" rows="12" maxlength="${MAX_TEXTO_PEGADO}" style="width:100%;box-sizing:border-box" placeholder="${ex ? 'O pega acá las celdas del Excel' : 'Pega acá el chat con el cliente'}"></textarea>
+      <div class="barra" style="margin-top:10px"><button class="prim" type="button" id="ct-pg-leer">Leer con IA</button><span class="msg" id="ct-pg-msg"></span></div></div>
+    <div id="ct-pg-res"></div>`;
+  const msg = (t) => { $('#ct-pg-msg').textContent = t; };
+  if (ex) $('#ct-pg-arch').addEventListener('change', async (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    try { $('#ct-pg-txt').value = (await excelATexto(f)).slice(0, MAX_TEXTO_PEGADO); msg(`Leído ${f.name}`); } catch (x) { msg('No se pudo abrir el archivo: ' + x.message); }
+  });
+  $('#ct-pg-leer').addEventListener('click', async () => {
+    if (!usuario()) { elegirSoy(); return; }
+    const texto = $('#ct-pg-txt').value.trim();
+    if (!texto) { msg(ex ? 'Sube o pega el Excel' : 'Pega el chat'); return; }
+    const b = $('#ct-pg-leer'); b.disabled = true; msg('Leyendo…');
+    try {
+      const r = await api('leer-texto', { method: 'POST', body: { texto, modo } });
+      msg('');
+      if (!ex) { await pintarFormPedido(null, { ...r.pedido, faltan: r.faltan }); return; }
+      previaExcel(r);
+    } catch (x) { msg(x.message); }
+    finally { b.disabled = false; }
+  });
+}
+
+function previaExcel(r) {
+  const p = r.pedido;
+  const caja = $('#ct-pg-res');
+  const total = (pax) => r.lineas.reduce((s, l) => s + Math.round((l.unidad === 'persona' ? l.precio_usd * pax : l.precio_usd) * 100), 0);
+  caja.innerHTML = `<form class="panel" id="ct-pg-f"><h2>Lo que leyó</h2>
+    ${r.faltan.length ? `<p class="nota" style="color:var(--danger)"><b>Falta:</b> ${esc(r.faltan.join(', '))}. Complétalo acá.</p>` : ''}
+    <div class="grid">
+      <label>Nombre del cliente<input name="nombre" required maxlength="120" value="${esc(p.nombre)}"></label>
+      <label>País<input name="pais" maxlength="60" value="${esc(p.pais)}"></label>
+      <label>Pasajeros<input name="pasajeros" type="number" min="1" max="60" required value="${esc(p.pasajeros)}"></label>
+      <label>Llega<input name="fecha_inicio" type="date" value="${esc(p.fecha_inicio)}"></label>
+      <label>Se va<input name="fecha_fin" type="date" value="${esc(p.fecha_fin)}"></label>
+      <label>Destinos (ciudad:noches, separados por coma)<input name="destinos" value="${esc(p.destinos.map((d) => `${d.ciudad}:${d.noches}`).join(', '))}"></label>
+    </div>
+    <h2>Líneas con precio (${r.lineas.length})</h2>
+    <div class="card"><table class="t-resp"><thead><tr><th>Día</th><th>Descripción</th><th>Precio del Excel</th><th class="num">Total del grupo</th></tr></thead><tbody id="ct-pg-lineas"></tbody></table></div>
+    <p><b>Total: <span id="ct-pg-total"></span></b> <span class="nota" style="margin:0">(precio de venta, sin margen)</span></p>
+    <div class="barra"><button class="prim">Crear cotización</button><span class="msg" id="ct-pg-m2"></span></div></form>`;
+  const f = $('#ct-pg-f');
+  const pintarLineas = () => {
+    const pax = Math.max(1, Number(f.pasajeros.value) || 1);
+    $('#ct-pg-lineas').innerHTML = r.lineas.map((l) => `<tr><td data-t="Día">${l.dia}</td><td class="full">${esc(l.descripcion)}</td><td data-t="Precio">US$ ${l.precio_usd.toLocaleString('es-PE')} ${l.unidad === 'persona' ? 'por persona' : 'el grupo'}</td><td class="num" data-t="Total"><b>${usd(Math.round((l.unidad === 'persona' ? l.precio_usd * pax : l.precio_usd) * 100))}</b></td></tr>`).join('');
+    $('#ct-pg-total').textContent = usd(total(pax));
+  };
+  f.pasajeros.addEventListener('input', pintarLineas); pintarLineas();
+  f.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!usuario()) { elegirSoy(); return; }
+    const pax = Math.max(1, Number(f.pasajeros.value) || 1);
+    const destinos = f.destinos.value.split(',').map((x) => x.trim()).filter(Boolean).map((x) => { const [c, n] = x.split(':'); return { ciudad: c.trim(), noches: Number(n) || 0 }; });
+    const body = { pedido: { nombre: f.nombre.value, pais: f.pais.value, pasajeros: pax, fecha_inicio: f.fecha_inicio.value || null, fecha_fin: f.fecha_fin.value || null, destinos, categoria_hotel: p.categoria_hotel },
+      lineas: r.lineas.map((l) => ({ dia: l.dia, descripcion: l.descripcion, total_grupo_cent: Math.round((l.unidad === 'persona' ? l.precio_usd * pax : l.precio_usd) * 100) })) };
+    const btn = f.querySelector('button.prim'); btn.disabled = true;
+    try { const j = await api('pedido-excel', { method: 'POST', body }); toast('Cotización creada con los precios del Excel'); irA('pedido/' + j.id); }
+    catch (x) { $('#ct-pg-m2').textContent = x.message; btn.disabled = false; }
+  });
+}
+
 // Formulario de alta / edición del pedido. p = pedido existente o null.
-async function pintarFormPedido(p) {
+async function pintarFormPedido(p, pre = null) {
   if (!datos) await cargarTarifario();
-  const v = p || { pasajeros: 2, categoria_hotel: 'confort', destinos: [{ ciudad: 'Cusco', noches: 4 }], servicios: [] };
+  const v = p || pre || { pasajeros: 2, categoria_hotel: 'confort', destinos: [{ ciudad: 'Cusco', noches: 4 }], servicios: [] };
   const ciudades = [...new Set([...datos.servicios.filter((s) => s.activo), ...datos.hoteles.filter((h) => h.activo)].map((x) => x.ciudad))].sort((a, b) => a.localeCompare(b, 'es'));
   const activos = datos.servicios.filter((s) => s.activo && s.tarifas.length);
   $('#ct-raiz').innerHTML = `<p><a href="${p ? '#/cotizaciones/pedido/' + p.id : '#/cotizaciones/pedidos'}">← Volver</a></p>
     <form id="ct-fp" class="panel"><h2>${p ? 'Editar pedido' : 'Nuevo pedido'}</h2>
+      ${pre ? `<p class="nota" style="margin:0 0 10px">Leído del chat: revisa cada dato antes de crear.${(pre.faltan || []).length ? ` <b>Falta: ${esc(pre.faltan.join(', '))}.</b>` : ''}</p>` : ''}
       <div class="grid">
         <label>Nombre del cliente<input name="nombre" required maxlength="120" value="${esc(v.nombre)}"></label>
         <label>País<input name="pais" maxlength="60" value="${esc(v.pais)}"></label>
@@ -17651,7 +17729,7 @@ async function pintarFormPedido(p) {
     RAIZ().querySelectorAll('#ct-servs input:checked').forEach((c) => elegidos.add(Number(c.value)));
     RAIZ().querySelectorAll('#ct-servs input:not(:checked)').forEach((c) => elegidos.delete(Number(c.value)));
     const body = { nombre: f.nombre.value, pais: f.pais.value, pasajeros: Number(f.pasajeros.value), fecha_inicio: f.fecha_inicio.value || null, fecha_fin: f.fecha_fin.value || null, dias: f.dias.value || null, fecha_tentativa: f.fecha_tentativa.checked,
-      categoria_hotel: f.categoria_hotel.value, destinos: destinos(), servicios: [...elegidos], pedidos_especiales: f.pedidos_especiales.value, lead_id: v.lead_id ?? null };
+      categoria_hotel: f.categoria_hotel.value, destinos: destinos(), servicios: [...elegidos], pedidos_especiales: f.pedidos_especiales.value, lead_id: v.lead_id ?? null, ...(pre ? { origen: 'chat' } : {}) };
     const btn = f.querySelector('button.prim'); btn.disabled = true;
     try {
       if (p) { await api(`pedidos/${p.id}`, { method: 'PUT', body }); toast('Pedido guardado'); irA('pedido/' + p.id); }
