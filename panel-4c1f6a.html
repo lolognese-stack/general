@@ -2344,6 +2344,7 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 #view-cotizaciones .ct-sub{margin:0 0 var(--s4);max-width:100%;overflow-x:auto}
 #view-cotizaciones .ct-sub[hidden]{display:none}
 #view-cotizaciones .ct-main{max-width:1100px;margin:0 auto}
+#view-cotizaciones .ct-main:has(.dias){max-width:none}
 #view-cotizaciones .ct-vacio{padding:var(--s6) var(--s5);text-align:center;color:var(--ink-3)}
 #view-cotizaciones table{white-space:normal}
 #view-cotizaciones tbody td{max-width:none;overflow:visible;text-overflow:clip}
@@ -2463,6 +2464,18 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 #view-cotizaciones .dia-cab{display:flex;gap:10px;align-items:baseline;padding:10px 14px;background:var(--surface-2)}
 #view-cotizaciones .dia-cab .link{margin-left:auto}
 #view-cotizaciones .dias td{font-size:.9rem}
+#view-cotizaciones .mod{white-space:nowrap;display:inline-block;font-size:.7rem;font-weight:700;letter-spacing:.04em;padding:1px 6px;border-radius:5px;border:1px solid var(--line);color:var(--ink-2)}
+#view-cotizaciones .mod.pri{border-color:var(--brand);color:var(--brand-ink)}
+@media(min-width:701px){
+#view-cotizaciones .dias{overflow-x:auto}
+#view-cotizaciones .lin{table-layout:fixed;width:100%;min-width:880px;border-collapse:collapse}
+#view-cotizaciones .lin td, #view-cotizaciones .lin th{padding:8px 10px;vertical-align:top;overflow-wrap:anywhere}
+#view-cotizaciones .lin th{font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;text-align:left}
+#view-cotizaciones .lin th.num, #view-cotizaciones .lin td.num{text-align:right;font-variant-numeric:tabular-nums}
+#view-cotizaciones .lin th.c, #view-cotizaciones .lin td.c{text-align:center}
+#view-cotizaciones .lin-cab{background:var(--surface-2);border-bottom:1px solid var(--line)}
+#view-cotizaciones .lin tr + tr td{border-top:1px solid var(--line)}
+}
 #view-cotizaciones .totales{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
 #view-cotizaciones .totales div{display:flex;flex-direction:column}
 #view-cotizaciones .totales span{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
@@ -17812,14 +17825,18 @@ function dibujarCotizacion() {
   const nDias = Math.max(1, p.destinos.reduce((s, d) => s + d.noches, 0) + 1, ...cot.lineas.map((l) => (l.dia || 0) + (l.tipo === 'hotel' ? 0 : 0)));
   const porDia = new Map();
   for (const l of cot.lineas) (porDia.get(l.dia) || porDia.set(l.dia, []).get(l.dia)).push(l);
+  const COLS = '<colgroup><col><col style="width:140px"><col style="width:76px"><col style="width:92px"><col style="width:104px"><col style="width:64px"><col style="width:108px"><col style="width:104px"><col style="width:136px"></colgroup>';
   const fila = (l) => `<tr class="${l.problema ? 'fila-err' : ''}">
       <td class="full"><b>${esc(l.descripcion)}</b> <span class="chip">${esc(l.tipo === 'hotel' ? 'hotel' : TIPOS[l.tipo] || l.tipo)}</span>
         ${l.origen_precio === 'ilustrativa' ? '<span class="prueba" title="La web no publica este destino: hay que armarlo y ponerle precio">ILUSTRACIÓN</span>' : l.es_ilustrativa ? '<span class="prueba">PRUEBA</span>' : ''}${l.sin_confirmar ? ' <span class="chip pisado" title="Precio publicado en la web, sin tarifa propia: confirmalo o corregilo antes de aprobar">precio web sin confirmar</span>' : l.origen_precio === 'web' && l.web_dia ? ' <span class="chip">de la web</span>' : ''}${l.pisado_neto || l.pisado_venta ? ' <span class="chip pisado" title="Precio cambiado a mano">a mano</span>' : ''}${l.precio_es_venta ? ' <span class="chip" title="Tarifa ya es precio de venta">propio</span>' : ''}
         ${l.problema ? `<div class="err">${esc(l.problema)}</div>` : ''}${l.nota ? `<div class="nota" style="margin:0">${esc(l.nota)}</div>` : ''}</td>
+      <td data-t="Horario">${l.horario ? esc(l.horario) : '<span class="nota" style="margin:0">—</span>'}</td>
+      <td data-t="Modalidad" class="c">${l.modalidad ? `<span class="mod ${l.modalidad === 'PRI' ? 'pri' : ''}" title="${l.modalidad === 'PRI' ? 'Privado' : 'Grupal'}">${l.modalidad}</span>` : ''}</td>
       <td data-t="Pax">${l.tipo === 'hotel' ? `${l.unidades} ${l.habitacion} × ${l.cantidad} n` : l.pasajeros}</td>
       <td data-t="Neto" class="num">${usd(l.neto_cent)}${l.tipo === 'hotel' && l.cantidad && l.unidades ? `<small class="nota" style="display:block;margin:0">${usd(Math.round(l.neto_cent / (l.cantidad * l.unidades)))} / hab. noche</small>` : ''}${l.moneda === 'PEN' && l.neto_unit_cent != null ? `<small class="nota" style="display:block;margin:0">S/ ${(l.neto_unit_cent / 100).toFixed(2)} c/u</small>` : ''}</td>
       <td data-t="Margen" class="num">${l.margen_pct != null ? l.margen_pct + '%' : '—'}</td>
-      <td data-t="Venta" class="num"><b>${usd(l.venta_cent)}</b></td>
+      <td data-t="Total" class="num"><b>${usd(l.venta_cent)}</b></td>
+      <td data-t="Ganancia" class="num">${usd(l.venta_cent - l.neto_cent)}</td>
       <td class="num">${ed && l.sin_confirmar ? `<button type="button" class="link" data-conf-lin="${l.id}">Confirmar</button>` : ''}${ed ? `<button type="button" class="link" data-ed-lin="${l.id}">Editar</button>` : ''}</td></tr>`;
   let dias = '';
   for (let d = 1; d <= nDias; d++) {
@@ -17827,7 +17844,7 @@ function dibujarCotizacion() {
     const fechaD = p.fecha_inicio ? (() => { const x = new Date(Date.parse(p.fecha_inicio + 'T12:00:00Z') + (d - 1) * 86400e3); return x.toISOString().slice(0, 10); })() : null;
     const dd = destinoDelDia(p.destinos, d);
     dias += `<div class="dia"><div class="dia-cab"><b>Día ${d}</b>${dd ? ` <span class="chip" title="${dd.duerme ? 'Duerme en ' + esc(dd.duerme) : 'Último día: salida'}">${esc(dd.txt)}</span>` : ''} <span class="nota" style="margin:0">${diaTxt(fechaD)}</span>${ed ? `<button type="button" class="link" data-mas="${d}">+ Agregar</button>` : ''}</div>
-      ${ls.length ? `<table class="t-resp"><tbody>${ls.map(fila).join('')}</tbody></table>` : '<p class="nota" style="padding:4px 14px;margin:0">Libre</p>'}</div>`;
+      ${ls.length ? `<table class="t-resp lin">${COLS}<tbody>${ls.map(fila).join('')}</tbody></table>` : '<p class="nota" style="padding:4px 14px;margin:0">Libre</p>'}</div>`;
   }
   const sinDia = cot.lineas.filter((l) => !l.dia || l.dia > nDias);
   const versiones = ped.cotizaciones;
@@ -17863,7 +17880,7 @@ function dibujarCotizacion() {
     ${p.fecha_tentativa ? `<p class="aviso"><b>Fecha tentativa:</b> el cliente no dio fecha, se cotiza con el ${fecha(p.fecha_inicio)}. Hay que confirmarla antes de mandar la propuesta.</p>` : ''}
     ${c.avisos.length ? `<ul class="avisos-cot">${c.avisos.map((a) => `<li>${esc(a)}</li>`).join('')}</ul>` : ''}
     ${t.problemas ? `<p class="err"><b>${t.problemas} línea${t.problemas > 1 ? 's' : ''} sin precio.</b> Cargá la tarifa, cambiá el hotel o poné el precio a mano.</p>` : ''}
-    <div class="card dias">${dias}</div>
+    <div class="card dias"><table class="t-resp lin lin-cab">${COLS}<thead><tr><th>Servicio</th><th>Horario</th><th class="c">Mod.</th><th>Pax</th><th class="num">Neto</th><th class="num">Margen</th><th class="num">Total</th><th class="num">Ganancia</th><th></th></tr></thead></table>${dias}</div>
     ${sinDia.length ? `<p class="err">Hay líneas fuera de los días del viaje: ${sinDia.map((l) => esc(l.descripcion) + ' (día ' + l.dia + ')').join(', ')}</p>` : ''}
     <div class="panel totales">
       <div><span>Neto total</span><b>${usd(t.neto_cent)}</b></div>
@@ -18065,6 +18082,8 @@ function editarLineaDlg(l) {
       <div class="fila"><label>Habitación<select name="habitacion">${['SGL', 'DBL', 'TPL'].map((h) => `<option ${h === l.habitacion ? 'selected' : ''}>${h}</option>`).join('')}</select></label>
       <label>Habitaciones<input name="unidades" type="number" min="1" value="${l.unidades}"></label></div>` : ''}
     ${l.tipo === 'manual' ? `<label>Descripción<input name="descripcion" maxlength="200" value="${esc(l.descripcion)}"></label>` : ''}
+    <div class="fila"><label>Horario<input name="horario" maxlength="60" value="${esc(l.horario || '')}" placeholder="08:00 a 13:00, según vuelo…"></label>
+      <label>Modalidad<select name="modalidad">${[['', '—'], ['PRI', 'PRI · privado'], ['GRU', 'GRU · grupal']].map(([k, n]) => `<option value="${k}" ${k === (l.modalidad || '') ? 'selected' : ''}>${n}</option>`).join('')}</select></label></div>
     ${hotel ? `<div class="fila"><label>Neto por habitación y noche (USD)<input name="neto_noche" inputmode="decimal" value="${(l.neto_cent / 100 / Math.max(1, l.cantidad * l.unidades)).toFixed(2)}"></label>
       <p class="nota" style="margin:0;align-self:end">Se calcula solo: precio × noches × habitaciones = neto total. Si cambiás uno, se recalcula el otro.</p></div>` : ''}
     <div class="fila"><label>Neto total (USD)${l.pisado_neto ? ' · a mano' : ''}<input name="neto" inputmode="decimal" value="${(l.neto_cent / 100).toFixed(2)}"></label>
@@ -18077,7 +18096,7 @@ function editarLineaDlg(l) {
       ${(l.pisado_neto || l.pisado_venta || l.margen_fijo != null) && l.tipo !== 'manual' ? '<button type="button" class="chico" id="ct-restaurar">Volver al tarifario</button>' : ''}
       <button value="cancel" formnovalidate>Cancelar</button><button class="prim" value="ok">Guardar</button></div>`,
     async (f) => {
-      const body = { dia: Number(f.dia.value), nota: f.nota.value, motivo: f.motivo.value };
+      const body = { dia: Number(f.dia.value), nota: f.nota.value, motivo: f.motivo.value, horario: f.horario.value, modalidad: f.modalidad.value };
       if (hotel) Object.assign(body, { noches: Number(f.noches.value), hotel_id: Number(f.hotel_id.value), habitacion: f.habitacion.value, unidades: Number(f.unidades.value) });
       else body.pasajeros = Number(f.pasajeros.value);
       if (l.tipo === 'manual') body.descripcion = f.descripcion.value;

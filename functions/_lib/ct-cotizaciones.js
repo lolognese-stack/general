@@ -149,7 +149,7 @@ async function crearCotizacion(env, pedido, por, { version = 1, lineas = null, c
 
 const COLS_LINEA = ['dia', 'orden', 'fecha', 'tipo', 'servicio_id', 'hotel_id', 'descripcion', 'pasajeros', 'cantidad', 'habitacion', 'unidades',
   'neto_cent', 'venta_cent', 'margen_fijo', 'pisado_neto', 'pisado_venta', 'nota',
-  'precio_es_venta', 'es_ilustrativa', 'origen_precio', 'sin_confirmar', 'web_producto_id', 'web_dia'];
+  'precio_es_venta', 'es_ilustrativa', 'origen_precio', 'sin_confirmar', 'web_producto_id', 'web_dia', 'horario', 'modalidad'];
 const insertarLinea = (env, cotId, l) => env.DB.prepare(`INSERT INTO ct_lineas (cotizacion_id, ${COLS_LINEA.join(', ')}) VALUES (?, ${COLS_LINEA.map(() => '?').join(', ')})`)
   .bind(cotId, ...COLS_LINEA.map((k) => l[k] ?? (['pisado_neto', 'pisado_venta', 'neto_cent', 'venta_cent', 'precio_es_venta', 'es_ilustrativa', 'sin_confirmar'].includes(k) ? 0 : k === 'origen_precio' ? 'tarifario' : ['cantidad', 'unidades', 'pasajeros'].includes(k) ? 1 : k === 'orden' ? 0 : null)));
 
@@ -257,6 +257,7 @@ export async function crearPedidoExcel(env, body, por) {
   const filas = (Array.isArray(body.lineas) ? body.lineas : []).slice(0, 120).map((l) => ({
     dia: Number.isInteger(Number(l && l.dia)) && Number(l.dia) >= 1 && Number(l.dia) <= 90 ? Number(l.dia) : 1,
     descripcion: texto(l && l.descripcion, 200), cent: Math.round(Number(l && l.total_grupo_cent)),
+    horario: texto(l && l.horario, 60), modalidad: l && ['PRI', 'GRU'].includes(String(l.modalidad || '').toUpperCase()) ? String(l.modalidad).toUpperCase() : null,
   })).filter((l) => l.descripcion && Number.isFinite(l.cent) && l.cent >= 0);
   if (!filas.length) errores.push('el Excel no trajo líneas con precio');
   if (errores.length) return json({ error: errores.join('; ') }, 400);
@@ -264,7 +265,7 @@ export async function crearPedidoExcel(env, body, por) {
   const lineas = filas.map((l, i) => ({
     dia: l.dia, orden: i, fecha: d.fecha_inicio ? new Date(Date.parse(d.fecha_inicio + 'T12:00:00Z') + (l.dia - 1) * 86400e3).toISOString().slice(0, 10) : null,
     tipo: 'manual', descripcion: l.descripcion, pasajeros: d.pasajeros, cantidad: 1, neto_cent: l.cent, precio_es_venta: 1,
-    origen_precio: 'excel', nota: 'Precio del Excel (de venta)',
+    origen_precio: 'excel', horario: l.horario, modalidad: l.modalidad,
   }));
   const cid = await crearCotizacion(env, { ...d, id }, por, { lineas, extra: { avisos: ['Cotización importada de un Excel: los precios son los del Excel, sin margen. No se armó itinerario ni se miró el tarifario.'] } });
   await cambiarEstado(env, id, 'borrador_listo', por, 'Importado de un Excel');
@@ -439,6 +440,12 @@ export async function editarLinea(env, cotId, lid, body, por) {
     set('dia', d); set('fecha', fechaDia(cot.fecha_inicio, d));
   }
   if (body.descripcion !== undefined) { const t = texto(body.descripcion, 200); if (!t) return json({ error: 'falta la descripción' }, 400); set('descripcion', t); }
+  if (body.horario !== undefined) set('horario', texto(body.horario, 60));
+  if (body.modalidad !== undefined) {
+    const m = body.modalidad === '' || body.modalidad === null ? null : String(body.modalidad).toUpperCase();
+    if (m !== null && m !== 'PRI' && m !== 'GRU') return json({ error: 'modalidad: PRI (privado) o GRU (grupal)' }, 400);
+    set('modalidad', m);
+  }
   if (body.pasajeros !== undefined) { const n = entero(body.pasajeros, 1, 60); if (!n) return json({ error: 'pasajeros no válido' }, 400); set('pasajeros', n); }
   if (l.tipo === 'hotel') {
     if (body.noches !== undefined) { const n = entero(body.noches, 1, 60); if (!n) return json({ error: 'noches no válido' }, 400); set('cantidad', n); }
