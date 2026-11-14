@@ -189,4 +189,9 @@ await test('excursiones: un servicio cargado sin tarifa se ubica igual (la líne
   const sin = await armarItinerario({ pedido: ped, catalogo: cat, web: [tour('x', 'Otro', 'Arequipa')], reglas, elegir: async () => ({}) });
   assert.ok(!sin.variantes[0].lineas.some((l) => l.servicio_id === 30));
 });
+await test('resolverExcursiones: "Machu Picchu" prefiere el tour o paquete antes que el ticket de entrada', () => {
+  const cat = { hoteles: [], servicios: [servicio(40, 'Ticket de ingreso a Machu Picchu', 'Cusco', { tipo: 'entrada', duracion: 'Medio día' }), servicio(41, 'Valle Sagrado VIP + Machu Picchu 2D/1N', 'Cusco', { tipo: 'paquete', duracion: '2D/1N' })] };
+  const r = resolverExcursiones(['Machu Picchu'], candidatosDe({ catalogo: cat, web: [] }));
+  assert.equal(r.forzadas[0].servicio.id, 41);
+});
 console.log(`${n} tests ok`);

@@ -114,7 +114,9 @@ export function resolverExcursiones(excursiones, candidatos) {
     if (!palabras.length) continue;
     const hay = (c) => { const t = ` ${normCiudad(`${c.nombre} ${c.producto?.resumen || ''}`)} `; return palabras.every((w) => t.includes(` ${w}`)); };
     const hits = candidatos.filter((c) => hay(c) && !forzadas.includes(c));
-    const c = ordenBase(hits)[0];
+    // Una excursión pedida es un tour o paquete: las entradas (tickets) solo si no hay otra cosa.
+    const esEntrada = (x) => (x.servicio?.tipo === 'entrada' ? 1 : 0);
+    const c = ordenBase(hits).sort((a, b) => esEntrada(a) - esEntrada(b))[0];
     if (c) forzadas.push(c); else avisos.push(`No encontré "${nombre}" en el tarifario ni en la web: armalo a mano.`);
   }
   return { forzadas, avisos };
