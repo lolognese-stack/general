@@ -58,6 +58,30 @@ dialog .pie{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:4px;font-size:.9rem;z-index:9}
 .scroll{overflow-x:auto}
 .login{max-width:420px;margin:40px auto}
+.tablero{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(220px,1fr);gap:12px;overflow-x:auto;padding-bottom:8px}
+.col{background:#EFE8DE;border-radius:6px;padding:10px;min-height:120px}
+.col h4{margin:0 0 10px;font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2);display:flex;justify-content:space-between}
+.col h4 span{color:var(--muted)}
+.ped{display:block;background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:10px 12px;margin-bottom:8px;color:var(--ink);text-decoration:none;position:relative}
+.ped:hover{border-color:var(--ink2)}.ped small{display:block;color:var(--ink2);font-size:.8rem}
+.ped .hace{display:block;margin-top:6px;font-size:.75rem;color:var(--muted)}
+.cab-ped{display:flex;gap:16px;justify-content:space-between;flex-wrap:wrap}.cab-ped .meta{color:var(--ink2);font-size:.88rem}
+.acc-ped{display:flex;flex-direction:column;gap:6px;align-items:flex-start;min-width:200px}
+.banner.grande{font-size:1.3rem;letter-spacing:.06em;text-align:center}
+.dias .dia{border-bottom:1px solid var(--line)}.dias .dia:last-child{border-bottom:0}
+.dia-cab{display:flex;gap:10px;align-items:baseline;padding:10px 14px;background:#FAF6F0}.dia-cab .link{margin-left:auto}
+.dias td{font-size:.9rem}
+.totales{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.totales div{display:flex;flex-direction:column}.totales span{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.totales b{font-size:1.05rem;font-variant-numeric:tabular-nums}.totales .venta b{font-size:1.3rem}
+.avisos-cot{background:var(--warn-bg);border:1px solid #F1C99B;padding:10px 14px 10px 30px;margin:0 0 12px;color:var(--brand-ink);font-size:.9rem}
+.servs label.check{margin:4px 0}.chip.pisado{border-color:var(--brand);color:var(--brand-ink)}
+@media(max-width:700px){.tablero{grid-auto-flow:row;grid-auto-columns:auto}
+  .dias .t-resp tr{display:grid;grid-template-columns:repeat(4,1fr);gap:2px 8px;padding:8px 14px}
+  .dias .t-resp td{display:block;padding:0;text-align:left}.dias .t-resp td:before{display:block;font-size:.68rem}
+  .dias .t-resp td.full,.dias .t-resp td:last-child{grid-column:1/-1}.dias .t-resp td:last-child{text-align:right}
+  .banner.grande{font-size:1.1rem}}
+.banner.grande small{letter-spacing:0;font-size:.85rem}
 @media(max-width:700px){
   main{padding:14px}header{padding:12px 14px}nav.tabs{padding:0 8px}
   .t-resp thead{display:none}.t-resp,.t-resp tbody,.t-resp tr,.t-resp td{display:block;width:100%}
@@ -75,7 +99,8 @@ dialog .pie{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
   <div class="der"><button id="soy" type="button" class="chico" title="Queda registrado en cada cambio de precio">Soy …</button></div>
 </header>
 <nav class="tabs" id="tabs" role="tablist">
-  <button role="tab" data-tab="servicios" aria-selected="true">Servicios</button>
+  <button role="tab" data-tab="pedidos" aria-selected="true">Pedidos</button>
+  <button role="tab" data-tab="servicios">Servicios</button>
   <button role="tab" data-tab="hoteles">Hoteles</button>
   <button role="tab" data-tab="importar">Importar</button>
   <button role="tab" data-tab="config">Configuración</button>
@@ -100,7 +125,7 @@ const peru = (t) => { if (!t) return '—'; const d = new Date(Date.parse(t.repl
 const tramo = (t) => t.pax_hasta == null ? `${t.pax_desde}+` : t.pax_desde === t.pax_hasta ? `${t.pax_desde}` : `${t.pax_desde}-${t.pax_hasta}`;
 const hoy = () => new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10);
 
-let tab = (location.hash || '#servicios').slice(1);
+let tab = (location.hash || '#pedidos').slice(1);
 let datos = null;          // tarifario
 let filtro = { ciudad: '', q: '', inactivos: false };
 let imp = null;            // estado del importador
@@ -159,11 +184,16 @@ function abrirDialogo(html, alGuardar) {
 }
 
 // ---------- pestañas ----------
+function marcarTab() {
+  const base = /^(pedido|nuevo|editar)/.test(tab) ? 'pedidos' : tab;
+  document.querySelectorAll('#tabs button').forEach((b) => b.setAttribute('aria-selected', b.dataset.tab === base));
+}
 function elegirTab(t) {
   tab = t; history.replaceState(null, '', '#' + t);
-  document.querySelectorAll('#tabs button').forEach((b) => b.setAttribute('aria-selected', b.dataset.tab === t));
+  marcarTab();
   pintar();
 }
+window.addEventListener('hashchange', () => { tab = (location.hash || '#pedidos').slice(1); marcarTab(); pintar(); });
 document.querySelectorAll('#tabs button').forEach((b) => b.addEventListener('click', () => elegirTab(b.dataset.tab)));
 
 async function cargarTarifario() { datos = await api('tarifario'); }
@@ -171,6 +201,11 @@ async function cargarTarifario() { datos = await api('tarifario'); }
 async function pintar() {
   const raiz = $('#raiz');
   try {
+    if (tab === 'pedidos') return await pintarPedidos();
+    if (tab === 'nuevo') return await pintarFormPedido(null);
+    let m;
+    if ((m = tab.match(/^pedido\/(\d+)$/))) return await pintarPedido(Number(m[1]));
+    if ((m = tab.match(/^editar\/(\d+)$/))) return await pintarFormPedido((await api(`pedidos/${m[1]}`)).pedido);
     if (tab === 'servicios' || tab === 'hoteles') { if (!datos) await cargarTarifario(); return tab === 'servicios' ? pintarServicios() : pintarHoteles(); }
     if (tab === 'importar') return pintarImportar();
     if (tab === 'config') return pintarConfig();
@@ -208,6 +243,307 @@ function porCiudad(lista, pintarUno) {
 function filaVigencia(t) {
   const vencida = t.vigente_hasta < hoy();
   return `${fecha(t.vigente_desde)} al ${fecha(t.vigente_hasta)}${vencida ? ' <span class="err">(vencida)</span>' : ''}`;
+}
+
+// ---------- pedidos ----------
+const ESTADOS = [
+  ['nuevo', 'Nuevo'], ['borrador_listo', 'Borrador listo'], ['en_revision', 'En revisión'], ['aprobada', 'Aprobada'],
+  ['enviada', 'Enviada'], ['cerrada', 'Cerrada'], ['perdida', 'Perdida'],
+];
+const NOMBRE_ESTADO = Object.fromEntries(ESTADOS);
+const COT_ESTADO = { borrador: 'Borrador', en_revision: 'En revisión', cambios_pedidos: 'Cambios pedidos', aprobada: 'Aprobada', reemplazada: 'Reemplazada' };
+const usd = (c) => c == null ? '—' : `US$ ${(c / 100).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const DIAS_SEM = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+const diaTxt = (iso) => iso ? `${DIAS_SEM[new Date(iso + 'T12:00:00Z').getUTCDay()]} ${iso.slice(8, 10)}/${iso.slice(5, 7)}` : 'sin fecha';
+function haceCuanto(t) {
+  if (!t) return '';
+  const m = Math.max(0, Math.round((Date.now() - Date.parse(t.replace(' ', 'T') + 'Z')) / 60000));
+  if (m < 60) return `${m} min`;
+  if (m < 48 * 60) return `${Math.round(m / 60)} h`;
+  return `${Math.round(m / 1440)} días`;
+}
+let verCerrados = false;
+
+async function pintarPedidos() {
+  const j = await api('pedidos');
+  const visibles = ESTADOS.filter(([k]) => verCerrados || !['cerrada', 'perdida'].includes(k));
+  const tarjeta = (p) => `<a class="ped" href="#pedido/${p.id}">
+      <b>${esc(p.nombre)}</b>${p.usa_prueba ? ' <span class="prueba">PRUEBA</span>' : ''}
+      <small>${p.pasajeros} pax · ${p.fecha_inicio ? fecha(p.fecha_inicio) : 'sin fecha'}${p.pais ? ' · ' + esc(p.pais) : ''}</small>
+      <small>${esc(p.destinos.map((d) => d.ciudad).join(' · '))}</small>
+      ${p.total_venta_cent ? `<small><b>${usd(Math.round(p.total_venta_cent / p.pasajeros))}</b> p/p · v${p.version}${p.problemas ? ` · <span class="err">${p.problemas} sin precio</span>` : ''}</small>` : ''}
+      <span class="hace" title="Tiempo en este estado">hace ${haceCuanto(p.estado_desde)}</span></a>`;
+  $('#raiz').innerHTML = `<div class="barra"><button class="prim" type="button" id="nuevo-ped">+ Pedido</button><span style="flex:1"></span>
+      <label class="check"><input type="checkbox" id="ver-cerr" ${verCerrados ? 'checked' : ''}> Ver cerrados y perdidos</label></div>
+    <div class="tablero">${visibles.map(([k, n]) => { const ps = j.pedidos.filter((p) => p.estado === k); return `<section class="col"><h4>${n} <span>${ps.length}</span></h4>${ps.map(tarjeta).join('') || '<p class="nota">—</p>'}</section>`; }).join('')}</div>`;
+  $('#nuevo-ped').addEventListener('click', () => irA('nuevo'));
+  $('#ver-cerr').addEventListener('change', (e) => { verCerrados = e.target.checked; pintarPedidos(); });
+}
+
+function irA(h) { location.hash = '#' + h; }
+
+// Formulario de alta / edición del pedido. p = pedido existente o null.
+async function pintarFormPedido(p) {
+  if (!datos) await cargarTarifario();
+  const v = p || { pasajeros: 2, categoria_hotel: 'confort', destinos: [{ ciudad: 'Cusco', noches: 4 }], servicios: [] };
+  const ciudades = [...new Set([...datos.servicios.filter((s) => s.activo), ...datos.hoteles.filter((h) => h.activo)].map((x) => x.ciudad))].sort((a, b) => a.localeCompare(b, 'es'));
+  const activos = datos.servicios.filter((s) => s.activo && s.tarifas.length);
+  $('#raiz').innerHTML = `<p><a href="${p ? '#pedido/' + p.id : '#pedidos'}">← Volver</a></p>
+    <form id="fp" class="panel"><h2>${p ? 'Editar pedido' : 'Nuevo pedido'}</h2>
+      <div class="grid">
+        <label>Nombre del cliente<input name="nombre" required maxlength="120" value="${esc(v.nombre)}"></label>
+        <label>País<input name="pais" maxlength="60" value="${esc(v.pais)}"></label>
+        <label>Pasajeros<input name="pasajeros" type="number" min="1" max="60" required value="${esc(v.pasajeros)}"></label>
+        <label>Llega<input name="fecha_inicio" type="date" value="${esc(v.fecha_inicio)}"></label>
+        <label>Se va<input name="fecha_fin" type="date" value="${esc(v.fecha_fin)}"></label>
+        <label>Hotel<select name="categoria_hotel">${[['economico', 'Económico'], ['confort', 'Confort'], ['premium', 'Premium'], ['sin_hotel', 'Sin hotel']].map(([k, n]) => `<option value="${k}" ${k === v.categoria_hotel ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+      </div>
+      <h2>Destinos, en orden</h2><div id="dests"></div>
+      <div class="barra"><button type="button" class="chico" id="mas-dest">+ Destino</button><span class="nota" id="cuenta-noches" style="margin:0"></span></div>
+      <datalist id="ciudades-ped">${ciudades.map((c) => `<option>${esc(c)}</option>`).join('')}</datalist>
+      <h2>Qué quiere hacer</h2><p class="nota">El borrador ubica cada servicio en un día libre de su ciudad.</p>
+      <div id="servs" class="servs"></div>
+      <h2>Pedidos especiales</h2><textarea name="pedidos_especiales" maxlength="2000">${esc(v.pedidos_especiales)}</textarea>
+      <div class="barra" style="margin-top:14px"><button class="prim">${p ? 'Guardar' : 'Crear y armar borrador'}</button><span class="msg" id="pmsg"></span></div>
+      ${p ? '<p class="nota">Guardar no cambia la cotización. Para rehacerla con los datos nuevos: "Volver a armar" en el pedido.</p>' : ''}
+    </form>`;
+  const f = $('#fp');
+  const filaDest = (d = { ciudad: '', noches: 1 }) => {
+    const el = document.createElement('div'); el.className = 'barra dest';
+    el.innerHTML = `<input name="d-ciudad" list="ciudades-ped" placeholder="Ciudad" value="${esc(d.ciudad)}" style="flex:1;min-width:140px">
+      <input name="d-noches" type="number" min="0" max="60" value="${esc(d.noches)}" style="width:80px"> noches <button type="button" class="link">Quitar</button>`;
+    el.querySelector('.link').addEventListener('click', () => { el.remove(); actualizar(); });
+    el.querySelectorAll('input').forEach((i) => i.addEventListener('input', actualizar));
+    $('#dests').appendChild(el);
+  };
+  const destinos = () => [...document.querySelectorAll('.dest')].map((el) => ({ ciudad: el.querySelector('[name=d-ciudad]').value.trim(), noches: Number(el.querySelector('[name=d-noches]').value || 0) })).filter((d) => d.ciudad);
+  const elegidos = new Set((v.servicios || []).map(Number));
+  const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+  function actualizar() {
+    const ds = destinos();
+    const noches = ds.reduce((s, d) => s + d.noches, 0);
+    let txt = `${noches} noches, ${noches + 1} días.`;
+    if (f.fecha_inicio.value && f.fecha_fin.value) {
+      const dias = Math.round((Date.parse(f.fecha_fin.value) - Date.parse(f.fecha_inicio.value)) / 86400e3) + 1;
+      if (dias !== noches + 1) txt += ` <span class="err">Las fechas dan ${dias} días.</span>`;
+    }
+    $('#cuenta-noches').innerHTML = txt;
+    document.querySelectorAll('#servs input:checked').forEach((c) => elegidos.add(Number(c.value)));
+    document.querySelectorAll('#servs input:not(:checked)').forEach((c) => elegidos.delete(Number(c.value)));
+    const enDest = new Set(ds.map((d) => norm(d.ciudad)));
+    const lista = activos.filter((s) => enDest.has(norm(s.ciudad)) || elegidos.has(s.id));
+    $('#servs').innerHTML = lista.length ? porCiudad(lista, (s) => `<label class="check"><input type="checkbox" value="${s.id}" ${elegidos.has(s.id) ? 'checked' : ''}> ${esc(s.nombre)} <small class="nota" style="margin:0">${esc(s.duracion || '')}</small>${s.tarifas.every((t) => t.es_ilustrativa) ? ' <span class="prueba">PRUEBA</span>' : ''}</label>`) : '<p class="nota">Agregá destinos para ver sus servicios.</p>';
+  }
+  (v.destinos.length ? v.destinos : [{ ciudad: '', noches: 1 }]).forEach(filaDest);
+  $('#mas-dest').addEventListener('click', () => { filaDest(); actualizar(); });
+  f.fecha_inicio.addEventListener('change', actualizar); f.fecha_fin.addEventListener('change', actualizar);
+  actualizar();
+  f.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!usuario()) { elegirSoy(); return; }
+    document.querySelectorAll('#servs input:checked').forEach((c) => elegidos.add(Number(c.value)));
+    document.querySelectorAll('#servs input:not(:checked)').forEach((c) => elegidos.delete(Number(c.value)));
+    const body = { nombre: f.nombre.value, pais: f.pais.value, pasajeros: Number(f.pasajeros.value), fecha_inicio: f.fecha_inicio.value || null, fecha_fin: f.fecha_fin.value || null,
+      categoria_hotel: f.categoria_hotel.value, destinos: destinos(), servicios: [...elegidos], pedidos_especiales: f.pedidos_especiales.value, lead_id: v.lead_id ?? null };
+    const btn = f.querySelector('button.prim'); btn.disabled = true;
+    try {
+      if (p) { await api(`pedidos/${p.id}`, { method: 'PUT', body }); toast('Pedido guardado'); irA('pedido/' + p.id); }
+      else { const r = await api('pedidos', { method: 'POST', body }); toast('Borrador armado'); irA('pedido/' + r.id); }
+    } catch (x) { $('#pmsg').textContent = x.message; btn.disabled = false; }
+  });
+}
+
+// ---------- detalle del pedido + armado ----------
+let ped = null;        // { pedido, estados, cotizaciones }
+let cot = null;        // vista de la cotización elegida
+let cotElegida = null;
+
+async function pintarPedido(id) {
+  ped = await api(`pedidos/${id}`);
+  if (!datos) await cargarTarifario();
+  const elegida = cotElegida && ped.cotizaciones.some((c) => c.id === cotElegida) ? cotElegida : ped.cotizaciones[0]?.id;
+  cot = elegida ? await api(`cotizaciones/${elegida}`) : null;
+  dibujarPedido();
+}
+
+function dibujarPedido() {
+  const p = ped.pedido;
+  const ultimoEstado = ped.estados[ped.estados.length - 1];
+  $('#raiz').innerHTML = `<p><a href="#pedidos">← Pedidos</a></p>
+    <div class="panel cab-ped">
+      <div><h2 style="margin:0 0 6px">${esc(p.nombre)}${p.pais ? ' · ' + esc(p.pais) : ''}</h2>
+        <div class="meta">${p.pasajeros} pasajeros · ${p.fecha_inicio ? `${fecha(p.fecha_inicio)} al ${fecha(p.fecha_fin)}` : 'sin fechas'} · hotel ${esc({ economico: 'económico', confort: 'confort', premium: 'premium', sin_hotel: 'no' }[p.categoria_hotel] || '—')}</div>
+        <div class="meta">${esc(p.destinos.map((d) => `${d.ciudad} (${d.noches} n)`).join(' → '))}</div>
+        ${p.pedidos_especiales ? `<div class="meta">Pedidos especiales: ${esc(p.pedidos_especiales)}</div>` : ''}
+        <div class="meta">Cargado por ${esc(p.creado_por || '—')} el ${peru(p.creado_en)}</div></div>
+      <div class="acc-ped">
+        <label>Estado<select id="estado">${ESTADOS.map(([k, n]) => `<option value="${k}" ${k === p.estado ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+        <small class="nota" style="margin:0">hace ${haceCuanto(p.estado_desde)}${ultimoEstado?.por ? ' · ' + esc(ultimoEstado.por) : ''} · <button type="button" class="link" id="hist-est">historial</button></small>
+        <button type="button" class="chico" id="editar-ped">Editar datos</button>
+      </div>
+    </div>
+    <div id="cot"></div>`;
+  $('#estado').addEventListener('change', async (e) => {
+    if (!usuario()) { elegirSoy(); e.target.value = p.estado; return; }
+    try { await api(`pedidos/${p.id}/estado`, { method: 'POST', body: { estado: e.target.value } }); toast('Estado: ' + NOMBRE_ESTADO[e.target.value]); pintarPedido(p.id); }
+    catch (x) { alert(x.message); e.target.value = p.estado; }
+  });
+  $('#editar-ped').addEventListener('click', () => irA(`editar/${p.id}`));
+  $('#hist-est').addEventListener('click', () => abrirDialogo(`<h3>Estados</h3><table><tbody>${ped.estados.map((s) => `<tr><td>${esc(NOMBRE_ESTADO[s.estado] || s.estado)}</td><td>${peru(s.creado_en)}</td><td>${esc(s.por || '')}${s.nota ? ` · ${esc(s.nota)}` : ''}</td></tr>`).join('')}</tbody></table><div class="pie"><button value="cancel" formnovalidate>Cerrar</button></div>`, () => {}));
+  dibujarCotizacion();
+}
+
+function dibujarCotizacion() {
+  const el = $('#cot');
+  if (!cot) { el.innerHTML = `<div class="vacio">Sin cotización. <button type="button" id="armar">Armar borrador</button></div>`; $('#armar').addEventListener('click', rearmarCot); return; }
+  const c = cot.cotizacion, p = cot.pedido, t = cot.totales, ed = c.editable;
+  const nDias = Math.max(1, p.destinos.reduce((s, d) => s + d.noches, 0) + 1, ...cot.lineas.map((l) => (l.dia || 0) + (l.tipo === 'hotel' ? 0 : 0)));
+  const porDia = new Map();
+  for (const l of cot.lineas) (porDia.get(l.dia) || porDia.set(l.dia, []).get(l.dia)).push(l);
+  const fila = (l) => `<tr class="${l.problema ? 'fila-err' : ''}">
+      <td class="full"><b>${esc(l.descripcion)}</b> <span class="chip">${esc(l.tipo === 'hotel' ? 'hotel' : TIPOS[l.tipo] || l.tipo)}</span>
+        ${l.es_ilustrativa ? '<span class="prueba">PRUEBA</span>' : ''}${l.pisado_neto || l.pisado_venta ? ' <span class="chip pisado" title="Precio cambiado a mano">a mano</span>' : ''}${l.precio_es_venta ? ' <span class="chip" title="Tarifa ya es precio de venta">propio</span>' : ''}
+        ${l.problema ? `<div class="err">${esc(l.problema)}</div>` : ''}${l.nota ? `<div class="nota" style="margin:0">${esc(l.nota)}</div>` : ''}</td>
+      <td data-t="Pax">${l.tipo === 'hotel' ? `${l.unidades} ${l.habitacion} × ${l.cantidad} n` : l.pasajeros}</td>
+      <td data-t="Neto" class="num">${usd(l.neto_cent)}${l.moneda === 'PEN' && l.neto_unit_cent != null ? `<small class="nota" style="display:block;margin:0">S/ ${(l.neto_unit_cent / 100).toFixed(2)} c/u</small>` : ''}</td>
+      <td data-t="Margen" class="num">${l.margen_pct != null ? l.margen_pct + '%' : '—'}</td>
+      <td data-t="Venta" class="num"><b>${usd(l.venta_cent)}</b></td>
+      <td class="num">${ed ? `<button type="button" class="link" data-ed-lin="${l.id}">Editar</button>` : ''}</td></tr>`;
+  let dias = '';
+  for (let d = 1; d <= nDias; d++) {
+    const ls = porDia.get(d) || [];
+    const fechaD = p.fecha_inicio ? (() => { const x = new Date(Date.parse(p.fecha_inicio + 'T12:00:00Z') + (d - 1) * 86400e3); return x.toISOString().slice(0, 10); })() : null;
+    dias += `<div class="dia"><div class="dia-cab"><b>Día ${d}</b> <span class="nota" style="margin:0">${diaTxt(fechaD)}</span>${ed ? `<button type="button" class="link" data-mas="${d}">+ Agregar</button>` : ''}</div>
+      ${ls.length ? `<table class="t-resp"><tbody>${ls.map(fila).join('')}</tbody></table>` : '<p class="nota" style="padding:4px 14px;margin:0">Libre</p>'}</div>`;
+  }
+  const sinDia = cot.lineas.filter((l) => !l.dia || l.dia > nDias);
+  const versiones = ped.cotizaciones;
+  el.innerHTML = `
+    ${c.usa_prueba ? '<div class="banner grande">PRECIOS DE PRUEBA<small>Usa tarifas de prueba o valores de configuración sin confirmar: no se puede mandar al cliente.</small></div>' : ''}
+    <div class="barra"><h2 style="margin:0">Cotización</h2>
+      <select id="ver">${versiones.map((v) => `<option value="${v.id}" ${v.id === c.id ? 'selected' : ''}>Versión ${v.version} · ${COT_ESTADO[v.estado] || v.estado}</option>`).join('')}</select>
+      <span style="flex:1"></span>
+      ${ed ? '<button type="button" class="chico" id="rearmar">Volver a armar</button>' : ''}
+      ${!ed && c.id === versiones[0].id ? '<button type="button" class="chico prim" id="nueva-v">Crear versión nueva</button>' : ''}
+      <button type="button" class="chico" id="cambios-cot">Cambios de precio</button></div>
+    ${c.estado === 'aprobada' ? `<p class="ok">Aprobada por ${esc(c.aprobada_por || '—')} el ${peru(c.aprobada_en)}. No se edita: para cambiar algo, versión nueva.</p>` : ''}
+    ${c.avisos.length ? `<ul class="avisos-cot">${c.avisos.map((a) => `<li>${esc(a)}</li>`).join('')}</ul>` : ''}
+    ${t.problemas ? `<p class="err"><b>${t.problemas} línea${t.problemas > 1 ? 's' : ''} sin precio.</b> Cargá la tarifa, cambiá el hotel o poné el precio a mano.</p>` : ''}
+    <div class="card dias">${dias}</div>
+    ${sinDia.length ? `<p class="err">Hay líneas fuera de los días del viaje: ${sinDia.map((l) => esc(l.descripcion) + ' (día ' + l.dia + ')').join(', ')}</p>` : ''}
+    <div class="panel totales">
+      <div><span>Neto total</span><b>${usd(t.neto_cent)}</b></div>
+      <div><span>Ganancia</span><b>${usd(t.ganancia_cent)}${t.margen_efectivo_pct != null ? ` <small>(${t.margen_efectivo_pct}%)</small>` : ''}</b></div>
+      <div class="venta"><span>Venta total</span><b>${usd(t.venta_cent)}</b></div>
+      <div class="venta"><span>Por persona</span><b>${usd(t.venta_por_persona_cent)}</b></div>
+      <div><span>Con factura (+${c.config.igv_pct}% IGV)</span><b>${usd(t.con_factura_cent)}</b></div>
+      <div><span>Con tarjeta (+${c.config.recargo_tarjeta_pct}%)</span><b>${usd(t.con_tarjeta_cent)}</b></div>
+    </div>
+    <p class="nota">Calculada con margen ${c.config.margen_pct}% y tipo de cambio S/ ${c.config.tc_pen_por_usd} por dólar${Object.keys(c.config.es_prueba || {}).length ? ' <span class="prueba">PRUEBA</span>' : ''}.
+      ${ed ? '<button type="button" class="link" id="usar-config">Usar la configuración actual</button>' : ''}</p>
+    <div class="panel"><h2>Notas de Álvaro</h2>${ed ? `<textarea id="notas" maxlength="4000">${esc(c.notas_alvaro)}</textarea><div class="barra" style="margin-top:8px"><button type="button" class="chico" id="guardar-notas">Guardar notas</button></div>` : `<p>${esc(c.notas_alvaro || '—')}</p>`}</div>`;
+  $('#ver').addEventListener('change', (e) => { cotElegida = Number(e.target.value); pintarPedido(ped.pedido.id); });
+  if ($('#rearmar')) $('#rearmar').addEventListener('click', rearmarCot);
+  if ($('#nueva-v')) $('#nueva-v').addEventListener('click', async () => {
+    if (!usuario()) { elegirSoy(); return; }
+    if (!confirm('¿Crear la versión ' + (c.version + 1) + '? Copia esta cotización y la deja editable.')) return;
+    try { const r = await api(`cotizaciones/${c.id}/nueva-version`, { method: 'POST' }); cotElegida = r.cotizacion_id; pintarPedido(ped.pedido.id); } catch (x) { alert(x.message); }
+  });
+  $('#cambios-cot').addEventListener('click', async () => {
+    const j = await api(`cotizaciones/${c.id}/cambios`);
+    abrirDialogo(`<h3>Cambios de precio · versión ${c.version}</h3>${j.cambios.length ? `<div class="scroll"><table><tbody>${j.cambios.map((x) => `<tr><td>${peru(x.creado_en)}</td><td>${esc(x.por)}</td><td>${esc(x.campo)}<br>${esc(x.antes || '—')} → ${esc(x.despues || '—')}${x.motivo ? `<br><small>${esc(x.motivo)}</small>` : ''}</td></tr>`).join('')}</tbody></table></div>` : '<p class="nota">Sin cambios a mano.</p>'}
+      <div class="pie"><button value="cancel" formnovalidate>Cerrar</button></div>`, () => {});
+  });
+  if ($('#usar-config')) $('#usar-config').addEventListener('click', async () => {
+    if (!usuario()) { elegirSoy(); return; }
+    cot = await api(`cotizaciones/${c.id}`, { method: 'PUT', body: { usar_config_actual: true } }); toast('Recalculada con la configuración actual'); dibujarCotizacion();
+  });
+  if ($('#guardar-notas')) $('#guardar-notas').addEventListener('click', async () => {
+    cot = await api(`cotizaciones/${c.id}`, { method: 'PUT', body: { notas_alvaro: $('#notas').value } }); toast('Notas guardadas'); dibujarCotizacion();
+  });
+  document.querySelectorAll('[data-mas]').forEach((b) => b.addEventListener('click', () => agregarLineaDlg(Number(b.dataset.mas))));
+  document.querySelectorAll('[data-ed-lin]').forEach((b) => b.addEventListener('click', () => editarLineaDlg(cot.lineas.find((l) => l.id == b.dataset.edLin))));
+}
+
+async function rearmarCot() {
+  if (!usuario()) { elegirSoy(); return; }
+  if (!confirm('¿Volver a armar el borrador desde los datos del pedido? Se pierden las líneas y los precios puestos a mano de esta versión.')) return;
+  try { const r = await api(`pedidos/${ped.pedido.id}/rearmar`, { method: 'POST' }); cotElegida = r.cotizacion_id; toast('Borrador rearmado'); pintarPedido(ped.pedido.id); } catch (x) { alert(x.message); }
+}
+
+const opcionesServicio = (sel) => porCiudadOpciones(datos.servicios.filter((s) => s.activo || s.id === sel), (s) => `<option value="${s.id}" ${s.id === sel ? 'selected' : ''}>${esc(s.nombre)}${s.tarifas.length ? '' : ' (sin tarifa)'}</option>`);
+const opcionesHotel = (sel) => porCiudadOpciones(datos.hoteles.filter((h) => h.activo || h.id === sel), (h) => `<option value="${h.id}" ${h.id === sel ? 'selected' : ''}>${esc(h.nombre)} · ${CATS[h.categoria]}</option>`);
+function porCiudadOpciones(lista, op) {
+  const g = new Map(); for (const x of lista) (g.get(x.ciudad) || g.set(x.ciudad, []).get(x.ciudad)).push(x);
+  return [...g.entries()].sort((a, b) => a[0].localeCompare(b[0], 'es')).map(([c, xs]) => `<optgroup label="${esc(c)}">${xs.map(op).join('')}</optgroup>`).join('');
+}
+
+function agregarLineaDlg(dia) {
+  if (!usuario()) { elegirSoy(); return; }
+  const c = cot.cotizacion, p = cot.pedido;
+  abrirDialogo(`<h3>Agregar al día ${dia}</h3>
+    <label>Qué<select name="tipo"><option value="servicio">Servicio del catálogo</option><option value="hotel">Hotel</option><option value="manual">Línea manual</option></select></label>
+    <div data-t="servicio"><label>Servicio<select name="servicio_id">${opcionesServicio(null)}</select></label></div>
+    <div data-t="hotel" hidden><label>Hotel<select name="hotel_id">${opcionesHotel(null)}</select></label>
+      <div class="fila"><label>Habitación<select name="habitacion"><option>DBL</option><option>SGL</option><option>TPL</option></select></label><label>Habitaciones<input name="unidades" type="number" min="1" value="1"></label></div>
+      <label>Noches<input name="noches" type="number" min="1" value="1"></label></div>
+    <div data-t="manual" hidden><label>Descripción<input name="descripcion" maxlength="200"></label>
+      <div class="fila"><label>Neto total (USD)<input name="neto" inputmode="decimal"></label><label>Venta total (USD, vacío = con margen)<input name="venta" inputmode="decimal"></label></div></div>
+    <label data-no-hotel>Pasajeros<input name="pasajeros" type="number" min="1" value="${p.pasajeros}"></label>
+    <div class="pie"><button value="cancel" formnovalidate>Cancelar</button><button class="prim" value="ok">Agregar</button></div>`,
+    async (f) => {
+      const tipo = f.tipo.value;
+      const body = { tipo, dia, pasajeros: Number(f.pasajeros.value) };
+      if (tipo === 'servicio') body.servicio_id = Number(f.servicio_id.value);
+      if (tipo === 'hotel') Object.assign(body, { hotel_id: Number(f.hotel_id.value), habitacion: f.habitacion.value, unidades: Number(f.unidades.value), noches: Number(f.noches.value) });
+      if (tipo === 'manual') Object.assign(body, { descripcion: f.descripcion.value, neto: f.neto.value, venta: f.venta.value });
+      cot = await api(`cotizaciones/${c.id}/lineas`, { method: 'POST', body }); dibujarCotizacion(); toast('Agregado');
+    });
+  const f = $('#dlg-f');
+  f.tipo.addEventListener('change', () => {
+    f.querySelectorAll('[data-t]').forEach((d) => { d.hidden = d.dataset.t !== f.tipo.value; });
+    f.querySelector('[data-no-hotel]').hidden = f.tipo.value === 'hotel';
+  });
+}
+
+function editarLineaDlg(l) {
+  if (!usuario()) { elegirSoy(); return; }
+  const c = cot.cotizacion;
+  const hotel = l.tipo === 'hotel';
+  abrirDialogo(`<h3>Editar línea</h3><p class="nota" style="margin:0">${esc(l.descripcion)}</p>
+    <div class="fila"><label>Día<input name="dia" type="number" min="1" value="${l.dia}"></label>
+      ${hotel ? `<label>Noches<input name="noches" type="number" min="1" value="${l.cantidad}"></label>` : `<label>Pasajeros<input name="pasajeros" type="number" min="1" value="${l.pasajeros}"></label>`}</div>
+    ${hotel ? `<label>Hotel<select name="hotel_id">${opcionesHotel(l.hotel_id)}</select></label>
+      <div class="fila"><label>Habitación<select name="habitacion">${['SGL', 'DBL', 'TPL'].map((h) => `<option ${h === l.habitacion ? 'selected' : ''}>${h}</option>`).join('')}</select></label>
+      <label>Habitaciones<input name="unidades" type="number" min="1" value="${l.unidades}"></label></div>` : ''}
+    ${l.tipo === 'manual' ? `<label>Descripción<input name="descripcion" maxlength="200" value="${esc(l.descripcion)}"></label>` : ''}
+    <div class="fila"><label>Neto total (USD)${l.pisado_neto ? ' · a mano' : ''}<input name="neto" inputmode="decimal" value="${(l.neto_cent / 100).toFixed(2)}"></label>
+      <label>Venta total (USD)${l.pisado_venta ? ' · a mano' : ''}<input name="venta" inputmode="decimal" value="${(l.venta_cent / 100).toFixed(2)}"></label></div>
+    ${l.precio_es_venta ? '<p class="nota" style="margin:0">Tarifa propia: ya es precio de venta, no lleva margen.</p>' : `<label>Margen % (vacío = el de la configuración, ${c.config.margen_pct}%)<input name="margen" inputmode="decimal" value="${l.margen_fijo ?? ''}"></label>`}
+    <label>Nota interna<input name="nota" maxlength="500" value="${esc(l.nota)}"></label>
+    <label>Motivo del cambio de precio (queda registrado)<input name="motivo" maxlength="200"></label>
+    <div class="pie">
+      <button type="button" class="link err" id="borrar-lin" style="margin-right:auto">Borrar línea</button>
+      ${(l.pisado_neto || l.pisado_venta || l.margen_fijo != null) && l.tipo !== 'manual' ? '<button type="button" class="chico" id="restaurar">Volver al tarifario</button>' : ''}
+      <button value="cancel" formnovalidate>Cancelar</button><button class="prim" value="ok">Guardar</button></div>`,
+    async (f) => {
+      const body = { dia: Number(f.dia.value), nota: f.nota.value, motivo: f.motivo.value };
+      if (hotel) Object.assign(body, { noches: Number(f.noches.value), hotel_id: Number(f.hotel_id.value), habitacion: f.habitacion.value, unidades: Number(f.unidades.value) });
+      else body.pasajeros = Number(f.pasajeros.value);
+      if (l.tipo === 'manual') body.descripcion = f.descripcion.value;
+      // Solo se manda el precio si alguien lo cambió (si no, se recalcula solo).
+      if (f.neto.value !== (l.neto_cent / 100).toFixed(2)) body.neto = f.neto.value;
+      if (f.venta.value !== (l.venta_cent / 100).toFixed(2)) body.venta = f.venta.value;
+      if (f.margen && f.margen.value !== String(l.margen_fijo ?? '')) body.margen = f.margen.value;
+      cot = await api(`cotizaciones/${c.id}/lineas/${l.id}`, { method: 'PUT', body }); dibujarCotizacion(); toast('Línea guardada');
+    });
+  $('#borrar-lin').addEventListener('click', async () => {
+    if (!confirm('¿Borrar esta línea?')) return;
+    try { cot = await api(`cotizaciones/${c.id}/lineas/${l.id}`, { method: 'DELETE' }); $('#dlg').close(); dibujarCotizacion(); toast('Línea borrada'); } catch (x) { $('#dlg-msg').textContent = x.message; }
+  });
+  if ($('#restaurar')) $('#restaurar').addEventListener('click', async () => {
+    try { cot = await api(`cotizaciones/${c.id}/lineas/${l.id}`, { method: 'PUT', body: { restaurar: true, motivo: $('#dlg-f').motivo.value } }); $('#dlg').close(); dibujarCotizacion(); toast('Precio según tarifario'); } catch (x) { $('#dlg-msg').textContent = x.message; }
+  });
 }
 
 // ---------- servicios ----------
@@ -498,7 +834,7 @@ async function pintarCambios() {
 async function iniciar() {
   if (!token()) return pedirToken('Entrá con el mismo token del panel.');
   pintarSoy();
-  document.querySelectorAll('#tabs button').forEach((b) => b.setAttribute('aria-selected', b.dataset.tab === tab));
+  marcarTab();
   await pintar();
   if (!usuario() && token()) elegirSoy();
 }

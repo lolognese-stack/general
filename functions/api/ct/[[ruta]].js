@@ -8,12 +8,22 @@
 //   PUT    /api/ct/config                      { valores: {clave: valor}, temporadas?: [...] }
 //   POST   /api/ct/importar                    { filas, aplicar, reemplazar_ilustrativas, fuente }
 //   GET    /api/ct/cambios?entidad=&id=        registro de cambios de precio
+//   GET    /api/ct/pedidos                     tablero        POST /api/ct/pedidos (alta + borrador automático)
+//   GET|PUT /api/ct/pedidos/:id               ver / editar datos del pedido
+//   POST   /api/ct/pedidos/:id/estado          { estado, nota }      POST /api/ct/pedidos/:id/rearmar
+//   GET|PUT /api/ct/cotizaciones/:id          ver (recalcula) / { notas_alvaro, usar_config_actual }
+//   POST   /api/ct/cotizaciones/:id/lineas     agregar línea   PUT|DELETE /api/ct/cotizaciones/:id/lineas/:lid
+//   POST   /api/ct/cotizaciones/:id/nueva-version          GET /api/ct/cotizaciones/:id/cambios
 // Quién: header x-crm-usuario (lo elige cada dispositivo en la página: "Soy Lorenzo / Soy Álvaro").
 import { rolDe, json } from '../../_lib/auth.js';
 import {
   leerFila, revisarArchivo, claveServicio, claveHotel, solapan, describirTramo,
   TIPOS_SERVICIO, CATEGORIAS,
 } from '../../_lib/tarifario.js';
+import {
+  listarPedidos, crearPedido, verPedido, editarPedido, estadoPedido, rearmar, nuevaVersion,
+  vistaCotizacion, editarCotizacion, agregarLinea, editarLinea, borrarLinea, cambiosCotizacion,
+} from '../../_lib/ct-cotizaciones.js';
 
 const CONFIG = {
   margen_pct: { min: 0, max: 300, nombre: 'Margen por defecto (%)' },
@@ -289,15 +299,34 @@ export async function onRequest({ request, env, params }) {
   const rol = rolDe(request, env);
   if (!rol) return json({ error: 'unauthorized' }, 401);
   const partes = [].concat(params.ruta || []);
-  const [recurso, idTxt] = partes;
+  const [recurso, idTxt, sub, subIdTxt] = partes;
   const id = idTxt === undefined ? null : Number(idTxt);
   if (idTxt !== undefined && !Number.isInteger(id)) return json({ error: 'id no válido' }, 400);
+  const subId = subIdTxt === undefined ? null : Number(subIdTxt);
+  if (subIdTxt !== undefined && !Number.isInteger(subId)) return json({ error: 'id no válido' }, 400);
   const m = request.method;
   const por = quien(request, rol);
   const body = m === 'POST' || m === 'PUT' ? await leerJson(request) : {};
 
   try {
     if (recurso === 'tarifario' && m === 'GET') return json(await getTarifario(env));
+    if (recurso === 'pedidos') {
+      if (!id && !sub && m === 'GET') return listarPedidos(env);
+      if (!id && !sub && m === 'POST') return crearPedido(env, body, por);
+      if (id && !sub && m === 'GET') return verPedido(env, id);
+      if (id && !sub && m === 'PUT') return editarPedido(env, id, body, por);
+      if (id && sub === 'estado' && m === 'POST') return estadoPedido(env, id, body, por);
+      if (id && sub === 'rearmar' && m === 'POST') return rearmar(env, id, por);
+    }
+    if (recurso === 'cotizaciones' && id) {
+      if (!sub && m === 'GET') { const v = await vistaCotizacion(env, id); return v ? json(v) : json({ error: 'No existe' }, 404); }
+      if (!sub && m === 'PUT') return editarCotizacion(env, id, body, por);
+      if (sub === 'lineas' && !subId && m === 'POST') return agregarLinea(env, id, body, por);
+      if (sub === 'lineas' && subId && m === 'PUT') return editarLinea(env, id, subId, body, por);
+      if (sub === 'lineas' && subId && m === 'DELETE') return borrarLinea(env, id, subId, por);
+      if (sub === 'nueva-version' && m === 'POST') return nuevaVersion(env, id, por);
+      if (sub === 'cambios' && m === 'GET') return cambiosCotizacion(env, id);
+    }
     if (recurso === 'servicios' && ((m === 'POST' && !id) || (m === 'PUT' && id))) return guardarServicio(env, id, body);
     if (recurso === 'hoteles' && ((m === 'POST' && !id) || (m === 'PUT' && id))) return guardarHotel(env, id, body);
     if (recurso === 'tarifas' || recurso === 'hotel-tarifas') {

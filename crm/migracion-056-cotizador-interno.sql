@@ -100,7 +100,8 @@ CREATE TABLE IF NOT EXISTS ct_pedidos (
   fecha_inicio  TEXT,                -- YYYY-MM-DD
   fecha_fin     TEXT,
   pasajeros     INTEGER NOT NULL DEFAULT 2,
-  destinos      TEXT,                -- JSON: ["cusco","puno"]
+  destinos      TEXT,                -- JSON: [{"ciudad":"Cusco","noches":3}, …] en orden de viaje
+  servicios     TEXT,                -- JSON: ids de ct_servicios que pidió el cliente (el borrador los ubica por día)
   categoria_hotel TEXT CHECK (categoria_hotel IS NULL OR categoria_hotel IN ('economico', 'confort', 'premium', 'sin_hotel')),
   pedidos_especiales TEXT,
   estado        TEXT NOT NULL DEFAULT 'nuevo'
@@ -135,7 +136,9 @@ CREATE TABLE IF NOT EXISTS ct_cotizaciones (
   total_neto_cent  INTEGER NOT NULL DEFAULT 0,  -- USD
   total_venta_cent INTEGER NOT NULL DEFAULT 0,  -- USD
   usa_prueba    INTEGER NOT NULL DEFAULT 0,     -- 1 = alguna tarifa o valor de configuración es de prueba: no se puede enviar
+  problemas     INTEGER NOT NULL DEFAULT 0,     -- líneas sin tarifa, sin hotel o sin fecha
   notas_alvaro  TEXT,
+  avisos        TEXT,                -- JSON: avisos del armado automático (fechas, servicios que no entran…)
   token_hash    TEXT,                -- SHA-256 del token del link de revisión (el token no se guarda)
   aprobada_por  TEXT,
   aprobada_en   TEXT,
@@ -150,8 +153,9 @@ CREATE INDEX IF NOT EXISTS idx_ct_cotizaciones_token ON ct_cotizaciones (token_h
 CREATE TABLE IF NOT EXISTS ct_lineas (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
   cotizacion_id   INTEGER NOT NULL REFERENCES ct_cotizaciones(id),
-  dia             INTEGER,           -- día del itinerario (1, 2…); NULL = sin día (ej. alojamiento total)
+  dia             INTEGER,           -- día del itinerario (1, 2…); hoteles: día de llegada
   orden           INTEGER NOT NULL DEFAULT 0,
+  fecha           TEXT,              -- YYYY-MM-DD del día (hoteles: check-in)
   tipo            TEXT NOT NULL,     -- tour | traslado | tren | entrada | paquete | hotel | manual
   servicio_id     INTEGER,
   hotel_id        INTEGER,
@@ -159,13 +163,19 @@ CREATE TABLE IF NOT EXISTS ct_lineas (
   descripcion     TEXT NOT NULL,
   pasajeros       INTEGER NOT NULL DEFAULT 1,
   cantidad        INTEGER NOT NULL DEFAULT 1, -- noches para hoteles, 1 para el resto
+  habitacion      TEXT,              -- hoteles: SGL | DBL | TPL
+  unidades        INTEGER NOT NULL DEFAULT 1, -- hoteles: cantidad de habitaciones
   neto_unit_cent  INTEGER,           -- en la moneda original
   moneda          TEXT,
   neto_cent       INTEGER NOT NULL DEFAULT 0, -- total de la línea en USD
   venta_cent      INTEGER NOT NULL DEFAULT 0, -- total de la línea en USD
-  margen_pct      REAL,
+  margen_pct      REAL,              -- el que se aplicó (0 si la tarifa ya es precio de venta)
+  margen_fijo     REAL,              -- margen puesto a mano para esta línea (NULL = el de la configuración)
+  precio_es_venta INTEGER NOT NULL DEFAULT 0,
   es_ilustrativa  INTEGER NOT NULL DEFAULT 0,
-  pisado          INTEGER NOT NULL DEFAULT 0, -- 1 = alguien cambió el precio a mano
+  pisado_neto     INTEGER NOT NULL DEFAULT 0, -- 1 = alguien cambió el neto a mano (no se recalcula)
+  pisado_venta    INTEGER NOT NULL DEFAULT 0, -- 1 = alguien cambió la venta a mano (no se recalcula)
+  problema        TEXT,              -- sin tarifa, falta hotel… (se recalcula)
   nota            TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_ct_lineas_cotizacion ON ct_lineas (cotizacion_id);
