@@ -1,8 +1,12 @@
 # Cotizador interno (Cotizaciones)
 
-Lorenzo carga el pedido, el sistema arma el borrador y Álvaro lo revisa y aprueba desde el celular.
-Página: `/cotizaciones-4c1f6a` (link "Cotizaciones" en el menú del panel). Todo es interno: netos y margen nunca salen
-en nada que vea el cliente.
+Lorenzo carga el pedido, el sistema arma el borrador y Álvaro lo revisa y aprueba entrando al CRM con su acceso.
+Sección nativa del panel: `#/cotizaciones/<pestaña>` (menú "Cotizaciones"). La página suelta `/cotizaciones-4c1f6a` y
+`/r/` quedaron como redirección a esa sección. Todo es interno: netos y margen nunca salen en nada que vea el cliente.
+
+**Acceso de Álvaro (rol `cotizador`):** secret de Pages `CRM_COTIZADOR_TOKEN`. Con ese token el panel solo muestra
+Cotizaciones y el resto de la API da 401 (`rolDe` no lo reconoce; solo `/api/ct/*` y `/api/yo` usan `rolDeCotizaciones`).
+Aprueba o pide cambios desde el mismo editor (`POST /api/ct/cotizaciones/:id/aprobar` y `/pedir-cambios`).
 
 ## Piezas
 
@@ -27,7 +31,7 @@ en nada que vea el cliente.
 - Cada cotización guarda la configuración con la que se calculó (`config_json`). Aprobada = no se edita: versión nueva.
 - PRECIOS DE PRUEBA: si una línea usa una tarifa de prueba o la cotización usa un valor de configuración sin confirmar.
   Se puede revisar y aprobar, pero no marcar como enviada ni pasar a la propuesta web.
-- Link de revisión: `/r/#<token>`. El token va después del `#` (no llega al servidor ni queda en logs); en la base solo
+- (Retirado en la Fase 1 del plan Cotizaciones en el CRM: ya no se generan links; `/api/revision/*` sigue en pie solo para links viejos.) Link de revisión: `/r/#<token>`. El token va después del `#` (no llega al servidor ni queda en logs); en la base solo
   su SHA-256. Vence a los 30 días; generar uno nuevo invalida el anterior. Desde el link solo se tocan precios y notas.
 
 ## Propuesta web

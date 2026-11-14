@@ -2334,6 +2334,118 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 .an-tbl tr.an-tot > *{background:var(--surface-sunk);font-weight:700;color:var(--ink);border-top:2px solid var(--ink);border-bottom:0}
 .an-tbl [data-tono="ojo"]{color:var(--masomenos);font-weight:700}
 .an-tbl [data-tono="mal"]{color:var(--danger);font-weight:700}
+/* ---- Cotizaciones (sección nativa; antes página suelta cotizaciones-4c1f6a) ---- */
+#view-cotizaciones{
+  --paper:var(--surface);--ink2:var(--ink-2);--muted:var(--ink-3);
+  --err:var(--danger);--err-bg:var(--danger-bg);--ok:var(--si);--brand-ink:var(--masomenos);--warn-bg:var(--masomenos-bg);
+}
+#view-cotizaciones .ct-bar{display:flex;align-items:center;gap:var(--s3);margin:0 0 var(--s4);flex-wrap:wrap}
+#view-cotizaciones .ct-bar .subtabs{max-width:100%;overflow-x:auto}
+#view-cotizaciones .ct-main{max-width:1100px;margin:0 auto}
+#view-cotizaciones .ct-vacio{padding:var(--s6) var(--s5);text-align:center;color:var(--ink-3)}
+#view-cotizaciones table{white-space:normal}
+#view-cotizaciones tbody td{max-width:none;overflow:visible;text-overflow:clip}
+#view-cotizaciones #ct-raiz button,#view-cotizaciones dialog button{font-weight:600;font-size:12.5px;padding:7px 13px;min-height:34px;border:1px solid var(--line);background:transparent;color:var(--ink-2);border-radius:var(--radius-sm)}
+#view-cotizaciones #ct-raiz button:hover,#view-cotizaciones dialog button:hover{background:var(--surface-sunk);color:var(--ink)}
+#view-cotizaciones #ct-raiz button.prim,#view-cotizaciones dialog button.prim{background:var(--brand);color:var(--brand-on);border-color:var(--brand)}
+#view-cotizaciones #ct-raiz button.prim:hover,#view-cotizaciones dialog button.prim:hover{opacity:.88;background:var(--brand)}
+#view-cotizaciones #ct-raiz button.chico,#view-cotizaciones dialog button.chico{padding:4px 10px;font-size:12px;min-height:30px}
+#view-cotizaciones #ct-raiz button.link,#view-cotizaciones dialog button.link{min-height:0}
+#view-cotizaciones #ct-raiz button:disabled,#view-cotizaciones dialog button:disabled{opacity:.45;cursor:not-allowed}
+#view-cotizaciones input,#view-cotizaciones select,#view-cotizaciones textarea{background:var(--surface-2)}
+.ct-toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:var(--ground);padding:10px 16px;border-radius:var(--radius-sm);font-size:13px;z-index:400}
+#view-cotizaciones #ct-raiz button.link, #view-cotizaciones dialog button.link{border:0;background:none;padding:2px 4px;color:var(--brand-ink);text-decoration:underline;font-size:.85rem}
+#view-cotizaciones #ct-raiz button:disabled, #view-cotizaciones dialog button:disabled{opacity:.45;cursor:not-allowed}
+#view-cotizaciones .nota{color:var(--muted);font-size:.85rem;margin:0 0 14px}
+#view-cotizaciones .banner{background:var(--err-bg);border:2px solid var(--err);color:var(--err);padding:12px 14px;margin-bottom:16px;font-weight:600}
+#view-cotizaciones .banner small{display:block;font-weight:400;color:var(--ink2)}
+#view-cotizaciones .prueba{display:inline-block;padding:1px 7px;border-radius:3px;background:var(--err);color:#fff;font-size:.7rem;font-weight:700;letter-spacing:.04em;vertical-align:middle}
+#view-cotizaciones .chip{display:inline-block;padding:1px 7px;border-radius:3px;border:1px solid var(--line);color:var(--ink2);font-size:.75rem;vertical-align:middle}
+#view-cotizaciones .barra{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+#view-cotizaciones input, #view-cotizaciones select, #view-cotizaciones textarea{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:4px;background:var(--surface-2);color:var(--ink);min-width:0}
+#view-cotizaciones textarea{width:100%;min-height:60px}
+#view-cotizaciones .card{background:var(--paper);border:1px solid var(--line);margin-bottom:12px}
+#view-cotizaciones .card>.cab{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line)}
+#view-cotizaciones .card h3{margin:0;font-size:1rem}
+#view-cotizaciones .card .meta{color:var(--muted);font-size:.83rem}
+#view-cotizaciones .card .acc{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+#view-cotizaciones .card.inactivo{opacity:.55}
+#view-cotizaciones table{width:100%;border-collapse:collapse}
+#view-cotizaciones th, #view-cotizaciones td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+#view-cotizaciones tr:last-child td{border-bottom:0}
+#view-cotizaciones th{font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;white-space:nowrap}
+#view-cotizaciones .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+#view-cotizaciones .vacio, #view-cotizaciones .error{padding:30px 20px;text-align:center;color:var(--muted);background:var(--paper);border:1px solid var(--line)}
+#view-cotizaciones h2{margin:26px 0 10px;font-size:.8rem;font-weight:600;line-height:1.2;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2)}
+#view-cotizaciones h2:first-child{margin-top:0}
+#view-cotizaciones .ciudad{margin:22px 0 8px;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+#view-cotizaciones .err{color:var(--err)}
+#view-cotizaciones .ok{color:var(--ok)}
+#view-cotizaciones .aviso{color:var(--brand-ink)}
+#view-cotizaciones tr.fila-err td{background:var(--err-bg)}
+#view-cotizaciones tr.fila-aviso td{background:var(--warn-bg)}
+#view-cotizaciones .resumen{display:flex;gap:16px;flex-wrap:wrap;margin:12px 0;font-weight:600}
+#view-cotizaciones .panel{background:var(--paper);border:1px solid var(--line);padding:16px;margin-bottom:16px}
+#view-cotizaciones .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+#view-cotizaciones label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--ink2)}
+#view-cotizaciones label.check{flex-direction:row;align-items:center;gap:8px}
+#view-cotizaciones dialog{border:1px solid var(--line);border-radius:6px;padding:0;max-width:560px;width:calc(100% - 24px);background:var(--paper);color:var(--ink)}
+#view-cotizaciones dialog::backdrop{background:rgba(0,0,0,.35)}
+#view-cotizaciones dialog form{padding:18px;display:flex;flex-direction:column;gap:12px}
+#view-cotizaciones dialog h3{margin:0}
+#view-cotizaciones dialog .fila{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#view-cotizaciones dialog .pie{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+#view-cotizaciones .msg{font-size:.88rem;color:var(--err);min-height:1.2em}
+#view-cotizaciones .ct-toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:4px;font-size:.9rem;z-index:9}
+#view-cotizaciones .scroll{overflow-x:auto}
+#view-cotizaciones .login{max-width:420px;margin:40px auto}
+#view-cotizaciones .tablero{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(220px,1fr);gap:12px;overflow-x:auto;padding-bottom:8px}
+#view-cotizaciones .col{background:var(--surface-sunk);border-radius:6px;padding:10px;min-height:120px}
+#view-cotizaciones .col h4{margin:0 0 10px;font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2);display:flex;justify-content:space-between}
+#view-cotizaciones .col h4 span{color:var(--muted)}
+#view-cotizaciones .ped{display:block;background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:10px 12px;margin-bottom:8px;color:var(--ink);text-decoration:none;position:relative}
+#view-cotizaciones .ped:hover{border-color:var(--ink2)}
+#view-cotizaciones .ped small{display:block;color:var(--ink2);font-size:.8rem}
+#view-cotizaciones .ped .hace{display:block;margin-top:6px;font-size:.75rem;color:var(--muted)}
+#view-cotizaciones .cab-ped{display:flex;gap:16px;justify-content:space-between;flex-wrap:wrap}
+#view-cotizaciones .cab-ped .meta{color:var(--ink2);font-size:.88rem}
+#view-cotizaciones .acc-ped{display:flex;flex-direction:column;gap:6px;align-items:flex-start;min-width:200px}
+#view-cotizaciones .banner.grande{font-size:1.3rem;letter-spacing:.06em;text-align:center}
+#view-cotizaciones .dias .dia{border-bottom:1px solid var(--line)}
+#view-cotizaciones .dias .dia:last-child{border-bottom:0}
+#view-cotizaciones .dia-cab{display:flex;gap:10px;align-items:baseline;padding:10px 14px;background:var(--surface-2)}
+#view-cotizaciones .dia-cab .link{margin-left:auto}
+#view-cotizaciones .dias td{font-size:.9rem}
+#view-cotizaciones .totales{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+#view-cotizaciones .totales div{display:flex;flex-direction:column}
+#view-cotizaciones .totales span{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+#view-cotizaciones .totales b{font-size:1.05rem;font-variant-numeric:tabular-nums}
+#view-cotizaciones .totales .venta b{font-size:1.3rem}
+#view-cotizaciones .avisos-cot{background:var(--warn-bg);border:1px solid var(--line);padding:10px 14px 10px 30px;margin:0 0 12px;color:var(--brand-ink);font-size:.9rem}
+#view-cotizaciones .servs label.check{margin:4px 0}
+#view-cotizaciones .chip.pisado{border-color:var(--brand);color:var(--brand-ink)}
+@media(max-width:700px){
+#view-cotizaciones .tablero{grid-auto-flow:row;grid-auto-columns:auto}
+#view-cotizaciones .dias .t-resp tr{display:grid;grid-template-columns:repeat(4,1fr);gap:2px 8px;padding:8px 14px}
+#view-cotizaciones .dias .t-resp td{display:block;padding:0;text-align:left}
+#view-cotizaciones .dias .t-resp td:before{display:block;font-size:.68rem}
+#view-cotizaciones .dias .t-resp td.full, #view-cotizaciones .dias .t-resp td:last-child{grid-column:1/-1}
+#view-cotizaciones .dias .t-resp td:last-child{text-align:right}
+#view-cotizaciones .banner.grande{font-size:1.1rem}
+}
+#view-cotizaciones .banner.grande small{letter-spacing:0;font-size:.85rem}
+@media(max-width:700px){
+#view-cotizaciones .t-resp thead{display:none}
+#view-cotizaciones .t-resp, #view-cotizaciones .t-resp tbody, #view-cotizaciones .t-resp tr, #view-cotizaciones .t-resp td{display:block;width:100%}
+#view-cotizaciones .t-resp tr{border-bottom:1px solid var(--line);padding:6px 0}
+#view-cotizaciones .t-resp td{border:0;padding:3px 14px;display:flex;justify-content:space-between;gap:12px;text-align:right}
+#view-cotizaciones .t-resp td:before{content:attr(data-t);color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;text-align:left}
+#view-cotizaciones .t-resp td.full{display:block;text-align:left}
+#view-cotizaciones .t-resp td.full:before{content:none}
+#view-cotizaciones .card>.cab{flex-direction:column}
+#view-cotizaciones .card .acc{justify-content:flex-start}
+#view-cotizaciones dialog .fila{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
@@ -2409,7 +2521,7 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg>
         <span>Propuestas</span>
       </button>
-      <button type="button" onclick="location.href='/cotizaciones-4c1f6a'" title="Tarifario y cotizaciones internas">
+      <button data-seccion="cotizaciones" title="Tarifario, pedidos y cotizaciones internas">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.5 7h7M8.5 11h1M12 11h1M15.5 11h0M8.5 14.5h1M12 14.5h1M8.5 18h1M12 18h1M15.5 14.5v3.5"/></svg>
         <span>Cotizaciones</span>
       </button>
@@ -2471,6 +2583,22 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 
     <section class="view" id="view-web" hidden></section>
     <section class="view" id="view-cotizador" hidden></section>
+    <section class="view" id="view-cotizaciones" hidden>
+    <div class="ct-bar">
+      <nav class="subtabs" id="ct-tabs" role="tablist" aria-label="Cotizaciones">
+        <button type="button" role="tab" data-tab="pedidos" aria-current="true">Pedidos</button>
+        <button type="button" role="tab" data-tab="servicios" aria-current="false">Servicios</button>
+        <button type="button" role="tab" data-tab="hoteles" aria-current="false">Hoteles</button>
+        <button type="button" role="tab" data-tab="importar" aria-current="false">Importar</button>
+        <button type="button" role="tab" data-tab="config" aria-current="false">Configuración</button>
+        <button type="button" role="tab" data-tab="cambios" aria-current="false">Registro</button>
+      </nav>
+      <span class="spacer"></span>
+      <button id="ct-soy" type="button" class="btn btn-ghost btn-sm" title="Queda registrado en cada cambio de precio">Soy …</button>
+    </div>
+    <div class="ct-main" id="ct-raiz"><div class="ct-vacio">Cargando…</div></div>
+    <dialog id="ct-dlg"><form id="ct-dlg-f" method="dialog"></form></dialog>
+  </section>
     <section class="view" id="view-formulario" hidden></section>
 
     <section class="view" id="view-inbox" hidden></section>
@@ -3656,6 +3784,8 @@ function renderLeads(){
 /* ---------------- cambio de sección ---------------- */
 
 function irA(nuevaSeccion){
+  // El rol cotizador (Álvaro) solo ve Cotizaciones: el resto de la API le da 403.
+  if(window.crmRol === 'cotizador') nuevaSeccion = 'cotizaciones';
   seccion = nuevaSeccion;
   arrastrando = false;   // por si se cambia de sección a mitad de un drag: sin esto render() queda congelado para siempre
   pzEditando = false;    // idem, si se navega con el foco todavía en una celda de la tabla
@@ -3685,6 +3815,7 @@ function irA(nuevaSeccion){
   el('view-inbox').hidden         = seccion !== 'inbox';
   el('view-setter').hidden        = seccion !== 'setter';
   el('view-cotizador').hidden     = seccion !== 'cotizador';
+  el('view-cotizaciones').hidden  = seccion !== 'cotizaciones';
   if(seccion !== 'objetivos') document.body.classList.remove('ob-weekly');
   el('kpis').hidden               = seccion !== 'leads' && seccion !== 'ventas';
   el('subtabs').hidden            = seccion !== 'leads' && seccion !== 'agendas';
@@ -3692,8 +3823,8 @@ function irA(nuevaSeccion){
   if(seccion === 'leads' || seccion === 'agendas') document.querySelectorAll('[data-view]').forEach(x =>
     x.setAttribute('aria-current', String(seccion === 'leads' && x.dataset.view === vista)));
   el('vt-subtabs').hidden         = seccion !== 'ventas';
-  el('search-wrap').hidden        = seccion === 'conversacion' || seccion === 'performance' || seccion === 'objetivos' || seccion === 'web' || seccion === 'formulario' || seccion === 'inbox' || seccion === 'setter' || seccion === 'cotizador';
-  el('new-btn').hidden            = seccion === 'conversacion' || seccion === 'performance' || seccion === 'planificador' || seccion === 'historias' || seccion === 'objetivos' || seccion === 'web' || seccion === 'formulario' || seccion === 'inbox' || seccion === 'setter' || seccion === 'cotizador';
+  el('search-wrap').hidden        = seccion === 'conversacion' || seccion === 'performance' || seccion === 'objetivos' || seccion === 'web' || seccion === 'formulario' || seccion === 'inbox' || seccion === 'setter' || seccion === 'cotizador' || seccion === 'cotizaciones';
+  el('new-btn').hidden            = seccion === 'conversacion' || seccion === 'performance' || seccion === 'planificador' || seccion === 'historias' || seccion === 'objetivos' || seccion === 'web' || seccion === 'formulario' || seccion === 'inbox' || seccion === 'setter' || seccion === 'cotizador' || seccion === 'cotizaciones';
 
   if(seccion === 'anuncios'){ el('search-wrap').hidden = true; el('new-btn').hidden = true; }
   el('new-btn-txt').textContent   = seccion === 'ventas' ? 'Nueva venta' : 'Nuevo lead';
@@ -3709,6 +3840,7 @@ function irA(nuevaSeccion){
   if(seccion === 'objetivos')    el('view-title').textContent = 'Objetivos';
   if(seccion === 'objetivos') cargarObjetivos();
   if(seccion === 'web'){ el('view-title').textContent = 'Web'; if(!wbCargado) cargarWeb(); }
+  if(seccion === 'cotizaciones'){ el('view-title').textContent = 'Cotizaciones'; if(window.ct) window.ct.mostrar(); }
   if(seccion === 'cotizador'){
     el('view-title').textContent = 'Cotizador';
     if(!czActivo && !el('cz-root')) el('view-cotizador').innerHTML = `<div class="ag-empty">Cargando…</div>`;
@@ -3745,6 +3877,7 @@ function irA(nuevaSeccion){
 function rutaBase(){
   if(seccion === 'agendas') return '#/leads/agendas';
   if(seccion === 'anuncios') return '#/anuncios/' + anTipo;
+  if(seccion === 'cotizaciones') return '#/cotizaciones/' + (window.ct ? window.ct.tab() : 'pedidos');
   return '#/' + seccion + (seccion === 'leads' ? '/' + vista
     : seccion === 'ventas' ? '/' + vtVista
     : seccion === 'performance' ? '/' + pfVista
@@ -3786,6 +3919,14 @@ function sincronizarHash(){
 }
 
 function parseHash(){
+  // Cotizaciones: #/cotizaciones/<pestaña> o #/cotizaciones/pedido/<id>, editar/<id>, nuevo.
+  const mc = location.hash.match(/^#\/cotizaciones(?:\/([^?]*))?/);
+  if(mc){
+    seccion = 'cotizaciones';
+    let t = ''; try{ t = decodeURIComponent(mc[1] || ''); }catch(e){}
+    if(window.ct) window.ct.setTab(t);
+    return;
+  }
   // Ventas: #/ventas/<vista> o #/ventas/<id> (abre el drawer de esa venta).
   const mv = location.hash.match(/^#\/ventas(?:\/([^?]+))?/);
   if(mv){
@@ -11899,15 +12040,7 @@ function entrar(){
   localStorage.setItem('crm_token', v);
   el('gate-error').classList.remove('show');
   el('gate').style.display = 'none';
-  load().then(() => { if(!getToken()) el('gate-error').classList.add('show'); });
-  cargarAngulos();
-  cargarRecursos();
-  cargarPiezas();
-  cargarHistorias();
-  cargarIdeas();
-  startPolling();
-  setterInit();
-  cotizadorInit();
+  arrancarSesion().then(() => { if(!getToken()) el('gate-error').classList.add('show'); });
 }
 
 /* ---------------- Objetivos ---------------- */
@@ -17009,13 +17142,848 @@ function stPintarAjustes(){
   });
 }
 
-parseHash();
-irA(seccion);
-window.addEventListener('hashchange', () => { parseHash(); irA(seccion); });
+/* ---------------- Cotizaciones (sección nativa) ---------------- */
+// Antes era la página suelta cotizaciones-4c1f6a. Corre en su propio ámbito (IIFE) para no pisar
+// nombres del panel; los ids llevan el prefijo ct-. API: /api/ct/*. Quién cambia un precio: header x-crm-usuario.
+(function(){
+const RAIZ = () => document.getElementById('view-cotizaciones');
+const $ = (s, el = RAIZ()) => el.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const token = () => localStorage.getItem('crm_token');
+const usuario = () => { try { return localStorage.getItem('ct_usuario') || ''; } catch { return ''; } };
+const XLSX_URL = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs';
+const TIPOS = { tour: 'Tour', traslado: 'Traslado', tren: 'Tren', entrada: 'Entrada', paquete: 'Paquete' };
+const CATS = { economico: 'Económico', confort: 'Confort', premium: 'Premium' };
+const TEMP = { todas: 'Todo el año', alta: 'Alta', baja: 'Baja' };
+const dinero = (cent, mon) => `${mon === 'PEN' ? 'S/' : 'US$'} ${(cent / 100).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fecha = (iso) => iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : '—';
+const peru = (t) => { if (!t) return '—'; const d = new Date(Date.parse(t.replace(' ', 'T') + 'Z') - 5 * 3600e3); const s = d.toISOString(); return `${s.slice(8, 10)}/${s.slice(5, 7)} ${s.slice(11, 16)}`; };
+const tramo = (t) => t.pax_hasta == null ? `${t.pax_desde}+` : t.pax_desde === t.pax_hasta ? `${t.pax_desde}` : `${t.pax_desde}-${t.pax_hasta}`;
+const hoy = () => new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10);
 
-if(getToken()){
-  el('gate').style.display = 'none';
-  load();
+let tab = 'pedidos';
+let datos = null;          // tarifario
+let filtro = { ciudad: '', q: '', inactivos: false };
+let imp = null;            // estado del importador
+
+function toast(t) { const d = document.createElement('div'); d.className = 'ct-toast'; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 2600); }
+
+async function api(ruta, opt = {}) {
+  const r = await fetch('/api/ct/' + ruta, {
+    method: opt.method || 'GET',
+    headers: { 'x-crm-token': token() || '', 'x-crm-usuario': encodeURIComponent(usuario()), ...(opt.body ? { 'content-type': 'application/json' } : {}) },
+    body: opt.body ? JSON.stringify(opt.body) : undefined,
+  });
+  const j = await r.json().catch(() => ({}));
+  if (r.status === 401) { localStorage.removeItem('crm_token'); document.getElementById('gate').style.display = 'flex'; throw new Error('401'); }
+  if (!r.ok) { const e = new Error(j.error || 'Error ' + r.status); e.datos = j; throw e; }
+  return j;
+}
+
+// ---------- quién soy ----------
+function pintarSoy() { $('#ct-soy').textContent = usuario() ? `Soy ${usuario()}` : 'Elegí quién sos'; }
+function elegirSoy() {
+  abrirDialogo(`<h3>¿Quién usa este dispositivo?</h3>
+    <p class="nota" style="margin:0">Queda registrado en cada cambio de precio. Se recuerda en este navegador.</p>
+    <div class="barra"><button type="button" data-n="Lorenzo">Lorenzo</button><button type="button" data-n="Álvaro">Álvaro</button></div>
+    <label>Otro nombre<input name="otro" maxlength="40" value=""></label>
+    <div class="pie"><button value="cancel" formnovalidate>Cancelar</button><button class="prim" value="ok">Guardar</button></div>`,
+    (f) => { const n = f.otro.value.trim(); if (!n) return 'Escribí un nombre o tocá uno de los botones'; localStorage.setItem('ct_usuario', n.slice(0, 40)); pintarSoy(); });
+  RAIZ().querySelectorAll('#ct-dlg [data-n]').forEach((b) => b.addEventListener('click', () => { localStorage.setItem('ct_usuario', b.dataset.n); pintarSoy(); $('#ct-dlg').close(); }));
+}
+
+// ---------- diálogo genérico ----------
+// html = contenido del form; alGuardar(form) puede devolver un texto de error o una promesa.
+function abrirDialogo(html, alGuardar) {
+  const dlg = $('#ct-dlg'), f = $('#ct-dlg-f');
+  f.innerHTML = html + '<div class="msg" id="ct-dlg-msg"></div>';
+  f.onsubmit = async (e) => {
+    const btn = e.submitter;
+    if (btn && btn.value === 'cancel') return;
+    e.preventDefault();
+    if (btn) btn.disabled = true;
+    try {
+      const err = await alGuardar(f);
+      if (err) { $('#ct-dlg-msg').textContent = err; return; }
+      dlg.close();
+    } catch (x) { $('#ct-dlg-msg').textContent = x.message; }
+    finally { if (btn) btn.disabled = false; }
+  };
+  dlg.showModal();
+  const primero = f.querySelector('input:not([type=hidden]),select,textarea'); if (primero) primero.focus();
+}
+
+// ---------- pestañas ----------
+function marcarTab() {
+  const base = /^(pedido|nuevo|editar)/.test(tab) ? 'pedidos' : tab;
+  RAIZ().querySelectorAll('#ct-tabs button').forEach((b) => b.setAttribute('aria-current', String(b.dataset.tab === base)));
+}
+function elegirTab(t) {
+  tab = t; history.replaceState(null, '', '#/cotizaciones/' + t);
+  marcarTab();
+  pintar();
+}
+
+async function cargarTarifario() { datos = await api('tarifario'); }
+
+async function pintar() {
+  const raiz = $('#ct-raiz');
+  try {
+    if (tab === 'pedidos') return await pintarPedidos();
+    if (tab === 'nuevo') return await pintarFormPedido(null);
+    let m;
+    if ((m = tab.match(/^pedido\/(\d+)$/))) return await pintarPedido(Number(m[1]));
+    if ((m = tab.match(/^editar\/(\d+)$/))) return await pintarFormPedido((await api(`pedidos/${m[1]}`)).pedido);
+    if (tab === 'servicios' || tab === 'hoteles') { if (!datos) await cargarTarifario(); return tab === 'servicios' ? pintarServicios() : pintarHoteles(); }
+    if (tab === 'importar') return pintarImportar();
+    if (tab === 'config') return pintarConfig();
+    if (tab === 'cambios') return pintarCambios();
+  } catch (e) { if (e.message !== '401') raiz.innerHTML = `<div class="error">${esc(e.message)}</div>`; }
+}
+
+function bannerPrueba() {
+  const n = datos?.resumen?.ilustrativas || 0;
+  return n ? `<div class="banner">Hay ${n} tarifas de PRUEBA (precios inventados).<small>Toda cotización que use una sale con el cartel "PRECIOS DE PRUEBA" y no se puede mandar al cliente. Para cargar las reales: pestaña Importar, con "Reemplazar las de prueba".</small></div>` : '';
+}
+
+function barraFiltro(lista, extra) {
+  const ciudades = [...new Set(lista.map((x) => x.ciudad))].sort((a, b) => a.localeCompare(b, 'es'));
+  return `<div class="barra">
+    <select id="ct-f-ciudad"><option value="">Todas las ciudades</option>${ciudades.map((c) => `<option ${c === filtro.ciudad ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
+    <input id="ct-f-q" type="search" placeholder="Buscar…" value="${esc(filtro.q)}">
+    <label class="check"><input id="ct-f-in" type="checkbox" ${filtro.inactivos ? 'checked' : ''}> Ver inactivos</label>
+    <span style="flex:1"></span>${extra}</div>`;
+}
+function engancharFiltro() {
+  $('#ct-f-ciudad').addEventListener('change', (e) => { filtro.ciudad = e.target.value; pintar(); });
+  $('#ct-f-q').addEventListener('input', (e) => { filtro.q = e.target.value; clearTimeout(engancharFiltro.t); engancharFiltro.t = setTimeout(() => { pintar(); const q = $('#ct-f-q'); q.focus(); q.setSelectionRange(q.value.length, q.value.length); }, 250); });
+  $('#ct-f-in').addEventListener('change', (e) => { filtro.inactivos = e.target.checked; pintar(); });
+}
+const pasaFiltro = (x) => (!filtro.ciudad || x.ciudad === filtro.ciudad) && (filtro.inactivos || x.activo) &&
+  (!filtro.q || (x.nombre + ' ' + x.ciudad).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes(filtro.q.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')));
+
+function porCiudad(lista, pintarUno) {
+  const grupos = new Map();
+  for (const x of lista) (grupos.get(x.ciudad) || grupos.set(x.ciudad, []).get(x.ciudad)).push(x);
+  return [...grupos.entries()].sort((a, b) => a[0].localeCompare(b[0], 'es')).map(([c, xs]) => `<div class="ciudad">${esc(c)} · ${xs.length}</div>${xs.map(pintarUno).join('')}`).join('');
+}
+
+function filaVigencia(t) {
+  const vencida = t.vigente_hasta < hoy();
+  return `${fecha(t.vigente_desde)} al ${fecha(t.vigente_hasta)}${vencida ? ' <span class="err">(vencida)</span>' : ''}`;
+}
+
+// ---------- pedidos ----------
+const ESTADOS = [
+  ['nuevo', 'Nuevo'], ['borrador_listo', 'Borrador listo'], ['en_revision', 'En revisión'], ['aprobada', 'Aprobada'],
+  ['enviada', 'Enviada'], ['cerrada', 'Cerrada'], ['perdida', 'Perdida'],
+];
+const NOMBRE_ESTADO = Object.fromEntries(ESTADOS);
+const COT_ESTADO = { borrador: 'Borrador', en_revision: 'En revisión', cambios_pedidos: 'Cambios pedidos', aprobada: 'Aprobada', reemplazada: 'Reemplazada' };
+const usd = (c) => c == null ? '—' : `US$ ${(c / 100).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const DIAS_SEM = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+const diaTxt = (iso) => iso ? `${DIAS_SEM[new Date(iso + 'T12:00:00Z').getUTCDay()]} ${iso.slice(8, 10)}/${iso.slice(5, 7)}` : 'sin fecha';
+function haceCuanto(t) {
+  if (!t) return '';
+  const m = Math.max(0, Math.round((Date.now() - Date.parse(t.replace(' ', 'T') + 'Z')) / 60000));
+  if (m < 60) return `${m} min`;
+  if (m < 48 * 60) return `${Math.round(m / 60)} h`;
+  return `${Math.round(m / 1440)} días`;
+}
+let verCerrados = false;
+
+async function pintarPedidos() {
+  const j = await api('pedidos');
+  const visibles = ESTADOS.filter(([k]) => verCerrados || !['cerrada', 'perdida'].includes(k));
+  const tarjeta = (p) => `<a class="ped" href="#/cotizaciones/pedido/${p.id}">
+      <b>${esc(p.nombre)}</b>${p.usa_prueba ? ' <span class="prueba">PRUEBA</span>' : ''}
+      <small>${p.pasajeros} pax · ${p.fecha_inicio ? fecha(p.fecha_inicio) : 'sin fecha'}${p.pais ? ' · ' + esc(p.pais) : ''}</small>
+      <small>${esc(p.destinos.map((d) => d.ciudad).join(' · '))}</small>
+      ${p.total_venta_cent ? `<small><b>${usd(Math.round(p.total_venta_cent / p.pasajeros))}</b> p/p · v${p.version}${p.problemas ? ` · <span class="err">${p.problemas} sin precio</span>` : ''}</small>` : ''}
+      <span class="hace" title="Tiempo en este estado">hace ${haceCuanto(p.estado_desde)}</span></a>`;
+  $('#ct-raiz').innerHTML = `<div class="barra"><button class="prim" type="button" id="ct-nuevo-ped">+ Pedido</button><span style="flex:1"></span>
+      <label class="check"><input type="checkbox" id="ct-ver-cerr" ${verCerrados ? 'checked' : ''}> Ver cerrados y perdidos</label></div>
+    <div class="tablero">${visibles.map(([k, n]) => { const ps = j.pedidos.filter((p) => p.estado === k); return `<section class="col"><h4>${n} <span>${ps.length}</span></h4>${ps.map(tarjeta).join('') || '<p class="nota">—</p>'}</section>`; }).join('')}</div>`;
+  $('#ct-nuevo-ped').addEventListener('click', () => irA('nuevo'));
+  $('#ct-ver-cerr').addEventListener('change', (e) => { verCerrados = e.target.checked; pintarPedidos(); });
+}
+
+function irA(h) { location.hash = '#/cotizaciones/' + h; }
+
+// Formulario de alta / edición del pedido. p = pedido existente o null.
+async function pintarFormPedido(p) {
+  if (!datos) await cargarTarifario();
+  const v = p || { pasajeros: 2, categoria_hotel: 'confort', destinos: [{ ciudad: 'Cusco', noches: 4 }], servicios: [] };
+  const ciudades = [...new Set([...datos.servicios.filter((s) => s.activo), ...datos.hoteles.filter((h) => h.activo)].map((x) => x.ciudad))].sort((a, b) => a.localeCompare(b, 'es'));
+  const activos = datos.servicios.filter((s) => s.activo && s.tarifas.length);
+  $('#ct-raiz').innerHTML = `<p><a href="${p ? '#/cotizaciones/pedido/' + p.id : '#/cotizaciones/pedidos'}">← Volver</a></p>
+    <form id="ct-fp" class="panel"><h2>${p ? 'Editar pedido' : 'Nuevo pedido'}</h2>
+      <div class="grid">
+        <label>Nombre del cliente<input name="nombre" required maxlength="120" value="${esc(v.nombre)}"></label>
+        <label>País<input name="pais" maxlength="60" value="${esc(v.pais)}"></label>
+        <label>Pasajeros<input name="pasajeros" type="number" min="1" max="60" required value="${esc(v.pasajeros)}"></label>
+        <label>Llega<input name="fecha_inicio" type="date" value="${esc(v.fecha_inicio)}"></label>
+        <label>Se va<input name="fecha_fin" type="date" value="${esc(v.fecha_fin)}"></label>
+        <label>Hotel<select name="categoria_hotel">${[['economico', 'Económico'], ['confort', 'Confort'], ['premium', 'Premium'], ['sin_hotel', 'Sin hotel']].map(([k, n]) => `<option value="${k}" ${k === v.categoria_hotel ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+      </div>
+      <h2>Destinos, en orden</h2><div id="ct-dests"></div>
+      <div class="barra"><button type="button" class="chico" id="ct-mas-dest">+ Destino</button><span class="nota" id="ct-cuenta-noches" style="margin:0"></span></div>
+      <datalist id="ct-ciudades-ped">${ciudades.map((c) => `<option>${esc(c)}</option>`).join('')}</datalist>
+      <h2>Qué quiere hacer</h2><p class="nota">El borrador ubica cada servicio en un día libre de su ciudad.</p>
+      <div id="ct-servs" class="servs"></div>
+      <h2>Pedidos especiales</h2><textarea name="pedidos_especiales" maxlength="2000">${esc(v.pedidos_especiales)}</textarea>
+      <div class="barra" style="margin-top:14px"><button class="prim">${p ? 'Guardar' : 'Crear y armar borrador'}</button><span class="msg" id="ct-pmsg"></span></div>
+      ${p ? '<p class="nota">Guardar no cambia la cotización. Para rehacerla con los datos nuevos: "Volver a armar" en el pedido.</p>' : ''}
+    </form>`;
+  const f = $('#ct-fp');
+  const filaDest = (d = { ciudad: '', noches: 1 }) => {
+    const el = document.createElement('div'); el.className = 'barra dest';
+    el.innerHTML = `<input name="d-ciudad" list="ct-ciudades-ped" placeholder="Ciudad" value="${esc(d.ciudad)}" style="flex:1;min-width:140px">
+      <input name="d-noches" type="number" min="0" max="60" value="${esc(d.noches)}" style="width:80px"> noches <button type="button" class="link">Quitar</button>`;
+    el.querySelector('.link').addEventListener('click', () => { el.remove(); actualizar(); });
+    el.querySelectorAll('input').forEach((i) => i.addEventListener('input', actualizar));
+    $('#ct-dests').appendChild(el);
+  };
+  const destinos = () => [...RAIZ().querySelectorAll('.dest')].map((el) => ({ ciudad: el.querySelector('[name=d-ciudad]').value.trim(), noches: Number(el.querySelector('[name=d-noches]').value || 0) })).filter((d) => d.ciudad);
+  const elegidos = new Set((v.servicios || []).map(Number));
+  const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+  function actualizar() {
+    const ds = destinos();
+    const noches = ds.reduce((s, d) => s + d.noches, 0);
+    let txt = `${noches} noches, ${noches + 1} días.`;
+    if (f.fecha_inicio.value && f.fecha_fin.value) {
+      const dias = Math.round((Date.parse(f.fecha_fin.value) - Date.parse(f.fecha_inicio.value)) / 86400e3) + 1;
+      if (dias !== noches + 1) txt += ` <span class="err">Las fechas dan ${dias} días.</span>`;
+    }
+    $('#ct-cuenta-noches').innerHTML = txt;
+    RAIZ().querySelectorAll('#ct-servs input:checked').forEach((c) => elegidos.add(Number(c.value)));
+    RAIZ().querySelectorAll('#ct-servs input:not(:checked)').forEach((c) => elegidos.delete(Number(c.value)));
+    const enDest = new Set(ds.map((d) => norm(d.ciudad)));
+    const lista = activos.filter((s) => enDest.has(norm(s.ciudad)) || elegidos.has(s.id));
+    $('#ct-servs').innerHTML = lista.length ? porCiudad(lista, (s) => `<label class="check"><input type="checkbox" value="${s.id}" ${elegidos.has(s.id) ? 'checked' : ''}> ${esc(s.nombre)} <small class="nota" style="margin:0">${esc(s.duracion || '')}</small>${s.tarifas.every((t) => t.es_ilustrativa) ? ' <span class="prueba">PRUEBA</span>' : ''}</label>`) : '<p class="nota">Agregá destinos para ver sus servicios.</p>';
+  }
+  (v.destinos.length ? v.destinos : [{ ciudad: '', noches: 1 }]).forEach(filaDest);
+  $('#ct-mas-dest').addEventListener('click', () => { filaDest(); actualizar(); });
+  f.fecha_inicio.addEventListener('change', actualizar); f.fecha_fin.addEventListener('change', actualizar);
+  actualizar();
+  f.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!usuario()) { elegirSoy(); return; }
+    RAIZ().querySelectorAll('#ct-servs input:checked').forEach((c) => elegidos.add(Number(c.value)));
+    RAIZ().querySelectorAll('#ct-servs input:not(:checked)').forEach((c) => elegidos.delete(Number(c.value)));
+    const body = { nombre: f.nombre.value, pais: f.pais.value, pasajeros: Number(f.pasajeros.value), fecha_inicio: f.fecha_inicio.value || null, fecha_fin: f.fecha_fin.value || null,
+      categoria_hotel: f.categoria_hotel.value, destinos: destinos(), servicios: [...elegidos], pedidos_especiales: f.pedidos_especiales.value, lead_id: v.lead_id ?? null };
+    const btn = f.querySelector('button.prim'); btn.disabled = true;
+    try {
+      if (p) { await api(`pedidos/${p.id}`, { method: 'PUT', body }); toast('Pedido guardado'); irA('pedido/' + p.id); }
+      else { const r = await api('pedidos', { method: 'POST', body }); toast('Borrador armado'); irA('pedido/' + r.id); }
+    } catch (x) { $('#ct-pmsg').textContent = x.message; btn.disabled = false; }
+  });
+}
+
+// ---------- detalle del pedido + armado ----------
+let ped = null;        // { pedido, estados, cotizaciones }
+let cot = null;        // vista de la cotización elegida
+let cotElegida = null;
+
+async function pintarPedido(id) {
+  ped = await api(`pedidos/${id}`);
+  if (!datos) await cargarTarifario();
+  const elegida = cotElegida && ped.cotizaciones.some((c) => c.id === cotElegida) ? cotElegida : ped.cotizaciones[0]?.id;
+  cot = elegida ? await api(`cotizaciones/${elegida}`) : null;
+  dibujarPedido();
+}
+
+function dibujarPedido() {
+  const p = ped.pedido;
+  const ultimoEstado = ped.estados[ped.estados.length - 1];
+  $('#ct-raiz').innerHTML = `<p><a href="#/cotizaciones/pedidos">← Pedidos</a></p>
+    <div class="panel cab-ped">
+      <div><h2 style="margin:0 0 6px">${esc(p.nombre)}${p.pais ? ' · ' + esc(p.pais) : ''}</h2>
+        <div class="meta">${p.pasajeros} pasajeros · ${p.fecha_inicio ? `${fecha(p.fecha_inicio)} al ${fecha(p.fecha_fin)}` : 'sin fechas'} · hotel ${esc({ economico: 'económico', confort: 'confort', premium: 'premium', sin_hotel: 'no' }[p.categoria_hotel] || '—')}</div>
+        <div class="meta">${esc(p.destinos.map((d) => `${d.ciudad} (${d.noches} n)`).join(' → '))}</div>
+        ${p.pedidos_especiales ? `<div class="meta">Pedidos especiales: ${esc(p.pedidos_especiales)}</div>` : ''}
+        <div class="meta">Cargado por ${esc(p.creado_por || '—')} el ${peru(p.creado_en)}</div></div>
+      <div class="acc-ped">
+        <label>Estado<select id="ct-estado">${ESTADOS.map(([k, n]) => `<option value="${k}" ${k === p.estado ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+        <small class="nota" style="margin:0">hace ${haceCuanto(p.estado_desde)}${ultimoEstado?.por ? ' · ' + esc(ultimoEstado.por) : ''} · <button type="button" class="link" id="ct-hist-est">historial</button></small>
+        <button type="button" class="chico" id="ct-editar-ped">Editar datos</button>
+      </div>
+    </div>
+    <div id="ct-cot"></div>`;
+  $('#ct-estado').addEventListener('change', async (e) => {
+    if (!usuario()) { elegirSoy(); e.target.value = p.estado; return; }
+    try { await api(`pedidos/${p.id}/estado`, { method: 'POST', body: { estado: e.target.value } }); toast('Estado: ' + NOMBRE_ESTADO[e.target.value]); pintarPedido(p.id); }
+    catch (x) { alert(x.message); e.target.value = p.estado; }
+  });
+  $('#ct-editar-ped').addEventListener('click', () => irA(`editar/${p.id}`));
+  $('#ct-hist-est').addEventListener('click', () => abrirDialogo(`<h3>Estados</h3><table><tbody>${ped.estados.map((s) => `<tr><td>${esc(NOMBRE_ESTADO[s.estado] || s.estado)}</td><td>${peru(s.creado_en)}</td><td>${esc(s.por || '')}${s.nota ? ` · ${esc(s.nota)}` : ''}</td></tr>`).join('')}</tbody></table><div class="pie"><button value="cancel" formnovalidate>Cerrar</button></div>`, () => {}));
+  dibujarCotizacion();
+}
+
+function dibujarCotizacion() {
+  const el = $('#ct-cot');
+  if (!cot) { el.innerHTML = `<div class="vacio">Sin cotización. <button type="button" id="ct-armar">Armar borrador</button></div>`; $('#ct-armar').addEventListener('click', rearmarCot); return; }
+  const c = cot.cotizacion, p = cot.pedido, t = cot.totales, ed = c.editable;
+  const nDias = Math.max(1, p.destinos.reduce((s, d) => s + d.noches, 0) + 1, ...cot.lineas.map((l) => (l.dia || 0) + (l.tipo === 'hotel' ? 0 : 0)));
+  const porDia = new Map();
+  for (const l of cot.lineas) (porDia.get(l.dia) || porDia.set(l.dia, []).get(l.dia)).push(l);
+  const fila = (l) => `<tr class="${l.problema ? 'fila-err' : ''}">
+      <td class="full"><b>${esc(l.descripcion)}</b> <span class="chip">${esc(l.tipo === 'hotel' ? 'hotel' : TIPOS[l.tipo] || l.tipo)}</span>
+        ${l.es_ilustrativa ? '<span class="prueba">PRUEBA</span>' : ''}${l.pisado_neto || l.pisado_venta ? ' <span class="chip pisado" title="Precio cambiado a mano">a mano</span>' : ''}${l.precio_es_venta ? ' <span class="chip" title="Tarifa ya es precio de venta">propio</span>' : ''}
+        ${l.problema ? `<div class="err">${esc(l.problema)}</div>` : ''}${l.nota ? `<div class="nota" style="margin:0">${esc(l.nota)}</div>` : ''}</td>
+      <td data-t="Pax">${l.tipo === 'hotel' ? `${l.unidades} ${l.habitacion} × ${l.cantidad} n` : l.pasajeros}</td>
+      <td data-t="Neto" class="num">${usd(l.neto_cent)}${l.moneda === 'PEN' && l.neto_unit_cent != null ? `<small class="nota" style="display:block;margin:0">S/ ${(l.neto_unit_cent / 100).toFixed(2)} c/u</small>` : ''}</td>
+      <td data-t="Margen" class="num">${l.margen_pct != null ? l.margen_pct + '%' : '—'}</td>
+      <td data-t="Venta" class="num"><b>${usd(l.venta_cent)}</b></td>
+      <td class="num">${ed ? `<button type="button" class="link" data-ed-lin="${l.id}">Editar</button>` : ''}</td></tr>`;
+  let dias = '';
+  for (let d = 1; d <= nDias; d++) {
+    const ls = porDia.get(d) || [];
+    const fechaD = p.fecha_inicio ? (() => { const x = new Date(Date.parse(p.fecha_inicio + 'T12:00:00Z') + (d - 1) * 86400e3); return x.toISOString().slice(0, 10); })() : null;
+    dias += `<div class="dia"><div class="dia-cab"><b>Día ${d}</b> <span class="nota" style="margin:0">${diaTxt(fechaD)}</span>${ed ? `<button type="button" class="link" data-mas="${d}">+ Agregar</button>` : ''}</div>
+      ${ls.length ? `<table class="t-resp"><tbody>${ls.map(fila).join('')}</tbody></table>` : '<p class="nota" style="padding:4px 14px;margin:0">Libre</p>'}</div>`;
+  }
+  const sinDia = cot.lineas.filter((l) => !l.dia || l.dia > nDias);
+  const versiones = ped.cotizaciones;
+  el.innerHTML = `
+    ${c.usa_prueba ? '<div class="banner grande">PRECIOS DE PRUEBA<small>Usa tarifas de prueba o valores de configuración sin confirmar: no se puede mandar al cliente.</small></div>' : ''}
+    <div class="barra"><h2 style="margin:0">Cotización</h2>
+      <select id="ct-ver">${versiones.map((v) => `<option value="${v.id}" ${v.id === c.id ? 'selected' : ''}>Versión ${v.version} · ${COT_ESTADO[v.estado] || v.estado}</option>`).join('')}</select>
+      <span style="flex:1"></span>
+      ${ed && c.id === versiones[0].id ? '<button type="button" class="chico prim" id="ct-a-revision">Mandar a revisión</button>' : ''}
+      ${['en_revision', 'cambios_pedidos'].includes(c.estado) && c.id === versiones[0].id ? '<button type="button" class="chico" id="ct-pedir-cambios">Pedir cambios</button><button type="button" class="chico prim" id="ct-aprobar">Aprobar</button>' : ''}
+      ${ed ? '<button type="button" class="chico" id="ct-rearmar">Volver a armar</button>' : ''}
+      ${c.estado === 'aprobada' ? '<button type="button" class="chico prim" id="ct-a-propuesta">Preparar propuesta web</button>' : ''}
+      ${!ed && c.id === versiones[0].id ? '<button type="button" class="chico" id="ct-nueva-v">Crear versión nueva</button>' : ''}
+      <button type="button" class="chico" id="ct-cambios-cot">Cambios de precio</button></div>
+    ${c.estado === 'en_revision' ? `<p class="aviso">En revisión de ${esc(c.revisor || '—')}. Los cambios de precio quedan en "Cambios de precio".</p>` : ''}
+    ${c.estado === 'cambios_pedidos' ? `<div class="avisos-cot"><b>${esc(c.revisor || 'Álvaro')} pidió cambios:</b> ${esc(c.pedido_cambios || '')}</div>` : ''}
+    ${c.estado === 'aprobada' ? `<p class="ok">Aprobada por ${esc(c.aprobada_por || '—')} el ${peru(c.aprobada_en)}. No se edita: para cambiar algo, versión nueva.</p>` : ''}
+    ${c.avisos.length ? `<ul class="avisos-cot">${c.avisos.map((a) => `<li>${esc(a)}</li>`).join('')}</ul>` : ''}
+    ${t.problemas ? `<p class="err"><b>${t.problemas} línea${t.problemas > 1 ? 's' : ''} sin precio.</b> Cargá la tarifa, cambiá el hotel o poné el precio a mano.</p>` : ''}
+    <div class="card dias">${dias}</div>
+    ${sinDia.length ? `<p class="err">Hay líneas fuera de los días del viaje: ${sinDia.map((l) => esc(l.descripcion) + ' (día ' + l.dia + ')').join(', ')}</p>` : ''}
+    <div class="panel totales">
+      <div><span>Neto total</span><b>${usd(t.neto_cent)}</b></div>
+      <div><span>Ganancia</span><b>${usd(t.ganancia_cent)}${t.margen_efectivo_pct != null ? ` <small>(${t.margen_efectivo_pct}%)</small>` : ''}</b></div>
+      <div class="venta"><span>Venta total</span><b>${usd(t.venta_cent)}</b></div>
+      <div class="venta"><span>Por persona</span><b>${usd(t.venta_por_persona_cent)}</b></div>
+      <div><span>Con factura (+${c.config.igv_pct}% IGV)</span><b>${usd(t.con_factura_cent)}</b></div>
+      <div><span>Con tarjeta (+${c.config.recargo_tarjeta_pct}%)</span><b>${usd(t.con_tarjeta_cent)}</b></div>
+    </div>
+    <p class="nota">Calculada con margen ${c.config.margen_pct}% y tipo de cambio S/ ${c.config.tc_pen_por_usd} por dólar${Object.keys(c.config.es_prueba || {}).length ? ' <span class="prueba">PRUEBA</span>' : ''}.
+      ${ed ? '<button type="button" class="link" id="ct-usar-config">Usar la configuración actual</button>' : ''}</p>
+    <div class="panel"><h2>Notas de Álvaro</h2>${ed ? `<textarea id="ct-notas" maxlength="4000">${esc(c.notas_alvaro)}</textarea><div class="barra" style="margin-top:8px"><button type="button" class="chico" id="ct-guardar-notas">Guardar notas</button></div>` : `<p>${esc(c.notas_alvaro || '—')}</p>`}</div>`;
+  $('#ct-ver').addEventListener('change', (e) => { cotElegida = Number(e.target.value); pintarPedido(ped.pedido.id); });
+  if ($('#ct-rearmar')) $('#ct-rearmar').addEventListener('click', rearmarCot);
+  if ($('#ct-a-revision')) $('#ct-a-revision').addEventListener('click', mandarRevisionDlg);
+  if ($('#ct-a-propuesta')) $('#ct-a-propuesta').addEventListener('click', prepararPropuestaDlg);
+  if ($('#ct-aprobar')) $('#ct-aprobar').addEventListener('click', aprobarDlg);
+  if ($('#ct-pedir-cambios')) $('#ct-pedir-cambios').addEventListener('click', pedirCambiosDlg);
+  if ($('#ct-nueva-v')) $('#ct-nueva-v').addEventListener('click', async () => {
+    if (!usuario()) { elegirSoy(); return; }
+    if (!confirm('¿Crear la versión ' + (c.version + 1) + '? Copia esta cotización y la deja editable.')) return;
+    try { const r = await api(`cotizaciones/${c.id}/nueva-version`, { method: 'POST' }); cotElegida = r.cotizacion_id; pintarPedido(ped.pedido.id); } catch (x) { alert(x.message); }
+  });
+  $('#ct-cambios-cot').addEventListener('click', async () => {
+    const j = await api(`cotizaciones/${c.id}/cambios`);
+    abrirDialogo(`<h3>Cambios de precio · versión ${c.version}</h3>${j.cambios.length ? `<div class="scroll"><table><tbody>${j.cambios.map((x) => `<tr><td>${peru(x.creado_en)}</td><td>${esc(x.por)}</td><td>${esc(x.campo)}<br>${esc(x.antes || '—')} → ${esc(x.despues || '—')}${x.motivo ? `<br><small>${esc(x.motivo)}</small>` : ''}</td></tr>`).join('')}</tbody></table></div>` : '<p class="nota">Sin cambios a mano.</p>'}
+      <div class="pie"><button value="cancel" formnovalidate>Cerrar</button></div>`, () => {});
+  });
+  if ($('#ct-usar-config')) $('#ct-usar-config').addEventListener('click', async () => {
+    if (!usuario()) { elegirSoy(); return; }
+    cot = await api(`cotizaciones/${c.id}`, { method: 'PUT', body: { usar_config_actual: true } }); toast('Recalculada con la configuración actual'); dibujarCotizacion();
+  });
+  if ($('#ct-guardar-notas')) $('#ct-guardar-notas').addEventListener('click', async () => {
+    cot = await api(`cotizaciones/${c.id}`, { method: 'PUT', body: { notas_alvaro: $('#ct-notas').value } }); toast('Notas guardadas'); dibujarCotizacion();
+  });
+  RAIZ().querySelectorAll('[data-mas]').forEach((b) => b.addEventListener('click', () => agregarLineaDlg(Number(b.dataset.mas))));
+  RAIZ().querySelectorAll('[data-ed-lin]').forEach((b) => b.addEventListener('click', () => editarLineaDlg(cot.lineas.find((l) => l.id == b.dataset.edLin))));
+}
+
+// ---------- revisión (Álvaro entra al mismo editor con el rol cotizador; ya no hay link /r/) ----------
+// Con un <dialog> modal abierto, lo que está fuera queda inerte: el respaldo selecciona el textarea del propio diálogo.
+async function copiar(texto, ta) {
+  try { await navigator.clipboard.writeText(texto); return true; }
+  catch { try { ta.focus(); ta.select(); return document.execCommand('copy'); } catch { return false; } }
+}
+function mandarRevisionDlg() {
+  if (!usuario()) { elegirSoy(); return; }
+  const c = cot.cotizacion;
+  abrirDialogo(`<h3>Mandar a revisión</h3>
+    ${c.usa_prueba ? '<p class="err" style="margin:0">Usa PRECIOS DE PRUEBA: se puede revisar y aprobar, pero no mandar al cliente.</p>' : ''}
+    ${cot.totales.problemas ? `<p class="err" style="margin:0">${cot.totales.problemas} líneas sin precio: no se va a poder aprobar hasta completarlas.</p>` : ''}
+    <label>Quién revisa<input name="revisor" maxlength="40" value="${esc(c.revisor || 'Álvaro')}"></label>
+    <p class="nota" style="margin:0">Álvaro la ve en Pedidos, en "En revisión", entrando al CRM con su acceso. Puede ajustar itinerario y precios, aprobarla o pedir cambios.</p>
+    <div class="pie"><button value="cancel" formnovalidate>Cancelar</button><button class="prim" value="ok">Mandar a revisión</button></div>`,
+    async (f) => {
+      await api(`cotizaciones/${c.id}/revision`, { method: 'POST', body: { revisor: f.revisor.value, sin_link: true } });
+      await pintarPedido(ped.pedido.id);
+      toast('En revisión');
+    });
+}
+function aprobarDlg() {
+  if (!usuario()) { elegirSoy(); return; }
+  const c = cot.cotizacion;
+  abrirDialogo(`<h3>Aprobar la versión ${c.version}</h3>
+    ${c.usa_prueba ? '<p class="err" style="margin:0">Usa PRECIOS DE PRUEBA: queda aprobada, pero no se puede mandar al cliente.</p>' : ''}
+    <p class="nota" style="margin:0">Aprobada no se edita: para cambiar algo hay que crear una versión nueva. Queda registrado: ${esc(usuario())}, ahora.</p>
+    <label>Nota (opcional)<textarea name="nota" maxlength="1000"></textarea></label>
+    <div class="pie"><button value="cancel" formnovalidate>Cancelar</button><button class="prim" value="ok">Aprobar</button></div>`,
+    async (f) => {
+      await api(`cotizaciones/${c.id}/aprobar`, { method: 'POST', body: { nota: f.nota.value } });
+      await pintarPedido(ped.pedido.id);
+      toast('Cotización aprobada');
+    });
+}
+function pedirCambiosDlg() {
+  if (!usuario()) { elegirSoy(); return; }
+  const c = cot.cotizacion;
+  abrirDialogo(`<h3>Pedir cambios</h3>
+    <p class="nota" style="margin:0">Vuelve a quien la armó, con tu mensaje arriba de la cotización.</p>
+    <label>Qué hay que cambiar<textarea name="texto" required maxlength="2000"></textarea></label>
+    <div class="pie"><button value="cancel" formnovalidate>Cancelar</button><button class="prim" value="ok">Pedir cambios</button></div>`,
+    async (f) => {
+      await api(`cotizaciones/${c.id}/pedir-cambios`, { method: 'POST', body: { texto: f.texto.value } });
+      await pintarPedido(ped.pedido.id);
+      toast('Cambios pedidos');
+    });
+}
+
+// ---------- propuesta web (fase 4) ----------
+async function prepararPropuestaDlg() {
+  const c = cot.cotizacion;
+  let r;
+  try { r = await api(`cotizaciones/${c.id}/propuesta`); }
+  catch (x) {
+    const errs = x.datos?.errores || [x.message];
+    abrirDialogo(`<h3>Todavía no se puede armar la propuesta</h3><ul>${errs.map((e) => `<li>${esc(e)}</li>`).join('')}</ul><div class="pie"><button value="cancel" formnovalidate>Cerrar</button></div>`, () => {});
+    return;
+  }
+  const paquete = { slug: r.slug, propuesta_json: r.propuesta_json, texto_armador: r.texto_armador };
+  abrirDialogo(`<h3>Propuesta web</h3>
+    <p class="nota" style="margin:0">Sin netos ni márgenes: solo lo que ve el cliente. Total ${usd(Math.round(r.propuesta_json.precio.totalPP * 100))} por persona · vence el ${fecha(r.propuesta_json.validUntil)} · carpeta <b>${esc(r.slug)}</b></p>
+    <ol class="nota" style="margin:0;padding-left:18px">
+      <li><b>Armar la página:</b> "Abrir en el armador" lleva este texto a Cotizador › Propuesta. Ahí se revisa y se descarga el HTML.</li>
+      <li><b>Datos de venta:</b> "Descargar paquete" baja el .json con el propuesta.json listo.</li>
+      <li><b>Publicar:</b> en luna-llena-propuestas, <code>node scripts/desde-cotizacion.mjs paquete.json pagina.html</code>, después <code>npm run validar</code> y el deploy de siempre.</li>
+    </ol>
+    <label>Texto para el armador<textarea name="m" rows="9" readonly>${esc(r.texto_armador)}</textarea></label>
+    <div class="pie">
+      <button type="button" class="chico" id="ct-pp-bajar" style="margin-right:auto">Descargar paquete</button>
+      <button type="button" class="chico" id="ct-pp-copiar">Copiar texto</button>
+      <button value="cancel" formnovalidate>Cerrar</button><button class="prim" value="ok">Abrir en el armador</button></div>`,
+    async () => {
+      try { localStorage.setItem('ct_para_armador', JSON.stringify({ texto: r.texto_armador, slug: r.slug, cotizacion_id: c.id })); localStorage.setItem('cz_modo', 'propuesta'); } catch {}
+      location.assign('/panel-4c1f6a?_=' + Date.now() + '#/cotizador');
+    });
+  $('#ct-pp-bajar').addEventListener('click', () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(paquete, null, 2)], { type: 'application/json' }));
+    a.download = `propuesta-${r.slug}.json`; a.click();
+  });
+  $('#ct-pp-copiar').addEventListener('click', async () => { const ok = await copiar(r.texto_armador, $('#ct-dlg-f').m); toast(ok ? 'Texto copiado' : 'No se pudo copiar'); });
+}
+
+async function rearmarCot() {
+  if (!usuario()) { elegirSoy(); return; }
+  if (!confirm('¿Volver a armar el borrador desde los datos del pedido? Se pierden las líneas y los precios puestos a mano de esta versión.')) return;
+  try { const r = await api(`pedidos/${ped.pedido.id}/rearmar`, { method: 'POST' }); cotElegida = r.cotizacion_id; toast('Borrador rearmado'); pintarPedido(ped.pedido.id); } catch (x) { alert(x.message); }
+}
+
+const opcionesServicio = (sel) => porCiudadOpciones(datos.servicios.filter((s) => s.activo || s.id === sel), (s) => `<option value="${s.id}" ${s.id === sel ? 'selected' : ''}>${esc(s.nombre)}${s.tarifas.length ? '' : ' (sin tarifa)'}</option>`);
+const opcionesHotel = (sel) => porCiudadOpciones(datos.hoteles.filter((h) => h.activo || h.id === sel), (h) => `<option value="${h.id}" ${h.id === sel ? 'selected' : ''}>${esc(h.nombre)} · ${CATS[h.categoria]}</option>`);
+function porCiudadOpciones(lista, op) {
+  const g = new Map(); for (const x of lista) (g.get(x.ciudad) || g.set(x.ciudad, []).get(x.ciudad)).push(x);
+  return [...g.entries()].sort((a, b) => a[0].localeCompare(b[0], 'es')).map(([c, xs]) => `<optgroup label="${esc(c)}">${xs.map(op).join('')}</optgroup>`).join('');
+}
+
+function agregarLineaDlg(dia) {
+  if (!usuario()) { elegirSoy(); return; }
+  const c = cot.cotizacion, p = cot.pedido;
+  abrirDialogo(`<h3>Agregar al día ${dia}</h3>
+    <label>Qué<select name="tipo"><option value="servicio">Servicio del catálogo</option><option value="hotel">Hotel</option><option value="manual">Línea manual</option></select></label>
+    <div data-t="servicio"><label>Servicio<select name="servicio_id">${opcionesServicio(null)}</select></label></div>
+    <div data-t="hotel" hidden><label>Hotel<select name="hotel_id">${opcionesHotel(null)}</select></label>
+      <div class="fila"><label>Habitación<select name="habitacion"><option>DBL</option><option>SGL</option><option>TPL</option></select></label><label>Habitaciones<input name="unidades" type="number" min="1" value="1"></label></div>
+      <label>Noches<input name="noches" type="number" min="1" value="1"></label></div>
+    <div data-t="manual" hidden><label>Descripción<input name="descripcion" maxlength="200"></label>
+      <div class="fila"><label>Neto total (USD)<input name="neto" inputmode="decimal"></label><label>Venta total (USD, vacío = con margen)<input name="venta" inputmode="decimal"></label></div></div>
+    <label data-no-hotel>Pasajeros<input name="pasajeros" type="number" min="1" value="${p.pasajeros}"></label>
+    <div class="pie"><button value="cancel" formnovalidate>Cancelar</button><button class="prim" value="ok">Agregar</button></div>`,
+    async (f) => {
+      const tipo = f.tipo.value;
+      const body = { tipo, dia, pasajeros: Number(f.pasajeros.value) };
+      if (tipo === 'servicio') body.servicio_id = Number(f.servicio_id.value);
+      if (tipo === 'hotel') Object.assign(body, { hotel_id: Number(f.hotel_id.value), habitacion: f.habitacion.value, unidades: Number(f.unidades.value), noches: Number(f.noches.value) });
+      if (tipo === 'manual') Object.assign(body, { descripcion: f.descripcion.value, neto: f.neto.value, venta: f.venta.value });
+      cot = await api(`cotizaciones/${c.id}/lineas`, { method: 'POST', body }); dibujarCotizacion(); toast('Agregado');
+    });
+  const f = $('#ct-dlg-f');
+  f.tipo.addEventListener('change', () => {
+    f.querySelectorAll('[data-t]').forEach((d) => { d.hidden = d.dataset.t !== f.tipo.value; });
+    f.querySelector('[data-no-hotel]').hidden = f.tipo.value === 'hotel';
+  });
+}
+
+function editarLineaDlg(l) {
+  if (!usuario()) { elegirSoy(); return; }
+  const c = cot.cotizacion;
+  const hotel = l.tipo === 'hotel';
+  abrirDialogo(`<h3>Editar línea</h3><p class="nota" style="margin:0">${esc(l.descripcion)}</p>
+    <div class="fila"><label>Día<input name="dia" type="number" min="1" value="${l.dia}"></label>
+      ${hotel ? `<label>Noches<input name="noches" type="number" min="1" value="${l.cantidad}"></label>` : `<label>Pasajeros<input name="pasajeros" type="number" min="1" value="${l.pasajeros}"></label>`}</div>
+    ${hotel ? `<label>Hotel<select name="hotel_id">${opcionesHotel(l.hotel_id)}</select></label>
+      <div class="fila"><label>Habitación<select name="habitacion">${['SGL', 'DBL', 'TPL'].map((h) => `<option ${h === l.habitacion ? 'selected' : ''}>${h}</option>`).join('')}</select></label>
+      <label>Habitaciones<input name="unidades" type="number" min="1" value="${l.unidades}"></label></div>` : ''}
+    ${l.tipo === 'manual' ? `<label>Descripción<input name="descripcion" maxlength="200" value="${esc(l.descripcion)}"></label>` : ''}
+    <div class="fila"><label>Neto total (USD)${l.pisado_neto ? ' · a mano' : ''}<input name="neto" inputmode="decimal" value="${(l.neto_cent / 100).toFixed(2)}"></label>
+      <label>Venta total (USD)${l.pisado_venta ? ' · a mano' : ''}<input name="venta" inputmode="decimal" value="${(l.venta_cent / 100).toFixed(2)}"></label></div>
+    ${l.precio_es_venta ? '<p class="nota" style="margin:0">Tarifa propia: ya es precio de venta, no lleva margen.</p>' : `<label>Margen % (vacío = el de la configuración, ${c.config.margen_pct}%)<input name="margen" inputmode="decimal" value="${l.margen_fijo ?? ''}"></label>`}
+    <label>Nota interna<input name="nota" maxlength="500" value="${esc(l.nota)}"></label>
+    <label>Motivo del cambio de precio (queda registrado)<input name="motivo" maxlength="200"></label>
+    <div class="pie">
+      <button type="button" class="link err" id="ct-borrar-lin" style="margin-right:auto">Borrar línea</button>
+      ${(l.pisado_neto || l.pisado_venta || l.margen_fijo != null) && l.tipo !== 'manual' ? '<button type="button" class="chico" id="ct-restaurar">Volver al tarifario</button>' : ''}
+      <button value="cancel" formnovalidate>Cancelar</button><button class="prim" value="ok">Guardar</button></div>`,
+    async (f) => {
+      const body = { dia: Number(f.dia.value), nota: f.nota.value, motivo: f.motivo.value };
+      if (hotel) Object.assign(body, { noches: Number(f.noches.value), hotel_id: Number(f.hotel_id.value), habitacion: f.habitacion.value, unidades: Number(f.unidades.value) });
+      else body.pasajeros = Number(f.pasajeros.value);
+      if (l.tipo === 'manual') body.descripcion = f.descripcion.value;
+      // Solo se manda el precio si alguien lo cambió (si no, se recalcula solo).
+      if (f.neto.value !== (l.neto_cent / 100).toFixed(2)) body.neto = f.neto.value;
+      if (f.venta.value !== (l.venta_cent / 100).toFixed(2)) body.venta = f.venta.value;
+      if (f.margen && f.margen.value !== String(l.margen_fijo ?? '')) body.margen = f.margen.value;
+      cot = await api(`cotizaciones/${c.id}/lineas/${l.id}`, { method: 'PUT', body }); dibujarCotizacion(); toast('Línea guardada');
+    });
+  $('#ct-borrar-lin').addEventListener('click', async () => {
+    if (!confirm('¿Borrar esta línea?')) return;
+    try { cot = await api(`cotizaciones/${c.id}/lineas/${l.id}`, { method: 'DELETE' }); $('#ct-dlg').close(); dibujarCotizacion(); toast('Línea borrada'); } catch (x) { $('#ct-dlg-msg').textContent = x.message; }
+  });
+  if ($('#ct-restaurar')) $('#ct-restaurar').addEventListener('click', async () => {
+    try { cot = await api(`cotizaciones/${c.id}/lineas/${l.id}`, { method: 'PUT', body: { restaurar: true, motivo: $('#ct-dlg-f').motivo.value } }); $('#ct-dlg').close(); dibujarCotizacion(); toast('Precio según tarifario'); } catch (x) { $('#ct-dlg-msg').textContent = x.message; }
+  });
+}
+
+// ---------- servicios ----------
+function pintarServicios() {
+  const lista = datos.servicios.filter(pasaFiltro);
+  $('#ct-raiz').innerHTML = bannerPrueba() + barraFiltro(datos.servicios, '<button class="prim" id="ct-nuevo-serv" type="button">+ Servicio</button>') +
+    (lista.length ? porCiudad(lista, (s) => `
+    <div class="card ${s.activo ? '' : 'inactivo'}">
+      <div class="cab"><div><h3>${esc(s.nombre)} ${s.activo ? '' : '<span class="chip">inactivo</span>'}</h3>
+        <div class="meta">${TIPOS[s.tipo]} · ${esc(s.duracion || 'sin duración')} · mínimo ${s.pax_min} pax ${s.precio_es_venta ? ' · <span class="chip" title="Lo opera Luna Llena: la tarifa ya es precio de venta, no se le suma margen">precio de venta</span>' : ''}</div>
+        ${s.incluye ? `<div class="meta">Incluye: ${esc(s.incluye)}</div>` : ''}${s.no_incluye ? `<div class="meta">No incluye: ${esc(s.no_incluye)}</div>` : ''}</div>
+        <div class="acc"><button class="chico" data-ed-serv="${s.id}" type="button">Editar</button><button class="chico" data-nueva-tar="${s.id}" type="button">+ Tarifa</button></div></div>
+      ${s.tarifas.length ? `<table class="t-resp"><thead><tr><th>Pasajeros</th><th>Temporada</th><th class="num">Neto por persona</th><th>Vigencia</th><th></th></tr></thead><tbody>
+        ${s.tarifas.map((t) => `<tr><td data-t="Pasajeros">${tramo(t)} ${t.es_ilustrativa ? '<span class="prueba">PRUEBA</span>' : ''}</td><td data-t="Temporada">${TEMP[t.temporada]}</td>
+          <td data-t="Neto" class="num">${dinero(t.neto_cent, t.moneda)}</td><td data-t="Vigencia">${filaVigencia(t)}</td>
+          <td class="num"><button class="link" data-ed-tar="${t.id}" type="button">Editar</button><button class="link" data-hist="tarifa:${t.id}" type="button">Historial</button><button class="link" data-del-tar="${t.id}" type="button">Borrar</button></td></tr>`).join('')}
+      </tbody></table>` : '<p class="nota" style="padding:10px 14px;margin:0">Sin tarifas: no se puede cotizar.</p>'}
+    </div>`) : '<div class="vacio">No hay servicios con ese filtro.</div>');
+  engancharFiltro();
+  $('#ct-nuevo-serv').addEventListener('click', () => editarServicio(null));
+  RAIZ().querySelectorAll('[data-ed-serv]').forEach((b) => b.addEventListener('click', () => editarServicio(datos.servicios.find((s) => s.id == b.dataset.edServ))));
+  RAIZ().querySelectorAll('[data-nueva-tar]').forEach((b) => b.addEventListener('click', () => editarTarifa('servicio', datos.servicios.find((s) => s.id == b.dataset.nuevaTar), null)));
+  RAIZ().querySelectorAll('[data-ed-tar]').forEach((b) => b.addEventListener('click', () => { const s = datos.servicios.find((x) => x.tarifas.some((t) => t.id == b.dataset.edTar)); editarTarifa('servicio', s, s.tarifas.find((t) => t.id == b.dataset.edTar)); }));
+  RAIZ().querySelectorAll('[data-del-tar]').forEach((b) => b.addEventListener('click', () => borrarTarifa('tarifas', b.dataset.delTar)));
+  engancharHistorial();
+}
+
+function editarServicio(s) {
+  const v = s || { tipo: 'tour', pax_min: 1, activo: 1 };
+  abrirDialogo(`<h3>${s ? 'Editar servicio' : 'Nuevo servicio'}</h3>
+    <label>Nombre<input name="nombre" required maxlength="160" value="${esc(v.nombre)}"></label>
+    <div class="fila"><label>Ciudad<input name="ciudad" required maxlength="60" value="${esc(v.ciudad)}" list="ct-ciudades"></label>
+      <label>Tipo<select name="tipo">${Object.entries(TIPOS).map(([k, n]) => `<option value="${k}" ${k === v.tipo ? 'selected' : ''}>${n}</option>`).join('')}</select></label></div>
+    <div class="fila"><label>Duración<input name="duracion" maxlength="80" value="${esc(v.duracion)}" placeholder="Medio día, 2D/1N…"></label>
+      <label>Mínimo de pasajeros<input name="pax_min" type="number" min="1" step="1" value="${esc(v.pax_min)}"></label></div>
+    <label>Qué incluye<textarea name="incluye">${esc(v.incluye)}</textarea></label>
+    <label>Qué no incluye<textarea name="no_incluye">${esc(v.no_incluye)}</textarea></label>
+    <label class="check"><input type="checkbox" name="precio_es_venta" ${v.precio_es_venta ? 'checked' : ''}> Lo opera Luna Llena: la tarifa ya es precio de venta (sin margen)</label>
+    ${s ? `<label class="check"><input type="checkbox" name="activo" ${v.activo ? 'checked' : ''}> Activo (se puede cotizar)</label>` : ''}
+    <datalist id="ct-ciudades">${[...new Set([...datos.servicios, ...datos.hoteles].map((x) => x.ciudad))].map((c) => `<option>${esc(c)}</option>`).join('')}</datalist>
+    <div class="pie"><button value="cancel" formnovalidate>Cancelar</button><button class="prim" value="ok">Guardar</button></div>`,
+    async (f) => {
+      await api(s ? `servicios/${s.id}` : 'servicios', { method: s ? 'PUT' : 'POST', body: { nombre: f.nombre.value, ciudad: f.ciudad.value, tipo: f.tipo.value, duracion: f.duracion.value, pax_min: Number(f.pax_min.value || 1), incluye: f.incluye.value, no_incluye: f.no_incluye.value, precio_es_venta: f.precio_es_venta.checked, activo: s ? f.activo.checked : true } });
+      await cargarTarifario(); pintar(); toast('Servicio guardado');
+    });
+}
+
+// clase = 'servicio' | 'hotel'; padre = servicio u hotel; t = tarifa o null
+function editarTarifa(clase, padre, t) {
+  if (!usuario()) { elegirSoy(); return; }
+  const v = t || { moneda: 'USD', temporada: 'todas', pax_desde: 1, pax_hasta: null, habitacion: 'DBL', vigente_desde: hoy(), vigente_hasta: `${hoy().slice(0, 4)}-12-31`, es_ilustrativa: 0 };
+  abrirDialogo(`<h3>${t ? 'Editar tarifa' : 'Nueva tarifa'}</h3><p class="nota" style="margin:0">${esc(padre.nombre)} · ${esc(padre.ciudad)}</p>
+    ${clase === 'hotel'
+      ? `<label>Habitación<select name="habitacion">${['SGL', 'DBL', 'TPL'].map((h) => `<option ${h === v.habitacion ? 'selected' : ''}>${h}</option>`).join('')}</select></label>`
+      : `<div class="fila"><label>Pasajeros desde<input name="pax_desde" type="number" min="1" step="1" required value="${esc(v.pax_desde)}"></label>
+         <label>Pasajeros hasta<input name="pax_hasta" type="number" min="1" step="1" value="${esc(v.pax_hasta ?? '')}" placeholder="vacío = y más"></label></div>`}
+    <div class="fila"><label>Precio neto ${clase === 'hotel' ? 'por habitación y noche' : 'por persona'}<input name="precio_neto" inputmode="decimal" required value="${t ? (t.neto_cent / 100).toFixed(2) : ''}"></label>
+      <label>Moneda<select name="moneda">${['USD', 'PEN'].map((m) => `<option ${m === v.moneda ? 'selected' : ''}>${m}</option>`).join('')}</select></label></div>
+    <label>Temporada<select name="temporada">${Object.entries(TEMP).map(([k, n]) => `<option value="${k}" ${k === v.temporada ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+    <div class="fila"><label>Vigente desde<input name="vigente_desde" type="date" required value="${esc(v.vigente_desde)}"></label>
+      <label>Vigente hasta<input name="vigente_hasta" type="date" required value="${esc(v.vigente_hasta)}"></label></div>
+    <label class="check"><input type="checkbox" name="es_ilustrativa" ${v.es_ilustrativa ? 'checked' : ''}> Tarifa de prueba (precio inventado)</label>
+    ${t ? '<label>Motivo del cambio (opcional)<input name="motivo" maxlength="200"></label>' : ''}
+    <p class="nota" style="margin:0">Queda registrado: ${esc(usuario())}, ahora.</p>
+    <div class="pie"><button value="cancel" formnovalidate>Cancelar</button><button class="prim" value="ok">Guardar</button></div>`,
+    async (f) => {
+      const body = { precio_neto: f.precio_neto.value, moneda: f.moneda.value, temporada: f.temporada.value, vigente_desde: f.vigente_desde.value, vigente_hasta: f.vigente_hasta.value, es_ilustrativa: f.es_ilustrativa.checked, motivo: f.motivo?.value };
+      if (clase === 'hotel') Object.assign(body, { hotel_id: padre.id, habitacion: f.habitacion.value });
+      else Object.assign(body, { servicio_id: padre.id, pax_desde: f.pax_desde.value, pax_hasta: f.pax_hasta.value });
+      const ruta = clase === 'hotel' ? 'hotel-tarifas' : 'tarifas';
+      await api(t ? `${ruta}/${t.id}` : ruta, { method: t ? 'PUT' : 'POST', body });
+      await cargarTarifario(); pintar(); toast('Tarifa guardada');
+    });
+}
+
+async function borrarTarifa(ruta, id) {
+  if (!usuario()) { elegirSoy(); return; }
+  if (!confirm('¿Borrar esta tarifa? Queda en el registro de cambios.')) return;
+  try { await api(`${ruta}/${id}`, { method: 'DELETE' }); await cargarTarifario(); pintar(); toast('Tarifa borrada'); } catch (e) { alert(e.message); }
+}
+
+function engancharHistorial() {
+  RAIZ().querySelectorAll('[data-hist]').forEach((b) => b.addEventListener('click', async () => {
+    const [ent, id] = b.dataset.hist.split(':');
+    const j = await api(`cambios?entidad=${ent}&id=${id}`);
+    abrirDialogo(`<h3>Historial de la tarifa</h3>${j.cambios.length ? `<table><tbody>${j.cambios.map((c) => `<tr><td>${peru(c.creado_en)}</td><td>${esc(c.por)}</td><td>${esc(c.antes || '—')} → ${esc(c.despues || 'borrada')}${c.motivo ? `<br><small>${esc(c.motivo)}</small>` : ''}</td></tr>`).join('')}</tbody></table>` : '<p class="nota">Sin cambios de precio registrados (viene del seed o de una importación).</p>'}
+      <div class="pie"><button value="cancel" formnovalidate>Cerrar</button></div>`, () => {});
+  }));
+}
+
+// ---------- hoteles ----------
+function pintarHoteles() {
+  const lista = datos.hoteles.filter(pasaFiltro);
+  $('#ct-raiz').innerHTML = bannerPrueba() + barraFiltro(datos.hoteles, '<button class="prim" id="ct-nuevo-hotel" type="button">+ Hotel</button>') +
+    (lista.length ? porCiudad(lista, (h) => `
+    <div class="card ${h.activo ? '' : 'inactivo'}">
+      <div class="cab"><div><h3>${esc(h.nombre)} ${h.es_ilustrativo ? '<span class="prueba">PRUEBA</span>' : ''} ${h.activo ? '' : '<span class="chip">inactivo</span>'}</h3>
+        <div class="meta">${CATS[h.categoria]} · precio por habitación y por noche${h.precio_es_venta ? ' · <span class="chip" title="La tarifa ya es precio de venta: no se le suma margen">precio de venta</span>' : ''}</div></div>
+        <div class="acc"><button class="chico" data-ed-hotel="${h.id}" type="button">Editar</button><button class="chico" data-nueva-htar="${h.id}" type="button">+ Tarifa</button></div></div>
+      ${h.tarifas.length ? `<table class="t-resp"><thead><tr><th>Habitación</th><th>Temporada</th><th class="num">Neto por noche</th><th>Vigencia</th><th></th></tr></thead><tbody>
+        ${h.tarifas.map((t) => `<tr><td data-t="Habitación">${t.habitacion} ${t.es_ilustrativa ? '<span class="prueba">PRUEBA</span>' : ''}</td><td data-t="Temporada">${TEMP[t.temporada]}</td>
+          <td data-t="Neto" class="num">${dinero(t.neto_cent, t.moneda)}</td><td data-t="Vigencia">${filaVigencia(t)}</td>
+          <td class="num"><button class="link" data-ed-htar="${t.id}" type="button">Editar</button><button class="link" data-hist="hotel_tarifa:${t.id}" type="button">Historial</button><button class="link" data-del-htar="${t.id}" type="button">Borrar</button></td></tr>`).join('')}
+      </tbody></table>` : '<p class="nota" style="padding:10px 14px;margin:0">Sin tarifas.</p>'}
+    </div>`) : '<div class="vacio">No hay hoteles con ese filtro.</div>');
+  engancharFiltro();
+  $('#ct-nuevo-hotel').addEventListener('click', () => editarHotel(null));
+  RAIZ().querySelectorAll('[data-ed-hotel]').forEach((b) => b.addEventListener('click', () => editarHotel(datos.hoteles.find((h) => h.id == b.dataset.edHotel))));
+  RAIZ().querySelectorAll('[data-nueva-htar]').forEach((b) => b.addEventListener('click', () => editarTarifa('hotel', datos.hoteles.find((h) => h.id == b.dataset.nuevaHtar), null)));
+  RAIZ().querySelectorAll('[data-ed-htar]').forEach((b) => b.addEventListener('click', () => { const h = datos.hoteles.find((x) => x.tarifas.some((t) => t.id == b.dataset.edHtar)); editarTarifa('hotel', h, h.tarifas.find((t) => t.id == b.dataset.edHtar)); }));
+  RAIZ().querySelectorAll('[data-del-htar]').forEach((b) => b.addEventListener('click', () => borrarTarifa('hotel-tarifas', b.dataset.delHtar)));
+  engancharHistorial();
+}
+
+function editarHotel(h) {
+  const v = h || { categoria: 'confort', activo: 1 };
+  abrirDialogo(`<h3>${h ? 'Editar hotel' : 'Nuevo hotel'}</h3>
+    <label>Nombre<input name="nombre" required maxlength="160" value="${esc(v.nombre)}"></label>
+    <div class="fila"><label>Ciudad<input name="ciudad" required maxlength="60" value="${esc(v.ciudad)}" list="ct-ciudades"></label>
+      <label>Categoría<select name="categoria">${Object.entries(CATS).map(([k, n]) => `<option value="${k}" ${k === v.categoria ? 'selected' : ''}>${n}</option>`).join('')}</select></label></div>
+    <label class="check"><input type="checkbox" name="precio_es_venta" ${v.precio_es_venta ? 'checked' : ''}> La tarifa ya es precio de venta (sin margen)</label>
+    <label class="check"><input type="checkbox" name="es_ilustrativo" ${v.es_ilustrativo ? 'checked' : ''}> Hotel de prueba (inventado)</label>
+    ${h ? `<label class="check"><input type="checkbox" name="activo" ${v.activo ? 'checked' : ''}> Activo (se puede cotizar)</label>` : ''}
+    <datalist id="ct-ciudades">${[...new Set([...datos.servicios, ...datos.hoteles].map((x) => x.ciudad))].map((c) => `<option>${esc(c)}</option>`).join('')}</datalist>
+    <div class="pie"><button value="cancel" formnovalidate>Cancelar</button><button class="prim" value="ok">Guardar</button></div>`,
+    async (f) => {
+      await api(h ? `hoteles/${h.id}` : 'hoteles', { method: h ? 'PUT' : 'POST', body: { nombre: f.nombre.value, ciudad: f.ciudad.value, categoria: f.categoria.value, es_ilustrativo: f.es_ilustrativo.checked, precio_es_venta: f.precio_es_venta.checked, activo: h ? f.activo.checked : true } });
+      await cargarTarifario(); pintar(); toast('Hotel guardado');
+    });
+}
+
+// ---------- importar ----------
+const COLS = ['tipo', 'nombre', 'ciudad', 'categoria_hotel', 'habitacion', 'precio_neto', 'moneda', 'pax_desde', 'pax_hasta', 'temporada', 'vigente_desde', 'vigente_hasta', 'precio_es_venta', 'duracion', 'incluye', 'no_incluye', 'pax_min', 'es_ilustrativa'];
+const AYUDA = {
+  tipo: 'tour, traslado, tren, entrada, paquete u hotel', nombre: 'Nombre del servicio o del hotel', ciudad: 'Cusco, Lima, Puno, Aguas Calientes…',
+  categoria_hotel: 'Solo hoteles: economico, confort o premium', habitacion: 'Solo hoteles: SGL, DBL o TPL (precio por habitación y por noche)',
+  precio_neto: 'Servicios: por persona. Hoteles: por habitación y noche. Ej. 45 o 45,50', moneda: 'USD o PEN',
+  pax_desde: 'Tramo de pasajeros: desde (vacío = 1)', pax_hasta: 'Tramo de pasajeros: hasta (vacío = y más, ej. 7+)', temporada: 'todas, alta o baja (vacío = todas)',
+  vigente_desde: 'AAAA-MM-DD o DD/MM/AAAA', vigente_hasta: 'AAAA-MM-DD o DD/MM/AAAA', precio_es_venta: '"si" si el precio ya es de venta (lo opera o lo vende Luna Llena): no se le suma margen',
+  duracion: 'Opcional: "Medio día", "2D/1N"', incluye: 'Opcional', no_incluye: 'Opcional', pax_min: 'Opcional: mínimo de pasajeros', es_ilustrativa: 'Opcional: "si" para tarifas de prueba',
+};
+const EJEMPLOS = [
+  ['tour', 'City Tour Cusco', 'Cusco', '', '', '28', 'USD', 2, 3, 'todas', '2027-01-01', '2027-12-31', 'si', 'Medio día', 'Guía y transporte', 'Boleto turístico', 1, ''],
+  ['tour', 'City Tour Cusco', 'Cusco', '', '', '22', 'USD', 4, '', 'todas', '2027-01-01', '2027-12-31', 'si', '', '', '', '', ''],
+  ['entrada', 'Circuito Mágico del Agua', 'Lima', '', '', '15', 'PEN', 1, '', 'todas', '2027-01-01', '2027-12-31', '', '', '', '', '', ''],
+  ['hotel', 'Hotel Ejemplo', 'Cusco', 'confort', 'DBL', '95', 'USD', '', '', 'alta', '2027-06-01', '2027-08-31', '', '', '', '', '', ''],
+];
+
+let XLSXmod = null;
+async function xlsx() { if (!XLSXmod) XLSXmod = await import(XLSX_URL); return XLSXmod; }
+
+async function bajarPlantilla(formato) {
+  const X = await xlsx();
+  const wb = X.utils.book_new();
+  X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet([COLS]), 'Tarifas');
+  X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet([COLS, ...EJEMPLOS]), 'Ejemplos');
+  X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet([['Columna', 'Qué va'], ...COLS.map((c) => [c, AYUDA[c]]),
+    [], ['Una fila = una tarifa. Varias filas con el mismo tipo, ciudad y nombre son el mismo servicio (un tramo de pasajeros o temporada cada una).'],
+    ['Los hoteles van con una fila por habitación (SGL, DBL, TPL).'], ['Se carga la hoja "Tarifas". La hoja "Ejemplos" no se carga.']]), 'Instrucciones');
+  if (formato === 'csv') {
+    const csv = X.utils.sheet_to_csv(X.utils.aoa_to_sheet([COLS, ...EJEMPLOS]));
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv' })); a.download = 'plantilla-tarifas-ejemplo.csv'; a.click();
+  } else X.writeFile(wb, 'plantilla-tarifas-luna-llena.xlsx');
+}
+
+async function leerArchivo(file) {
+  const X = await xlsx();
+  const buf = await file.arrayBuffer();
+  const esCsv = /\.csv$/i.test(file.name) || file.type === 'text/csv';
+  // CSV: raw para que "01/11/2026" no se lea como fecha de EE. UU.
+  // Excel: fechas como Date con la fecha local que se ve en la planilla (el número de serie se corre por la zona horaria).
+  const wb = esCsv ? X.read(new TextDecoder('utf-8').decode(buf), { type: 'string', raw: true }) : X.read(buf, { type: 'array', cellDates: true });
+  const hoja = wb.SheetNames.find((n) => /^tarifas$/i.test(n.trim())) || wb.SheetNames[0];
+  const dosD = (n) => String(n).padStart(2, '0');
+  const filas = X.utils.sheet_to_json(wb.Sheets[hoja], { defval: '', raw: true, blankrows: true }).map((f) => {
+    for (const k of Object.keys(f)) if (f[k] instanceof Date) { const d = f[k]; f[k] = `${d.getFullYear()}-${dosD(d.getMonth() + 1)}-${dosD(d.getDate())}`; }
+    return f;
+  });
+  return { hoja, filas };
+}
+
+function pintarImportar() {
+  $('#ct-raiz').innerHTML = `
+    <div class="panel"><h2>1. Plantilla</h2>
+      <p class="nota">Una fila por tarifa. Se carga la hoja "Tarifas"; en "Ejemplos" e "Instrucciones" está cómo completarla. Excel (.xlsx) o CSV.</p>
+      <div class="barra"><button type="button" id="ct-pl-x">Descargar plantilla Excel</button><button type="button" id="ct-pl-c">Ejemplo en CSV</button></div></div>
+    <div class="panel"><h2>2. Subir y revisar</h2>
+      <div class="grid"><label>Archivo<input type="file" id="ct-arch" accept=".xlsx,.xls,.csv"></label>
+        <label>Fuente (de dónde salen los precios)<input id="ct-fuente" maxlength="120" placeholder="Tarifario proveedor X 2027"></label></div>
+      <label class="check" style="margin-top:12px"><input type="checkbox" id="ct-reemp"> Reemplazar las de prueba (al cargar borra todas las tarifas de prueba y desactiva los hoteles de prueba y los servicios que queden sin tarifa)</label>
+      <div class="barra" style="margin-top:12px"><button class="prim" type="button" id="ct-revisar" disabled>Revisar</button></div>
+      <div id="ct-vista"></div></div>`;
+  $('#ct-pl-x').addEventListener('click', () => bajarPlantilla('xlsx').catch((e) => alert('No se pudo armar la plantilla: ' + e.message)));
+  $('#ct-pl-c').addEventListener('click', () => bajarPlantilla('csv').catch((e) => alert(e.message)));
+  $('#ct-arch').addEventListener('change', async (e) => {
+    const f = e.target.files[0]; imp = null; $('#ct-vista').innerHTML = ''; $('#ct-revisar').disabled = !f;
+    if (f && !$('#ct-fuente').value) $('#ct-fuente').value = f.name.replace(/\.[^.]+$/, '');
+  });
+  $('#ct-reemp').addEventListener('change', () => { if (imp) revisar(); });
+  $('#ct-revisar').addEventListener('click', revisar);
+}
+
+async function revisar() {
+  const f = $('#ct-arch').files[0]; if (!f) return;
+  $('#ct-vista').innerHTML = '<p class="nota">Revisando…</p>';
+  try {
+    const { hoja, filas } = await leerArchivo(f);
+    const j = await api('importar', { method: 'POST', body: { filas, aplicar: false, reemplazar_ilustrativas: $('#ct-reemp').checked } });
+    imp = { ...j, crudas: filas, hoja };
+    pintarVista();
+  } catch (e) { if (e.message !== '401') $('#ct-vista').innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+}
+
+function pintarVista() {
+  const { resumen, filas, hoja } = imp;
+  const r = resumen;
+  $('#ct-vista').innerHTML = `<div class="resumen"><span>Hoja "${esc(hoja)}": ${r.total} filas</span><span class="ok">${r.ok} bien</span><span class="${r.con_error ? 'err' : ''}">${r.con_error} con error</span><span>${r.servicios} servicios · ${r.hoteles} hoteles</span></div>
+    ${r.con_error ? '<p class="err">Corregí las filas en rojo en el archivo y volvé a subirlo. No se carga nada hasta que no haya errores.</p>' : ''}
+    <div class="scroll"><table class="t-resp"><thead><tr><th>Fila</th><th>Tipo</th><th>Nombre</th><th>Ciudad</th><th>Pax / hab.</th><th>Temporada</th><th class="num">Neto</th><th>Vigencia</th><th>Revisión</th></tr></thead><tbody>
+      ${filas.map((x) => { const d = x.d; return `<tr class="${x.errores.length ? 'fila-err' : x.avisos.length ? 'fila-aviso' : ''}">
+        <td data-t="Fila">${x.n}</td><td data-t="Tipo">${esc(d.tipo || '?')}${d.es_ilustrativa ? ' <span class="prueba">PRUEBA</span>' : ''}</td><td data-t="Nombre">${esc(d.nombre)}</td><td data-t="Ciudad">${esc(d.ciudad)}</td>
+        <td data-t="Pax / hab.">${d.clase === 'hotel' ? esc((CATS[d.categoria] || '?') + ' ' + (d.habitacion || '?')) : (d.pax_desde ? tramo(d) : '?')}</td><td data-t="Temporada">${esc(TEMP[d.temporada] || '?')}</td>
+        <td data-t="Neto" class="num">${d.neto_cent != null && d.moneda ? dinero(d.neto_cent, d.moneda) : '?'}</td><td data-t="Vigencia">${d.vigente_desde ? fecha(d.vigente_desde) : '?'} al ${d.vigente_hasta ? fecha(d.vigente_hasta) : '?'}</td>
+        <td data-t="Revisión" class="full">${x.errores.map((e) => `<div class="err">✗ ${esc(e)}</div>`).join('')}${x.avisos.map((e) => `<div class="aviso">! ${esc(e)}</div>`).join('')}${!x.errores.length && !x.avisos.length ? '<span class="ok">✓</span>' : ''}</td></tr>`; }).join('')}
+    </tbody></table></div>
+    <div class="barra" style="margin-top:14px"><button class="prim" type="button" id="ct-aplicar" ${r.con_error || !r.total ? 'disabled' : ''}>Cargar ${r.total} tarifas${$('#ct-reemp').checked ? ' y borrar las de prueba' : ''}</button></div>`;
+  $('#ct-aplicar').addEventListener('click', aplicar);
+}
+
+async function aplicar() {
+  if (!usuario()) { elegirSoy(); return; }
+  const reemp = $('#ct-reemp').checked;
+  if (!confirm(`¿Cargar ${imp.resumen.total} tarifas${reemp ? ' y borrar TODAS las tarifas de prueba' : ''}?`)) return;
+  $('#ct-aplicar').disabled = true;
+  try {
+    await api('importar', { method: 'POST', body: { filas: imp.crudas, aplicar: true, reemplazar_ilustrativas: reemp, fuente: $('#ct-fuente').value } });
+    datos = null; imp = null;
+    toast('Tarifas cargadas'); elegirTab('servicios');
+  } catch (e) {
+    if (e.datos?.filas) { imp = { ...imp, ...e.datos }; pintarVista(); }
+    alert(e.message);
+  }
+}
+
+// ---------- configuración ----------
+async function pintarConfig() {
+  const j = await api('config');
+  const c = j.config;
+  $('#ct-raiz').innerHTML = `<form id="ct-fc">
+    <div class="panel"><h2>Valores</h2><p class="nota">Se usan al calcular cada cotización y quedan guardados en ella (si después cambian, las cotizaciones viejas no cambian). Un valor "de prueba" hace que la cotización salga con el cartel PRECIOS DE PRUEBA hasta que alguien lo confirme guardándolo.</p>
+      <div class="grid">${Object.entries(c).map(([k, x]) => `<label>${esc(x.nombre)} ${x.es_prueba ? '<span class="prueba">PRUEBA</span>' : ''}
+        <input name="${k}" inputmode="decimal" required value="${esc(x.valor ?? '')}">
+        <small class="nota" style="margin:0">${x.actualizado_por ? `Lo confirmó ${esc(x.actualizado_por)} el ${peru(x.actualizado_en)}` : x.es_prueba ? 'Sin confirmar' : 'Valor inicial'}</small></label>`).join('')}</div></div>
+    <div class="panel"><h2>Temporadas</h2><p class="nota">Rangos que se repiten todos los años (pueden cruzar el año, ej. 20/12 al 05/01). Los días fuera de una temporada alta son temporada baja. ${j.temporadas.some((t) => t.es_prueba) ? '<span class="prueba">PRUEBA</span> Las fechas actuales son de prueba.' : ''}</p>
+      <div id="ct-temps"></div><button type="button" id="ct-mas-temp" class="chico">+ Rango</button></div>
+    <div class="barra"><button class="prim">Guardar y confirmar</button><span class="msg" id="ct-cmsg"></span></div></form>`;
+  const md2 = (md) => md ? `${md.slice(3)}/${md.slice(0, 2)}` : '';
+  const filaTemp = (t = { temporada: 'alta', desde_md: '', hasta_md: '', nota: '' }) => {
+    const d = document.createElement('div'); d.className = 'barra temp';
+    d.innerHTML = `<select name="t-temp"><option value="alta" ${t.temporada === 'alta' ? 'selected' : ''}>Alta</option><option value="baja" ${t.temporada === 'baja' ? 'selected' : ''}>Baja</option></select>
+      <input name="t-desde" placeholder="DD/MM" size="6" value="${md2(t.desde_md)}"> al <input name="t-hasta" placeholder="DD/MM" size="6" value="${md2(t.hasta_md)}">
+      <input name="t-nota" placeholder="Nota" value="${esc(t.nota || '')}" style="flex:1;min-width:140px"><button type="button" class="link">Quitar</button>`;
+    d.querySelector('.link').addEventListener('click', () => d.remove());
+    $('#ct-temps').appendChild(d);
+  };
+  j.temporadas.forEach(filaTemp);
+  $('#ct-mas-temp').addEventListener('click', () => filaTemp());
+  $('#ct-fc').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!usuario()) { elegirSoy(); return; }
+    const aMd = (s) => { const m = String(s).trim().match(/^(\d{1,2})[/-](\d{1,2})$/); return m ? `${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : 'x'; };
+    const valores = {}; for (const k of Object.keys(c)) valores[k] = e.target[k].value;
+    const temporadas = [...RAIZ().querySelectorAll('.temp')].map((d) => ({ temporada: d.querySelector('[name=t-temp]').value, desde_md: aMd(d.querySelector('[name=t-desde]').value), hasta_md: aMd(d.querySelector('[name=t-hasta]').value), nota: d.querySelector('[name=t-nota]').value }));
+    try { await api('config', { method: 'PUT', body: { valores, temporadas } }); toast('Configuración guardada'); pintarConfig(); }
+    catch (x) { $('#ct-cmsg').textContent = x.message; }
+  });
+}
+
+// ---------- registro ----------
+async function pintarCambios() {
+  const j = await api('cambios');
+  const ENT = { tarifa: 'Tarifa', hotel_tarifa: 'Tarifa de hotel', config: 'Configuración', importacion: 'Importación', linea: 'Cotización' };
+  $('#ct-raiz').innerHTML = `<p class="nota">Últimos 100 cambios de precio, configuración e importaciones.</p>` + (j.cambios.length ? `<div class="card"><table class="t-resp"><thead><tr><th>Cuándo</th><th>Quién</th><th>Qué</th><th>Antes</th><th>Después</th></tr></thead><tbody>
+    ${j.cambios.map((c) => `<tr><td data-t="Cuándo">${peru(c.creado_en)}</td><td data-t="Quién">${esc(c.por)}</td><td data-t="Qué">${esc(ENT[c.entidad] || c.entidad)} ${esc(c.entidad_id)} · ${esc(c.campo)}${c.motivo ? `<br><small>${esc(c.motivo)}</small>` : ''}</td><td data-t="Antes">${esc(c.antes || '—')}</td><td data-t="Después">${esc(c.despues || '—')}</td></tr>`).join('')}
+  </tbody></table></div>` : '<div class="vacio">Todavía no hay cambios.</div>');
+}
+
+// Entrada desde el panel (irA('cotizaciones')): pinta la pestaña de la URL.
+async function mostrar() {
+  if (!token()) return;
+  if (window.crmRol === 'cotizador' && !usuario()) { try { localStorage.setItem('ct_usuario', 'Álvaro'); } catch {} }
+  if (!mostrar.listo) {
+    mostrar.listo = true;
+    $('#ct-soy').addEventListener('click', elegirSoy);
+    RAIZ().querySelectorAll('#ct-tabs button').forEach((b) => b.addEventListener('click', () => elegirTab(b.dataset.tab)));
+  }
+  pintarSoy();
+  marcarTab();
+  await pintar();
+  if (!usuario() && !$('#ct-dlg').open) elegirSoy();
+}
+window.ct = { mostrar, tab: () => tab, setTab: (t) => { tab = t || 'pedidos'; } };
+})();
+
+/* ---- Rol de la sesión: 'cotizador' (Álvaro) solo entra a Cotizaciones ---- */
+window.crmRol = null;
+function modoCotizador(){
+  document.querySelectorAll('.nav button').forEach(b => { b.hidden = b.dataset.seccion !== 'cotizaciones'; });
+  if(pollHandle){ clearInterval(pollHandle); pollHandle = null; }
+  irA('cotizaciones');
+}
+// Carga todo lo del panel. Con el token de cotizador no se pide nada más que Cotizaciones.
+async function arrancarSesion(){
+  try{
+    const r = await fetch('/api/yo', { headers:{ 'x-crm-token': getToken() } });
+    if(r.ok) window.crmRol = (await r.json()).rol;
+  }catch(e){}
+  if(window.crmRol === 'cotizador'){ modoCotizador(); return; }
+  const p = load();
   cargarAngulos();
   cargarRecursos();
   cargarPiezas();
@@ -17024,6 +17992,17 @@ if(getToken()){
   startPolling();
   setterInit();
   cotizadorInit();
+  if(seccion === 'cotizaciones') irA('cotizaciones');
+  return p;
+}
+
+parseHash();
+irA(seccion);
+window.addEventListener('hashchange', () => { parseHash(); irA(seccion); });
+
+if(getToken()){
+  el('gate').style.display = 'none';
+  arrancarSesion();
 }
 </script>
 </body>

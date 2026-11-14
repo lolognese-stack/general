@@ -32,11 +32,13 @@ export async function mandarARevision(env, cotId, body, por) {
   const vigente = cot.token_hash && cot.token_vence && cot.token_vence > new Date().toISOString().replace('T', ' ').slice(0, 19);
   let token = null;
   const stmts = [];
-  if (body.nuevo_link || !vigente) {
+  // Desde que Álvaro entra al CRM con su rol, ya no se genera link (/r/ está retirado): sin_link lo omite.
+  if (!body.sin_link && (body.nuevo_link || !vigente)) {
     token = tokenNuevo();
     const vence = new Date(Date.now() + DIAS_VALIDEZ * 86400e3).toISOString().replace('T', ' ').slice(0, 19);
     stmts.push(env.DB.prepare(`UPDATE ct_cotizaciones SET token_hash = ?, token_vence = ?, revisor = ? WHERE id = ?`).bind(await sha256(token), vence, revisor, cotId));
   }
+  if (body.sin_link) stmts.push(env.DB.prepare(`UPDATE ct_cotizaciones SET revisor = ? WHERE id = ?`).bind(revisor, cotId));
   stmts.push(env.DB.prepare(`UPDATE ct_cotizaciones SET estado = 'en_revision', actualizado_en = ${ahora} WHERE id = ?`).bind(cotId));
   await env.DB.batch(stmts);
   await cambiarEstado(env, cot.pedido_id, 'en_revision', por, `Versión ${cot.version} a revisión de ${revisor}`);

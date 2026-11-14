@@ -17,7 +17,7 @@
 //   POST   /api/ct/cotizaciones/:id/revision   { revisor, nuevo_link } -> { token } (el token solo se ve esta vez)
 //   GET    /api/ct/cotizaciones/:id/propuesta  { slug, propuesta_json, texto_armador } para la propuesta web (solo aprobadas)
 // Quién: header x-crm-usuario (lo elige cada dispositivo en la página: "Soy Lorenzo / Soy Álvaro").
-import { rolDe, json } from '../../_lib/auth.js';
+import { rolDeCotizaciones, json } from '../../_lib/auth.js';
 import {
   leerFila, revisarArchivo, claveServicio, claveHotel, solapan, describirTramo,
   TIPOS_SERVICIO, CATEGORIAS,
@@ -26,7 +26,7 @@ import {
   listarPedidos, crearPedido, verPedido, editarPedido, estadoPedido, rearmar, nuevaVersion,
   vistaCotizacion, editarCotizacion, agregarLinea, editarLinea, borrarLinea, cambiosCotizacion,
 } from '../../_lib/ct-cotizaciones.js';
-import { mandarARevision } from '../../_lib/ct-revision.js';
+import { mandarARevision, aprobar, pedirCambios } from '../../_lib/ct-revision.js';
 import { paraPropuesta } from '../../_lib/ct-propuesta.js';
 import { cargarCatalogo } from '../../_lib/ct-cotizaciones.js';
 
@@ -41,7 +41,7 @@ function quien(request, rol) {
   let u = request.headers.get('x-crm-usuario') || '';
   try { u = decodeURIComponent(u); } catch {}
   u = u.replace(/[^\p{L}\p{N} .'-]/gu, '').trim().slice(0, 40);
-  return u || (rol === 'admin' ? 'admin' : 'equipo');
+  return u || (rol === 'admin' ? 'admin' : rol === 'cotizador' ? 'cotizador' : 'equipo');
 }
 const leerJson = async (request) => { try { return await request.json(); } catch { return {}; } };
 const ahora = "datetime('now')";
@@ -301,7 +301,7 @@ async function importar(env, body, por) {
 
 // ---------- router ----------
 export async function onRequest({ request, env, params }) {
-  const rol = rolDe(request, env);
+  const rol = rolDeCotizaciones(request, env);
   if (!rol) return json({ error: 'unauthorized' }, 401);
   const partes = [].concat(params.ruta || []);
   const [recurso, idTxt, sub, subIdTxt] = partes;
@@ -332,6 +332,15 @@ export async function onRequest({ request, env, params }) {
       if (sub === 'nueva-version' && m === 'POST') return nuevaVersion(env, id, por);
       if (sub === 'cambios' && m === 'GET') return cambiosCotizacion(env, id);
       if (sub === 'revision' && m === 'POST') return mandarARevision(env, id, body, por);
+      // Álvaro aprueba o pide cambios desde el mismo editor (antes era desde el link /r/). Queda registrado quién fue.
+      if ((sub === 'aprobar' || sub === 'pedir-cambios') && m === 'POST') {
+        const cot = await env.DB.prepare(`SELECT * FROM ct_cotizaciones WHERE id = ?`).bind(id).first();
+        if (!cot) return json({ error: 'No existe' }, 404);
+        const ult = await env.DB.prepare(`SELECT id FROM ct_cotizaciones WHERE pedido_id = ? ORDER BY version DESC LIMIT 1`).bind(cot.pedido_id).first();
+        if (ult.id !== cot.id) return json({ error: 'Hay una versión más nueva' }, 409);
+        const quienes = { ...cot, revisor: por };
+        return sub === 'aprobar' ? aprobar(env, quienes, body) : pedirCambios(env, quienes, body);
+      }
       if (sub === 'propuesta' && m === 'GET') {
         const v = await vistaCotizacion(env, id);
         if (!v) return json({ error: 'No existe' }, 404);
