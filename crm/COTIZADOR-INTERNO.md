@@ -8,7 +8,7 @@ en nada que vea el cliente.
 
 | Qué | Dónde |
 |---|---|
-| Tablas (`ct_*`) | `crm/migracion-056-cotizador-interno.sql` |
+| Tablas (`ct_*`) | `crm/migracion-058-cotizador-interno.sql` |
 | Tarifas de prueba (precios inventados) | `crm/seed-cotizador-ilustrativo.sql` (lo genera `crm/generar-seed-cotizador.mjs`) |
 | Lectura de planillas e importador | `functions/_lib/tarifario.js` · tests `node crm/probar-tarifario.mjs` |
 | Cálculo y borrador automático | `functions/_lib/cotizar.js` · tests `node crm/probar-cotizar.mjs` |
@@ -38,7 +38,7 @@ Cotización aprobada → "Preparar propuesta web": texto para el armador (Cotiza
 
 ## Publicar
 
-1. `npx wrangler d1 execute crm-plantilla --remote --file crm/migracion-056-cotizador-interno.sql`
+1. `npx wrangler d1 execute crm-plantilla --remote --file crm/migracion-058-cotizador-interno.sql`
 2. Seed de prueba (opcional): `npx wrangler d1 execute crm-plantilla --remote --file crm/seed-cotizador-ilustrativo.sql`
 3. Tarifas reales: pestaña Importar con "Reemplazar las de prueba" (no van en git: el repo es público).
 4. Deploy del CRM con `deploy-demo.py` (flags de Luna Llena) y diff contra producción, como siempre.

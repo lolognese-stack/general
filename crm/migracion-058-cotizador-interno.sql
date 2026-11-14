@@ -1,8 +1,8 @@
--- Migración 056: cotizador interno (tarifario, configuración, pedidos y cotizaciones).
+-- Migración 058: cotizador interno (tarifario, configuración, pedidos y cotizaciones).
 -- Lorenzo carga el pedido, el sistema arma el borrador y Álvaro lo revisa y aprueba desde el celular.
 -- Todo lo que es tabla ct_* es interno: netos y margen nunca salen en nada que vea el cliente.
 -- Importes en centavos (INTEGER) para no arrastrar errores de punto flotante.
--- Aplicar: npx wrangler d1 execute crm-plantilla --remote --file crm/migracion-056-cotizador-interno.sql
+-- Aplicar: npx wrangler d1 execute crm-plantilla --remote --file crm/migracion-058-cotizador-interno.sql
 -- Seed de tarifas de prueba (aparte, se puede volver a correr): crm/seed-cotizador-ilustrativo.sql
 
 -- Configuración editable desde la pantalla. es_prueba = 1 mientras nadie confirme el valor:
