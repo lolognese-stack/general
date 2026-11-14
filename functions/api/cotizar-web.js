@@ -15,6 +15,7 @@
 import { canalDesdeReferer } from '../_lib/canal.js';
 import { sincronizarManychat } from '../_lib/manychat.js';
 import { enviarAvisoLead } from '../_lib/aviso-lead.js';
+import { guardarLeadWeb } from '../_lib/lead-web.js';
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -195,54 +196,13 @@ export async function onRequestPost({ request, env, waitUntil }) {
   };
   const now = new Date().toISOString();
 
-  // Mismo envío (parcial y después el final): se completa ese lead.
-  const mismo = await env.DB.prepare('SELECT id, meta_json FROM leads WHERE submission_id = ? LIMIT 1').bind(submissionId).first();
-  if (mismo) {
-    // Un reintento del envío final no vuelve a mandar el mail.
-    let yaCompleto = false;
-    try { yaCompleto = JSON.parse(mismo.meta_json || '{}').completo === true; } catch {}
-    await actualizar(env, mismo.id, datos, now);
-    sincronizar(env, manychatId, waitUntil, body.interno === true);
-    if (!yaCompleto) avisar(env, mismo.id, waitUntil, body);
-    return json({ ok: true, crm_id: mismo.id, actualizado: true });
-  }
-
-  // Ya escribió por Instagram o WhatsApp (ManyChat) o cotizó una ficha en
-  // esta visita: se completa ese lead en vez de duplicarlo.
-  const previo = manychatId
-    ? await env.DB.prepare('SELECT id FROM leads WHERE manychat_id = ? ORDER BY id DESC LIMIT 1').bind(manychatId).first()
-    : codigo
-      ? await env.DB.prepare(`SELECT id FROM leads WHERE codigo_web = ? AND creado_en > datetime('now', '-1 day') LIMIT 1`).bind(codigo).first()
-      : null;
-  if (previo) {
-    await env.DB.prepare(
-      `UPDATE leads SET submission_id = coalesce(submission_id, ?),
-              notas = coalesce(notas || char(10) || char(10), '') || ?, actualizado_en = ?
-        WHERE id = ?`
-    ).bind(submissionId, `[${now.slice(0, 10)}] ` + notas, now, previo.id).run();
-    const { notas: _n, nombre: _nombre, ...resto } = datos;
-    await actualizar(env, previo.id, resto, now);
-    sincronizar(env, manychatId, waitUntil, body.interno === true);
-    avisar(env, previo.id, waitUntil, body);
-    return json({ ok: true, crm_id: previo.id, actualizado: true });
-  }
-
-  const cols = Object.keys(datos);
-  const res = await env.DB.prepare(
-    `INSERT INTO leads (${cols.join(', ')}, submission_id, fuente, etapa, fecha_alta, creado_en, actualizado_en)
-     VALUES (${cols.map(() => '?').join(', ')}, ?, ?, 'lead_nuevo', ?, ?, ?)`
-  ).bind(...cols.map((k) => datos[k]), submissionId, FUENTE, now, now, now).run();
+  // Mismo envío (parcial y después el final): se completa ese lead. Ya escribió por
+  // Instagram/WhatsApp (ManyChat) o cotizó una ficha en esta visita: se suma a ese lead.
+  const r = await guardarLeadWeb(env, { submissionId, datos, manychatId, codigo, fuente: FUENTE, now });
   sincronizar(env, manychatId, waitUntil, body.interno === true);
-  avisar(env, res.meta.last_row_id, waitUntil, body);
-  return json({ ok: true, crm_id: res.meta.last_row_id }, 201);
-}
-
-// Solo pisa con valores no vacíos: el envío final no borra lo del parcial.
-async function actualizar(env, id, datos, now) {
-  const cols = Object.keys(datos).filter((k) => datos[k] !== null && datos[k] !== undefined);
-  if (!cols.length) return;
-  await env.DB.prepare(`UPDATE leads SET ${cols.map((k) => `${k} = ?`).join(', ')}, actualizado_en = ? WHERE id = ?`)
-    .bind(...cols.map((k) => datos[k]), now, id).run();
+  // Un reintento del envío final no vuelve a mandar el mail.
+  if (!r.yaCompleto) avisar(env, r.id, waitUntil, body);
+  return r.nuevo ? json({ ok: true, crm_id: r.id }, 201) : json({ ok: true, crm_id: r.id, actualizado: true });
 }
 
 async function clickWhatsapp(env, submissionId) {

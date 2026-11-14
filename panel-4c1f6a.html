@@ -3254,7 +3254,7 @@ const LUGARES  = ["Destino 1","Destino 2","Destino 3","Destino 4","Destino 5","D
 const PAIS_ORIGEN = 'XX';
 
 // Fuente y medio del lead -- listas cerradas para poder cruzar/graficar.
-const FUENTES = ['Instagram','Página web','WhatsApp','Formulario viaje'];
+const FUENTES = ['Instagram','Página web','WhatsApp','Formulario viaje','Armador web'];
 const MEDIOS  = ['Reel','Carrusel','Historia','Outbound','Seguidor','DM'];
 
 // Categorías de ángulo -- mismo mapeo que los tokens semánticos existentes
@@ -11531,6 +11531,26 @@ async function itGuardar(texto){
   }
 }
 
+// Lead que armó su itinerario en /armar/ de la web (meta_json.formulario = 'armador').
+function itArmadorWeb(l){
+  try{ const m = JSON.parse(l.meta_json || '{}'); return m && m.formulario === 'armador' ? m : null; }catch(e){ return null; }
+}
+// Precarga de "Nuevo pedido" (Cotizaciones) con lo que armó el cliente: destinos y noches salen de los tramos del itinerario.
+function itPrecargaWeb(l, it, m){
+  const ts = (it || []).filter(t => t && t.titulo && Array.isArray(t.dias) && t.dias.length);
+  const destinos = ts.map((t, i) => ({ ciudad: String(t.titulo).trim(), noches: i === ts.length - 1 ? Math.max(0, t.dias.length - 1) : t.dias.length }));
+  const cat = { economico:'economico', confort:'confort', superior:'premium' }[m.categoria_hotel] || 'confort';
+  const fecha = m.fecha_tipo === 'exacta' ? m.fecha : '';
+  const faltan = [];
+  if(!fecha) faltan.push(m.fecha_tipo === 'mes' ? 'fecha exacta (dijo ' + m.fecha + ')' : 'fecha (no la sabe)');
+  return {
+    origen:'web', lead_id:l.id, nombre:l.nombre || '', pais:l.pais || '', pasajeros:Number(l.personas) || (Number(m.adultos || 1) + Number(m.ninos || 0)),
+    fecha_inicio:fecha, fecha_tentativa:false, dias:l.dias || '', categoria_hotel:cat, destinos, servicios:[],
+    excursiones:Array.isArray(m.excursiones) ? m.excursiones : [],
+    pedidos_especiales:[m.ritmo ? 'Ritmo: ' + ({ tranquilo:'tranquilo', equilibrado:'equilibrado', a_full:'a full' }[m.ritmo] || m.ritmo) : '', m.comentario || '', m.itinerario_url ? 'Itinerario web: ' + m.itinerario_url : ''].filter(Boolean).join('. '),
+    faltan,
+  };
+}
 function pintarItinerario(l){
   const it = itinerarioDe(l), box = el('it-bloque'), ctl = el('it-ctl');
   box.style.display = it ? '' : 'none';
@@ -11542,7 +11562,9 @@ function pintarItinerario(l){
   el('f-dias-wrap').style.display = it ? 'none' : '';
 
   if(!l || !l.id){ ctl.innerHTML = ''; return; }
+  const web = itArmadorWeb(l);
   ctl.innerHTML = `
+    ${web ? `<div class="it-acciones"><button type="button" class="btn btn-primary btn-sm" id="it-pedido-web">Nuevo pedido con este itinerario</button>${web.itinerario_url ? `<a class="btn btn-ghost btn-sm" href="${esc(web.itinerario_url)}" target="_blank" rel="noopener">Ver lo que armó el cliente</a>` : ''}</div>` : ''}
     <div class="it-acciones">
       <button type="button" class="btn btn-ghost btn-sm" id="it-pegar">${it ? 'Reemplazar itinerario' : 'Pegar itinerario día por día'}</button>
       ${it ? `<button type="button" class="btn btn-ghost btn-sm" id="it-quitar">Quitar</button>` : ''}
@@ -11556,6 +11578,10 @@ function pintarItinerario(l){
       </div>
     </div>`;
   const anio = () => /^\d{4}/.test(l.llegada || '') ? +String(l.llegada).slice(0, 4) : new Date().getFullYear();
+  if(web) el('it-pedido-web').addEventListener('click', () => {
+    try{ sessionStorage.setItem('ct_pre_lead', JSON.stringify(itPrecargaWeb(l, it, web))); }catch(e){}
+    location.hash = '#/cotizaciones/nuevo';
+  });
   el('it-pegar').addEventListener('click', () => { el('it-editor').style.display = ''; el('it-txt').focus(); });
   el('it-cancelar').addEventListener('click', () => { el('it-editor').style.display = 'none'; });
   const quitar = el('it-quitar');
@@ -16306,7 +16332,7 @@ function ibFechaISO(v){
 function ibCategoriaHotel(v){
   const s = String(v || '').toLowerCase();
   if(/econ|hostal|3\s*\*|barat/.test(s)) return 'economico';
-  if(/prem|lujo|5\s*\*|4\s*\*/.test(s)) return 'premium';
+  if(/prem|lujo|superior|5\s*\*|4\s*\*/.test(s)) return 'premium';
   return 'confort';
 }
 
@@ -16335,7 +16361,8 @@ function ibPrecargaPedido(l, an){
     fecha_inicio: ibFechaISO(l.llegada) || ibFechaISO(l.fecha_viaje), fecha_tentativa: false,
     dias: dias || '', categoria_hotel: ibCategoriaHotel(l.categoria_hotel),
     destinos: ibDestinosPedido(l, dias),
-    pedidos_especiales: [l.ocasion ? 'Ocasión: ' + l.ocasion : '', an && an.que_busca ? an.que_busca : ''].filter(Boolean).join('. '),
+    excursiones: (itArmadorWeb(l) || {}).excursiones || [],
+    pedidos_especiales: [l.ocasion ? 'Ocasión: ' + l.ocasion : '', an && an.que_busca ? an.que_busca : '', (itArmadorWeb(l) || {}).itinerario_url ? 'Armó su itinerario en la web: ' + itArmadorWeb(l).itinerario_url : ''].filter(Boolean).join('. '),
   };
 }
 
@@ -17525,7 +17552,12 @@ async function pintar() {
   const raiz = $('#ct-raiz');
   try {
     if (tab === 'pedidos') return await pintarPedidos();
-    if (tab === 'nuevo') return await pintarFormPedido(null);
+    if (tab === 'nuevo') {
+      // Precarga desde la ficha de un lead que armó su itinerario en la web (botón "Nuevo pedido con este itinerario").
+      let pre = null;
+      try { pre = JSON.parse(sessionStorage.getItem('ct_pre_lead') || 'null'); sessionStorage.removeItem('ct_pre_lead'); } catch (e) {}
+      return await pintarFormPedido(null, pre);
+    }
     if (tab === 'pegar-chat') return pintarPegar('chat');
     if (tab === 'pegar-excel') return pintarPegar('excel');
     let m;
@@ -17695,7 +17727,7 @@ async function pintarFormPedido(p, pre = null) {
   const activos = datos.servicios.filter((s) => s.activo && s.tarifas.length);
   $('#ct-raiz').innerHTML = `<p><a href="${p ? '#/cotizaciones/pedido/' + p.id : '#/cotizaciones/pedidos'}">← Volver</a></p>
     <form id="ct-fp" class="panel"><h2>${p ? 'Editar pedido' : 'Nuevo pedido'}</h2>
-      ${pre ? `<p class="nota" style="margin:0 0 10px">Leído del chat: revisa cada dato antes de crear.${(pre.faltan || []).length ? ` <b>Falta: ${esc(pre.faltan.join(', '))}.</b>` : ''}</p>` : ''}
+      ${pre ? `<p class="nota" style="margin:0 0 10px">${pre.origen === 'web' ? 'Itinerario que armó el cliente en la web' : 'Leído del chat'}: revisa cada dato antes de crear.${(pre.faltan || []).length ? ` <b>Falta: ${esc(pre.faltan.join(', '))}.</b>` : ''}</p>` : ''}
       <div class="grid">
         <label>Nombre del cliente<input name="nombre" required maxlength="120" value="${esc(v.nombre)}"></label>
         <label>País<input name="pais" maxlength="60" value="${esc(v.pais)}"></label>
@@ -17754,7 +17786,7 @@ async function pintarFormPedido(p, pre = null) {
     RAIZ().querySelectorAll('#ct-servs input:checked').forEach((c) => elegidos.add(Number(c.value)));
     RAIZ().querySelectorAll('#ct-servs input:not(:checked)').forEach((c) => elegidos.delete(Number(c.value)));
     const body = { nombre: f.nombre.value, pais: f.pais.value, pasajeros: Number(f.pasajeros.value), fecha_inicio: f.fecha_inicio.value || null, fecha_fin: f.fecha_fin.value || null, dias: f.dias.value || null, fecha_tentativa: f.fecha_tentativa.checked,
-      categoria_hotel: f.categoria_hotel.value, destinos: destinos(), servicios: [...elegidos], excursiones: f.excursiones.value.split(/[,;\n]+/).map((x) => x.trim()).filter(Boolean), pedidos_especiales: f.pedidos_especiales.value, lead_id: v.lead_id ?? null, ...(pre ? { origen: 'chat' } : {}) };
+      categoria_hotel: f.categoria_hotel.value, destinos: destinos(), servicios: [...elegidos], excursiones: f.excursiones.value.split(/[,;\n]+/).map((x) => x.trim()).filter(Boolean), pedidos_especiales: f.pedidos_especiales.value, lead_id: v.lead_id ?? null, ...(pre ? { origen: pre.origen === 'web' ? 'web' : 'chat' } : {}) };
     const btn = f.querySelector('button.prim'); btn.disabled = true;
     try {
       if (p) { await api(`pedidos/${p.id}`, { method: 'PUT', body }); toast('Pedido guardado'); irA('pedido/' + p.id); }

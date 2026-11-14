@@ -17,7 +17,7 @@
 import { rolDe, json } from '../_lib/auth.js';
 
 const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/;
-const FORMULARIOS = new Set(['cotizar-web', 'personalizado', 'paquete']);
+const FORMULARIOS = new Set(['cotizar-web', 'personalizado', 'paquete', 'armador']);
 // Perú: UTC-5 todo el año (sin horario de verano).
 const TZ = '-5 hours';
 

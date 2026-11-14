@@ -14,7 +14,7 @@
 // Las sesiones del equipo (interno) no se guardan.
 
 const TIPOS = new Set(['abierto', 'paso_visto', 'paso_completado', 'paso_atras', 'error_validacion', 'salida', 'enviado', 'click_whatsapp']);
-const FORMULARIOS = new Set(['cotizar-web', 'personalizado', 'paquete']);
+const FORMULARIOS = new Set(['cotizar-web', 'personalizado', 'paquete', 'armador']);
 const MAX_EVENTOS = 40;
 const RE_SESION = /^[A-Za-z0-9_-]{8,80}$/;
 

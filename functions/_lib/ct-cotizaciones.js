@@ -73,7 +73,7 @@ function leerPedido(b) {
   if (dias !== null && (!Number.isInteger(dias) || dias < 1 || dias > 90)) errores.push('días: un entero de 1 a 90');
   const conversacion = entero(b.conversacion_id);
   if (conversacion !== null && !Number.isInteger(conversacion)) errores.push('conversación no válida');
-  const origen = ['inbox', 'manual', 'chat', 'excel'].includes(b.origen) ? b.origen : 'manual';
+  const origen = ['inbox', 'manual', 'chat', 'excel', 'web'].includes(b.origen) ? b.origen : 'manual';
   const tentativa = b.fecha_tentativa ? 1 : 0;
   // Los cuatro datos sin los que no hay itinerario ni tarifa (pedido desde el inbox): destinos, días, personas, fecha.
   if (origen === 'inbox') {
