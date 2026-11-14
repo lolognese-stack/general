@@ -17834,9 +17834,9 @@ function dibujarCotizacion() {
       <td data-t="Modalidad" class="c">${l.modalidad ? `<span class="mod ${l.modalidad === 'PRI' ? 'pri' : ''}" title="${l.modalidad === 'PRI' ? 'Privado' : 'Grupal'}">${l.modalidad}</span>` : ''}</td>
       <td data-t="Pax">${l.tipo === 'hotel' ? `${l.unidades} ${l.habitacion} × ${l.cantidad} n` : l.pasajeros}</td>
       <td data-t="Neto" class="num">${usd(l.neto_cent)}${l.tipo === 'hotel' && l.cantidad && l.unidades ? `<small class="nota" style="display:block;margin:0">${usd(Math.round(l.neto_cent / (l.cantidad * l.unidades)))} / hab. noche</small>` : ''}${l.moneda === 'PEN' && l.neto_unit_cent != null ? `<small class="nota" style="display:block;margin:0">S/ ${(l.neto_unit_cent / 100).toFixed(2)} c/u</small>` : ''}</td>
-      <td data-t="Margen" class="num">${l.margen_pct != null ? l.margen_pct + '%' : '—'}</td>
+      <td data-t="Margen" class="num">${l.precio_es_venta ? '—' : l.margen_pct != null ? l.margen_pct + '%' : '—'}</td>
       <td data-t="Total" class="num"><b>${usd(l.venta_cent)}</b></td>
-      <td data-t="Ganancia" class="num">${usd(l.venta_cent - l.neto_cent)}</td>
+      <td data-t="Ganancia" class="num">${l.precio_es_venta ? '<span class="nota" style="margin:0" title="Precio final cargado con la ganancia adentro: el neto no se conoce">sin definir</span>' : usd(l.venta_cent - l.neto_cent)}</td>
       <td class="num">${ed && l.sin_confirmar ? `<button type="button" class="link" data-conf-lin="${l.id}">Confirmar</button>` : ''}${ed ? `<button type="button" class="link" data-ed-lin="${l.id}">Editar</button>` : ''}</td></tr>`;
   let dias = '';
   for (let d = 1; d <= nDias; d++) {
@@ -17884,7 +17884,7 @@ function dibujarCotizacion() {
     ${sinDia.length ? `<p class="err">Hay líneas fuera de los días del viaje: ${sinDia.map((l) => esc(l.descripcion) + ' (día ' + l.dia + ')').join(', ')}</p>` : ''}
     <div class="panel totales">
       <div><span>Neto total</span><b>${usd(t.neto_cent)}</b></div>
-      <div><span>Ganancia</span><b>${usd(t.ganancia_cent)}${t.margen_efectivo_pct != null ? ` <small>(${t.margen_efectivo_pct}%)</small>` : ''}</b></div>
+      <div><span>Ganancia</span><b>${usd(t.ganancia_cent)}${t.margen_efectivo_pct != null ? ` <small>(${t.margen_efectivo_pct}%)</small>` : ''}</b>${cot.lineas.some((l) => l.precio_es_venta && l.venta_cent > 0) ? '<small class="nota" style="margin:0">No cuenta las líneas con precio final: su neto no está definido.</small>' : ''}</div>
       <div class="venta"><span>Venta total</span><b>${usd(t.venta_cent)}</b></div>
       <div class="venta"><span>Por persona</span><b>${usd(t.venta_por_persona_cent)}</b></div>
       <div><span>Con factura (+${c.config.igv_pct}% IGV)</span><b>${usd(t.con_factura_cent)}</b></div>
@@ -18135,10 +18135,10 @@ function pintarServicios() {
     (lista.length ? porCiudad(lista, (s) => `
     <div class="card ${s.activo ? '' : 'inactivo'}">
       <div class="cab"><div><h3>${esc(s.nombre)} ${s.activo ? '' : '<span class="chip">inactivo</span>'}</h3>
-        <div class="meta">${TIPOS[s.tipo]} · ${esc(s.duracion || 'sin duración')} · mínimo ${s.pax_min} pax ${s.precio_es_venta ? ' · <span class="chip" title="Lo opera Luna Llena: la tarifa ya es precio de venta, no se le suma margen">precio de venta</span>' : ''}</div>
+        <div class="meta">${TIPOS[s.tipo]} · ${esc(s.duracion || 'sin duración')} · mínimo ${s.pax_min} pax ${s.precio_es_venta ? ' · <span class="chip" title="El precio cargado ya incluye la ganancia: no se le suma margen. El neto (costo) todavía no se conoce.">precio final · neto sin definir</span>' : ''}</div>
         ${s.incluye ? `<div class="meta">Incluye: ${esc(s.incluye)}</div>` : ''}${s.no_incluye ? `<div class="meta">No incluye: ${esc(s.no_incluye)}</div>` : ''}</div>
         <div class="acc"><button class="chico" data-ed-serv="${s.id}" type="button">Editar</button><button class="chico" data-nueva-tar="${s.id}" type="button">+ Tarifa</button></div></div>
-      ${s.tarifas.length ? `<table class="t-resp"><thead><tr><th>Pasajeros</th><th>Temporada</th><th class="num">Neto por persona</th><th>Vigencia</th><th></th></tr></thead><tbody>
+      ${s.tarifas.length ? `<table class="t-resp"><thead><tr><th>Pasajeros</th><th>Temporada</th><th class="num">${s.precio_es_venta ? 'Precio final por persona' : 'Neto por persona'}</th><th>Vigencia</th><th></th></tr></thead><tbody>
         ${s.tarifas.map((t) => `<tr><td data-t="Pasajeros">${tramo(t)} ${t.es_ilustrativa ? '<span class="prueba">PRUEBA</span>' : ''}</td><td data-t="Temporada">${TEMP[t.temporada]}</td>
           <td data-t="Neto" class="num">${dinero(t.neto_cent, t.moneda)}</td><td data-t="Vigencia">${filaVigencia(t)}</td>
           <td class="num"><button class="link" data-ed-tar="${t.id}" type="button">Editar</button><button class="link" data-hist="tarifa:${t.id}" type="button">Historial</button><button class="link" data-del-tar="${t.id}" type="button">Borrar</button></td></tr>`).join('')}
@@ -18183,7 +18183,7 @@ function editarTarifa(clase, padre, t) {
       ? `<label>Habitación<select name="habitacion">${['SGL', 'DBL', 'TPL'].map((h) => `<option ${h === v.habitacion ? 'selected' : ''}>${h}</option>`).join('')}</select></label>`
       : `<div class="fila"><label>Pasajeros desde<input name="pax_desde" type="number" min="1" step="1" required value="${esc(v.pax_desde)}"></label>
          <label>Pasajeros hasta<input name="pax_hasta" type="number" min="1" step="1" value="${esc(v.pax_hasta ?? '')}" placeholder="vacío = y más"></label></div>`}
-    <div class="fila"><label>Precio neto ${clase === 'hotel' ? 'por habitación y noche' : 'por persona'}<input name="precio_neto" inputmode="decimal" required value="${t ? (t.neto_cent / 100).toFixed(2) : ''}"></label>
+    <div class="fila"><label>${padre.precio_es_venta ? 'Precio final (con ganancia)' : 'Precio neto'} ${clase === 'hotel' ? 'por habitación y noche' : 'por persona'}<input name="precio_neto" inputmode="decimal" required value="${t ? (t.neto_cent / 100).toFixed(2) : ''}"></label>
       <label>Moneda<select name="moneda">${['USD', 'PEN'].map((m) => `<option ${m === v.moneda ? 'selected' : ''}>${m}</option>`).join('')}</select></label></div>
     <label>Temporada<select name="temporada">${Object.entries(TEMP).map(([k, n]) => `<option value="${k}" ${k === v.temporada ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
     <div class="fila"><label>Vigente desde<input name="vigente_desde" type="date" required value="${esc(v.vigente_desde)}"></label>
@@ -18224,9 +18224,9 @@ function pintarHoteles() {
     (lista.length ? porCiudad(lista, (h) => `
     <div class="card ${h.activo ? '' : 'inactivo'}">
       <div class="cab"><div><h3>${esc(h.nombre)} ${h.es_ilustrativo ? '<span class="prueba">PRUEBA</span>' : ''} ${h.activo ? '' : '<span class="chip">inactivo</span>'}</h3>
-        <div class="meta">${CATS[h.categoria]} · precio por habitación y por noche${h.precio_es_venta ? ' · <span class="chip" title="La tarifa ya es precio de venta: no se le suma margen">precio de venta</span>' : ''}</div></div>
+        <div class="meta">${CATS[h.categoria]} · precio por habitación y por noche${h.precio_es_venta ? ' · <span class="chip" title="El precio cargado ya incluye la ganancia: no se le suma margen. El neto (costo) todavía no se conoce.">precio final · neto sin definir</span>' : ''}</div></div>
         <div class="acc"><button class="chico" data-ed-hotel="${h.id}" type="button">Editar</button><button class="chico" data-nueva-htar="${h.id}" type="button">+ Tarifa</button></div></div>
-      ${h.tarifas.length ? `<table class="t-resp"><thead><tr><th>Habitación</th><th>Temporada</th><th class="num">Neto por noche</th><th>Vigencia</th><th></th></tr></thead><tbody>
+      ${h.tarifas.length ? `<table class="t-resp"><thead><tr><th>Habitación</th><th>Temporada</th><th class="num">${h.precio_es_venta ? 'Precio final por noche' : 'Neto por noche'}</th><th>Vigencia</th><th></th></tr></thead><tbody>
         ${h.tarifas.map((t) => `<tr><td data-t="Habitación">${t.habitacion} ${t.es_ilustrativa ? '<span class="prueba">PRUEBA</span>' : ''}</td><td data-t="Temporada">${TEMP[t.temporada]}</td>
           <td data-t="Neto" class="num">${dinero(t.neto_cent, t.moneda)}</td><td data-t="Vigencia">${filaVigencia(t)}</td>
           <td class="num"><button class="link" data-ed-htar="${t.id}" type="button">Editar</button><button class="link" data-hist="hotel_tarifa:${t.id}" type="button">Historial</button><button class="link" data-del-htar="${t.id}" type="button">Borrar</button></td></tr>`).join('')}
