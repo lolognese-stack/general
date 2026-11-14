@@ -423,9 +423,13 @@ function dibujarCotizacion() {
     <div class="barra"><h2 style="margin:0">Cotización</h2>
       <select id="ver">${versiones.map((v) => `<option value="${v.id}" ${v.id === c.id ? 'selected' : ''}>Versión ${v.version} · ${COT_ESTADO[v.estado] || v.estado}</option>`).join('')}</select>
       <span style="flex:1"></span>
+      ${ed && c.id === versiones[0].id ? '<button type="button" class="chico prim" id="a-revision">Mandar a revisión</button>' : ''}
+      ${c.estado === 'en_revision' && linkGuardado(c.id) ? '<button type="button" class="chico" id="copiar-wa">Copiar mensaje para WhatsApp</button>' : ''}
       ${ed ? '<button type="button" class="chico" id="rearmar">Volver a armar</button>' : ''}
       ${!ed && c.id === versiones[0].id ? '<button type="button" class="chico prim" id="nueva-v">Crear versión nueva</button>' : ''}
       <button type="button" class="chico" id="cambios-cot">Cambios de precio</button></div>
+    ${c.estado === 'en_revision' ? `<p class="aviso">En revisión de ${esc(c.revisor || '—')}. Lo que cambie desde el link queda en "Cambios de precio".</p>` : ''}
+    ${c.estado === 'cambios_pedidos' ? `<div class="avisos-cot"><b>${esc(c.revisor || 'Álvaro')} pidió cambios:</b> ${esc(c.pedido_cambios || '')}</div>` : ''}
     ${c.estado === 'aprobada' ? `<p class="ok">Aprobada por ${esc(c.aprobada_por || '—')} el ${peru(c.aprobada_en)}. No se edita: para cambiar algo, versión nueva.</p>` : ''}
     ${c.avisos.length ? `<ul class="avisos-cot">${c.avisos.map((a) => `<li>${esc(a)}</li>`).join('')}</ul>` : ''}
     ${t.problemas ? `<p class="err"><b>${t.problemas} línea${t.problemas > 1 ? 's' : ''} sin precio.</b> Cargá la tarifa, cambiá el hotel o poné el precio a mano.</p>` : ''}
@@ -444,6 +448,8 @@ function dibujarCotizacion() {
     <div class="panel"><h2>Notas de Álvaro</h2>${ed ? `<textarea id="notas" maxlength="4000">${esc(c.notas_alvaro)}</textarea><div class="barra" style="margin-top:8px"><button type="button" class="chico" id="guardar-notas">Guardar notas</button></div>` : `<p>${esc(c.notas_alvaro || '—')}</p>`}</div>`;
   $('#ver').addEventListener('change', (e) => { cotElegida = Number(e.target.value); pintarPedido(ped.pedido.id); });
   if ($('#rearmar')) $('#rearmar').addEventListener('click', rearmarCot);
+  if ($('#a-revision')) $('#a-revision').addEventListener('click', mandarRevisionDlg);
+  if ($('#copiar-wa')) $('#copiar-wa').addEventListener('click', () => dialogoLink(linkGuardado(c.id)));
   if ($('#nueva-v')) $('#nueva-v').addEventListener('click', async () => {
     if (!usuario()) { elegirSoy(); return; }
     if (!confirm('¿Crear la versión ' + (c.version + 1) + '? Copia esta cotización y la deja editable.')) return;
@@ -463,6 +469,50 @@ function dibujarCotizacion() {
   });
   document.querySelectorAll('[data-mas]').forEach((b) => b.addEventListener('click', () => agregarLineaDlg(Number(b.dataset.mas))));
   document.querySelectorAll('[data-ed-lin]').forEach((b) => b.addEventListener('click', () => editarLineaDlg(cot.lineas.find((l) => l.id == b.dataset.edLin))));
+}
+
+// ---------- revisión (link para Álvaro) ----------
+const claveLink = (id) => `ct_link_${id}`;
+const linkGuardado = (id) => { try { return localStorage.getItem(claveLink(id)); } catch { return null; } };
+const linkDe = (tok) => `${location.origin}/r/#${tok}`;
+function mensajeWhatsApp(tok) {
+  const c = cot.cotizacion, p = cot.pedido, t = cot.totales;
+  const quien = c.revisor || 'Álvaro';
+  return `Hola ${quien}, la cotización de ${p.nombre} (${p.pasajeros} pax${p.fecha_inicio ? `, ${fecha(p.fecha_inicio)} al ${fecha(p.fecha_fin)}` : ''}) está lista para revisar:\n${linkDe(tok)}\n\nTotal ${usd(t.venta_cent)} (${usd(t.venta_por_persona_cent)} por persona).${c.usa_prueba ? '\nOJO: usa PRECIOS DE PRUEBA.' : ''}\nDesde el link podés cambiar precios, dejar notas y aprobar o pedir cambios.`;
+}
+// Con un <dialog> modal abierto, lo que está fuera queda inerte: el respaldo selecciona el textarea del propio diálogo.
+async function copiar(texto, ta) {
+  try { await navigator.clipboard.writeText(texto); return true; }
+  catch { try { ta.focus(); ta.select(); return document.execCommand('copy'); } catch { return false; } }
+}
+function dialogoLink(tok) {
+  const msg = mensajeWhatsApp(tok);
+  abrirDialogo(`<h3>Link de revisión</h3>
+    <p class="nota" style="margin:0">Cualquiera con este link ve los netos y puede aprobar: mandalo solo a ${esc(cot.cotizacion.revisor || 'Álvaro')}. Vence a los 30 días.</p>
+    <label>Mensaje<textarea name="m" rows="7" readonly>${esc(msg)}</textarea></label>
+    <div class="pie"><a class="chico" href="${esc(linkDe(tok))}" target="_blank" rel="noopener" style="margin-right:auto">Abrir el link</a>
+      <button value="cancel" formnovalidate>Cerrar</button><button class="prim" value="ok">Copiar mensaje para WhatsApp</button></div>`,
+    async (f) => { const ok = await copiar(msg, f.m); toast(ok ? 'Mensaje copiado' : 'No se pudo copiar: copialo a mano'); if (!ok) return 'Seleccioná el texto y copialo'; });
+}
+function mandarRevisionDlg() {
+  if (!usuario()) { elegirSoy(); return; }
+  const c = cot.cotizacion;
+  const guardado = linkGuardado(c.id);
+  abrirDialogo(`<h3>Mandar a revisión</h3>
+    ${c.usa_prueba ? '<p class="err" style="margin:0">Usa PRECIOS DE PRUEBA: se puede revisar y aprobar, pero no mandar al cliente.</p>' : ''}
+    ${cot.totales.problemas ? `<p class="err" style="margin:0">${cot.totales.problemas} líneas sin precio: no se va a poder aprobar hasta completarlas.</p>` : ''}
+    <label>Quién revisa<input name="revisor" maxlength="40" value="${esc(c.revisor || 'Álvaro')}"></label>
+    ${c.tiene_link ? `<label class="check"><input type="checkbox" name="nuevo" ${guardado ? '' : 'checked'}> Generar un link nuevo (el anterior deja de andar)</label>
+      ${guardado ? '' : '<p class="nota" style="margin:0">El link anterior no está guardado en este dispositivo: hace falta uno nuevo para copiarlo.</p>'}` : ''}
+    <div class="pie"><button value="cancel" formnovalidate>Cancelar</button><button class="prim" value="ok">Mandar a revisión</button></div>`,
+    async (f) => {
+      const r = await api(`cotizaciones/${c.id}/revision`, { method: 'POST', body: { revisor: f.revisor.value, nuevo_link: !!(f.nuevo && f.nuevo.checked) } });
+      if (r.token) { try { localStorage.setItem(claveLink(c.id), r.token); } catch {} }
+      const tok = r.token || linkGuardado(c.id);
+      await pintarPedido(ped.pedido.id);
+      if (tok) setTimeout(() => dialogoLink(tok), 50);
+      else toast('En revisión. El link anterior sigue andando.');
+    });
 }
 
 async function rearmarCot() {

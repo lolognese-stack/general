@@ -14,6 +14,7 @@
 //   GET|PUT /api/ct/cotizaciones/:id          ver (recalcula) / { notas_alvaro, usar_config_actual }
 //   POST   /api/ct/cotizaciones/:id/lineas     agregar línea   PUT|DELETE /api/ct/cotizaciones/:id/lineas/:lid
 //   POST   /api/ct/cotizaciones/:id/nueva-version          GET /api/ct/cotizaciones/:id/cambios
+//   POST   /api/ct/cotizaciones/:id/revision   { revisor, nuevo_link } -> { token } (el token solo se ve esta vez)
 // Quién: header x-crm-usuario (lo elige cada dispositivo en la página: "Soy Lorenzo / Soy Álvaro").
 import { rolDe, json } from '../../_lib/auth.js';
 import {
@@ -24,6 +25,7 @@ import {
   listarPedidos, crearPedido, verPedido, editarPedido, estadoPedido, rearmar, nuevaVersion,
   vistaCotizacion, editarCotizacion, agregarLinea, editarLinea, borrarLinea, cambiosCotizacion,
 } from '../../_lib/ct-cotizaciones.js';
+import { mandarARevision } from '../../_lib/ct-revision.js';
 
 const CONFIG = {
   margen_pct: { min: 0, max: 300, nombre: 'Margen por defecto (%)' },
@@ -326,6 +328,7 @@ export async function onRequest({ request, env, params }) {
       if (sub === 'lineas' && subId && m === 'DELETE') return borrarLinea(env, id, subId, por);
       if (sub === 'nueva-version' && m === 'POST') return nuevaVersion(env, id, por);
       if (sub === 'cambios' && m === 'GET') return cambiosCotizacion(env, id);
+      if (sub === 'revision' && m === 'POST') return mandarARevision(env, id, body, por);
     }
     if (recurso === 'servicios' && ((m === 'POST' && !id) || (m === 'PUT' && id))) return guardarServicio(env, id, body);
     if (recurso === 'hoteles' && ((m === 'POST' && !id) || (m === 'PUT' && id))) return guardarHotel(env, id, body);

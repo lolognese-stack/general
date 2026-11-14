@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#161616">
+<title>Revisar cotización · Luna Llena Travel</title>
+<style>
+:root{--bg:#F6F1EA;--paper:#FFFDF9;--ink:#161616;--ink2:#4A443E;--muted:#857B70;--line:#E2D9CE;--brand:#FF7A00;--brand-ink:#A34A00;--ok:#1F7A4D;--ok-bg:#E7F4EC;--err:#B42318;--err-bg:#FDECEA;--warn-bg:#FFF4E8}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;padding-bottom:150px}
+header{background:var(--ink);color:#fff;padding:16px 16px 18px}
+header small{color:#C9C1B6;letter-spacing:.06em;text-transform:uppercase;font-size:.72rem}
+header h1{margin:4px 0 2px;font-size:1.35rem;line-height:1.2}
+header p{margin:0;color:#E4DDD3;font-size:.9rem}
+main{padding:14px 14px 0;max-width:640px;margin:0 auto}
+.banner{padding:12px 14px;margin-bottom:12px;border-radius:6px;font-weight:600}
+.banner small{display:block;font-weight:400;font-size:.88rem;margin-top:2px}
+.prueba-b{background:var(--err-bg);border:2px solid var(--err);color:var(--err);text-align:center;font-size:1.15rem;letter-spacing:.05em}
+.prueba-b small{letter-spacing:0;color:var(--ink2)}
+.ok-b{background:var(--ok-bg);border:1px solid #A9D5BA;color:var(--ok)}
+.warn-b{background:var(--warn-bg);border:1px solid #F1C99B;color:var(--brand-ink)}
+.gris-b{background:#EEE8E0;border:1px solid var(--line);color:var(--ink2)}
+.prueba{display:inline-block;padding:0 6px;border-radius:3px;background:var(--err);color:#fff;font-size:.66rem;font-weight:700;letter-spacing:.04em;vertical-align:middle}
+.chip{display:inline-block;padding:0 6px;border-radius:3px;border:1px solid var(--line);color:var(--ink2);font-size:.7rem;vertical-align:middle}
+.chip.mano{border-color:var(--brand);color:var(--brand-ink)}
+.dia{margin:16px 0 6px;display:flex;gap:8px;align-items:baseline}
+.dia b{font-size:.95rem}.dia span{color:var(--muted);font-size:.85rem}
+.linea{display:flex;gap:10px;justify-content:space-between;align-items:flex-start;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px;margin-bottom:6px;width:100%;text-align:left;font:inherit;color:inherit}
+button.linea{cursor:pointer}button.linea:active{background:#F3EDE4}
+.linea.mal{border-color:var(--err);background:var(--err-bg)}
+.linea .d{flex:1;min-width:0}.linea .d b{display:block;font-size:.95rem;line-height:1.3}
+.linea .d small{display:block;color:var(--ink2);font-size:.8rem;margin-top:2px}
+.linea .d .err{color:var(--err);font-size:.82rem;font-weight:600}
+.linea .v{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}.linea .v b{display:block}.linea .v small{color:var(--muted);font-size:.75rem}
+.libre{color:var(--muted);font-size:.85rem;padding:2px 2px 6px}
+.caja{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:14px;margin:16px 0}
+.caja h2{margin:0 0 10px;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2)}
+.tot{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tot div span{display:block;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.04em}
+.tot div b{font-variant-numeric:tabular-nums}
+textarea,input{font:inherit;width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
+textarea{min-height:90px}
+label{display:block;font-size:.85rem;color:var(--ink2);margin-bottom:10px}
+label input,label textarea{margin-top:4px}
+button{font:inherit;cursor:pointer}
+.btn{padding:12px 16px;border-radius:6px;border:1px solid var(--ink);background:var(--paper);color:var(--ink);font-weight:600}
+.btn.prim{background:var(--ink);color:#fff}.btn.verde{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn:disabled{opacity:.45}
+.link{border:0;background:none;color:var(--brand-ink);text-decoration:underline;padding:4px 0}
+.barra{position:fixed;left:0;right:0;bottom:0;background:var(--paper);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -4px 16px rgba(0,0,0,.06)}
+.barra .in{max-width:640px;margin:0 auto}
+.barra .tt{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.barra .tt b{font-size:1.25rem;font-variant-numeric:tabular-nums}.barra .tt span{color:var(--ink2);font-size:.85rem}
+.barra .bs{display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
+dialog{border:0;border-radius:12px 12px 0 0;padding:0;width:100%;max-width:640px;margin:auto auto 0;background:var(--paper);color:var(--ink)}
+dialog::backdrop{background:rgba(0,0,0,.4)}
+dialog form{padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
+dialog h3{margin:0 0 4px}dialog .sub{color:var(--ink2);font-size:.88rem;margin:0 0 14px}
+.fila{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pie{display:flex;gap:8px;justify-content:flex-end;margin-top:6px;flex-wrap:wrap}
+.msg{color:var(--err);font-size:.88rem;min-height:1.2em;margin-top:6px}
+.vacio{padding:60px 20px;text-align:center;color:var(--ink2)}
+.toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:6px;font-size:.9rem;z-index:9}
+ul.av{margin:0;padding-left:18px}
+</style>
+</head>
+<body>
+<header id="cab"><small>Luna Llena Travel · revisión interna</small><h1>Cargando…</h1></header>
+<main id="raiz"></main>
+<div class="barra" id="barra" hidden><div class="in"><div class="tt"><span id="pp"></span><b id="total"></b></div><div class="bs" id="botones"></div></div></div>
+<dialog id="dlg"><form id="dlg-f" method="dialog"></form></dialog>
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const token = decodeURIComponent((location.hash || '').slice(1)).trim();
+const usd = (c) => c == null ? '—' : `US$ ${(c / 100).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fecha = (iso) => iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : '';
+const DS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+const diaTxt = (iso) => iso ? `${DS[new Date(iso + 'T12:00:00Z').getUTCDay()]} ${iso.slice(8, 10)}/${iso.slice(5, 7)}` : '';
+const peru = (t) => { if (!t) return ''; const d = new Date(Date.parse(t.replace(' ', 'T') + 'Z') - 5 * 3600e3).toISOString(); return `${d.slice(8, 10)}/${d.slice(5, 7)} ${d.slice(11, 16)}`; };
+let v = null;
+
+function toast(t) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 2400); }
+
+async function api(ruta, opt = {}) {
+  const r = await fetch('/api/revision' + ruta, {
+    method: opt.method || 'GET',
+    headers: { 'x-revision-token': token, ...(opt.body ? { 'content-type': 'application/json' } : {}) },
+    body: opt.body ? JSON.stringify(opt.body) : undefined,
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || 'Error ' + r.status);
+  return j;
+}
+
+function dialogo(html, alGuardar) {
+  const dlg = $('#dlg'), f = $('#dlg-f');
+  f.innerHTML = html + '<div class="msg" id="dmsg"></div>';
+  f.onsubmit = async (e) => {
+    const b = e.submitter;
+    if (b && b.value === 'cancel') return;
+    e.preventDefault(); if (b) b.disabled = true;
+    try { await alGuardar(f); dlg.close(); } catch (x) { $('#dmsg').textContent = x.message; } finally { if (b) b.disabled = false; }
+  };
+  dlg.showModal();
+}
+
+async function cargar() {
+  if (!token) { $('#cab h1').textContent = 'Link incompleto'; $('#raiz').innerHTML = '<div class="vacio">Abrí el link completo que te mandaron por WhatsApp.</div>'; return; }
+  try { v = await api(''); pintar(); }
+  catch (e) { $('#cab h1').textContent = 'No se puede abrir'; $('#raiz').innerHTML = `<div class="vacio">${esc(e.message)}</div>`; $('#barra').hidden = true; }
+}
+
+function pintar() {
+  const c = v.cotizacion, p = v.pedido, t = v.totales;
+  const editable = ['en_revision', 'cambios_pedidos'].includes(c.estado);
+  $('#cab').innerHTML = `<small>Luna Llena Travel · revisión interna · versión ${c.version}</small><h1>${esc(p.nombre)}${p.pais ? ' · ' + esc(p.pais) : ''}</h1>
+    <p>${p.pasajeros} pasajero${p.pasajeros > 1 ? 's' : ''}${p.fecha_inicio ? ` · ${fecha(p.fecha_inicio)} al ${fecha(p.fecha_fin)}` : ''}</p>
+    <p>${esc(p.destinos.map((d) => `${d.ciudad} ${d.noches}n`).join(' · '))}${p.categoria_hotel && p.categoria_hotel !== 'sin_hotel' ? ` · hotel ${esc(p.categoria_hotel)}` : ''}</p>`;
+  const nDias = Math.max(1, p.destinos.reduce((s, d) => s + d.noches, 0) + 1, ...v.lineas.map((l) => l.dia || 1));
+  const porDia = new Map(); for (const l of v.lineas) (porDia.get(l.dia) || porDia.set(l.dia, []).get(l.dia)).push(l);
+  let dias = '';
+  for (let d = 1; d <= nDias; d++) {
+    const f = p.fecha_inicio ? new Date(Date.parse(p.fecha_inicio + 'T12:00:00Z') + (d - 1) * 86400e3).toISOString().slice(0, 10) : null;
+    const ls = porDia.get(d) || [];
+    dias += `<div class="dia"><b>Día ${d}</b><span>${diaTxt(f)}</span></div>` + (ls.length ? ls.map((l) => {
+      const det = l.tipo === 'hotel' ? `${l.unidades} hab. ${l.habitacion} × ${l.cantidad} noche${l.cantidad > 1 ? 's' : ''}` : `${l.pasajeros} pax`;
+      const tag = editable ? 'button type="button"' : 'div';
+      return `<${tag} class="linea ${l.problema ? 'mal' : ''}" data-l="${l.id}">
+        <span class="d"><b>${esc(l.descripcion)}</b>
+          <small>${det} · neto ${usd(l.neto_cent)}${l.precio_es_venta ? ' · precio propio' : ` · margen ${l.margen_pct}%`}</small>
+          ${l.es_ilustrativa ? '<span class="prueba">PRUEBA</span> ' : ''}${l.pisado_neto || l.pisado_venta ? '<span class="chip mano">cambiado a mano</span>' : ''}
+          ${l.problema ? `<span class="err">${esc(l.problema)}</span>` : ''}${l.nota ? `<small>${esc(l.nota)}</small>` : ''}</span>
+        <span class="v"><b>${usd(l.venta_cent)}</b>${editable ? '<small>tocar para editar</small>' : ''}</span></${tag.split(' ')[0]}>`;
+    }).join('') : '<div class="libre">Día libre</div>');
+  }
+  let estado = '';
+  if (c.estado === 'aprobada') estado = `<div class="banner ok-b">Aprobada${c.aprobada_por ? ' por ' + esc(c.aprobada_por) : ''} el ${peru(c.aprobada_en)}<small>No se edita más. Si hay que cambiar algo, el equipo arma una versión nueva y te manda otro link.</small></div>`;
+  else if (c.estado === 'reemplazada') estado = '<div class="banner gris-b">Hay una versión más nueva de esta cotización<small>Este link es de una versión vieja: pedí el link nuevo.</small></div>';
+  else if (c.estado === 'cambios_pedidos') estado = `<div class="banner warn-b">Pediste cambios<small>${esc(c.pedido_cambios || '')}</small></div>`;
+  else if (c.estado === 'borrador') estado = '<div class="banner gris-b">Todavía no está lista para revisar<small>El equipo la está armando.</small></div>';
+  $('#raiz').innerHTML = `
+    ${c.usa_prueba ? '<div class="banner prueba-b">PRECIOS DE PRUEBA<small>Usa tarifas de prueba o configuración sin confirmar. Se puede revisar, pero no se puede mandar al cliente.</small></div>' : ''}
+    ${estado}
+    ${p.pedidos_especiales ? `<div class="banner warn-b">Pedidos del cliente<small>${esc(p.pedidos_especiales)}</small></div>` : ''}
+    ${c.avisos.length ? `<div class="banner warn-b">Para revisar<small><ul class="av">${c.avisos.map((a) => `<li>${esc(a)}</li>`).join('')}</ul></small></div>` : ''}
+    ${t.problemas ? `<div class="banner prueba-b" style="font-size:1rem">${t.problemas} línea${t.problemas > 1 ? 's' : ''} sin precio<small>Tocala y poné el precio, o pedí cambios.</small></div>` : ''}
+    ${dias}
+    <div class="caja"><h2>Números</h2><div class="tot">
+      <div><span>Neto total</span><b>${usd(t.neto_cent)}</b></div>
+      <div><span>Ganancia</span><b>${usd(t.ganancia_cent)}${t.margen_efectivo_pct != null ? ` (${t.margen_efectivo_pct}%)` : ''}</b></div>
+      <div><span>Venta total</span><b>${usd(t.venta_cent)}</b></div>
+      <div><span>Por persona</span><b>${usd(t.venta_por_persona_cent)}</b></div>
+      <div><span>Con factura (+${c.config.igv_pct}%)</span><b>${usd(t.con_factura_cent)}</b></div>
+      <div><span>Con tarjeta (+${c.config.recargo_tarjeta_pct}%)</span><b>${usd(t.con_tarjeta_cent)}</b></div>
+    </div></div>
+    <div class="caja"><h2>Notas</h2>${editable ? `<textarea id="notas" maxlength="4000" placeholder="Notas para el equipo">${esc(c.notas_alvaro)}</textarea><div class="pie"><button type="button" class="btn" id="g-notas">Guardar notas</button></div>` : `<p style="margin:0">${esc(c.notas_alvaro || '—')}</p>`}</div>`;
+  $('#total').textContent = usd(t.venta_cent);
+  $('#pp').textContent = `${usd(t.venta_por_persona_cent)} por persona`;
+  $('#barra').hidden = false;
+  $('#botones').innerHTML = editable
+    ? '<button type="button" class="btn" id="b-cambios">Pedir cambios</button><button type="button" class="btn verde" id="b-aprobar">Aprobar</button>'
+    : '';
+  if (!editable) $('#botones').style.display = 'none'; else $('#botones').style.display = '';
+  if (editable) {
+    document.querySelectorAll('button.linea').forEach((b) => b.addEventListener('click', () => editar(v.lineas.find((l) => l.id == b.dataset.l))));
+    $('#g-notas').addEventListener('click', async () => { try { v = await api('/notas', { method: 'PUT', body: { notas_alvaro: $('#notas').value } }); toast('Notas guardadas'); pintar(); } catch (e) { alert(e.message); } });
+    $('#b-cambios').addEventListener('click', pedirCambios);
+    $('#b-aprobar').addEventListener('click', aprobar);
+  }
+}
+
+function editar(l) {
+  dialogo(`<h3>${esc(l.descripcion)}</h3><p class="sub">${l.tipo === 'hotel' ? `${l.unidades} hab. ${l.habitacion} × ${l.cantidad} noches` : `${l.pasajeros} pasajeros`}${l.moneda === 'PEN' && l.neto_unit_cent != null ? ` · tarifa S/ ${(l.neto_unit_cent / 100).toFixed(2)}` : ''}</p>
+    <div class="fila"><label>Neto (US$)<input name="neto" inputmode="decimal" value="${(l.neto_cent / 100).toFixed(2)}"></label>
+      <label>Venta (US$)<input name="venta" inputmode="decimal" value="${(l.venta_cent / 100).toFixed(2)}"></label></div>
+    ${l.precio_es_venta ? '' : `<label>Margen % (vacío = ${v.cotizacion.config.margen_pct}%)<input name="margen" inputmode="decimal" value="${l.margen_fijo ?? ''}"></label>`}
+    <label>Motivo (queda registrado)<input name="motivo" maxlength="200" placeholder="Ej. el operador subió la tarifa"></label>
+    <label>Nota para el equipo<input name="nota" maxlength="500" value="${esc(l.nota)}"></label>
+    <div class="pie">${l.pisado_neto || l.pisado_venta || l.margen_fijo != null ? '<button type="button" class="link" id="rest" style="margin-right:auto">Volver al tarifario</button>' : ''}
+      <button class="btn" value="cancel" formnovalidate>Cancelar</button><button class="btn prim" value="ok">Guardar</button></div>`,
+    async (f) => {
+      const body = { motivo: f.motivo.value, nota: f.nota.value };
+      if (f.neto.value !== (l.neto_cent / 100).toFixed(2)) body.neto = f.neto.value;
+      if (f.venta.value !== (l.venta_cent / 100).toFixed(2)) body.venta = f.venta.value;
+      if (f.margen && f.margen.value !== String(l.margen_fijo ?? '')) body.margen = f.margen.value;
+      v = await api(`/lineas/${l.id}`, { method: 'PUT', body }); pintar(); toast('Guardado');
+    });
+  const r = $('#rest');
+  if (r) r.addEventListener('click', async () => { try { v = await api(`/lineas/${l.id}`, { method: 'PUT', body: { restaurar: true, motivo: $('#dlg-f').motivo.value } }); $('#dlg').close(); pintar(); toast('Precio según tarifario'); } catch (e) { $('#dmsg').textContent = e.message; } });
+}
+
+function pedirCambios() {
+  dialogo(`<h3>Pedir cambios</h3><p class="sub">Le llega al equipo en el CRM (y en Discord si está conectado).</p>
+    <label>Qué hay que cambiar<textarea name="texto" required maxlength="2000" placeholder="Ej. cambiar el hotel de Cusco por uno más céntrico"></textarea></label>
+    <div class="pie"><button class="btn" value="cancel" formnovalidate>Cancelar</button><button class="btn prim" value="ok">Mandar</button></div>`,
+    async (f) => { v = await api('/cambios', { method: 'POST', body: { texto: f.texto.value } }); pintar(); toast('Cambios pedidos'); });
+}
+
+function aprobar() {
+  const t = v.totales, c = v.cotizacion;
+  dialogo(`<h3>Aprobar cotización</h3><p class="sub">${esc(v.pedido.nombre)} · versión ${c.version}</p>
+    <p style="margin:0 0 6px">Venta total <b>${usd(t.venta_cent)}</b> (${usd(t.venta_por_persona_cent)} por persona) · ganancia ${usd(t.ganancia_cent)}.</p>
+    ${c.usa_prueba ? '<p style="color:var(--err);font-weight:600">Usa PRECIOS DE PRUEBA: queda aprobada, pero no se va a poder mandar al cliente.</p>' : ''}
+    ${t.problemas ? `<p style="color:var(--err);font-weight:600">Hay ${t.problemas} líneas sin precio: no se puede aprobar todavía.</p>` : ''}
+    <p class="sub">Después de aprobarla no se edita más.</p>
+    <label>Nota (opcional)<input name="nota" maxlength="1000"></label>
+    <div class="pie"><button class="btn" value="cancel" formnovalidate>Cancelar</button><button class="btn verde" value="ok" ${t.problemas ? 'disabled' : ''}>Aprobar</button></div>`,
+    async (f) => { v = await api('/aprobar', { method: 'POST', body: { nota: f.nota.value } }); pintar(); toast('Aprobada'); });
+}
+
+window.addEventListener('hashchange', () => location.reload());
+cargar();
+</script>
+</body>
+</html>

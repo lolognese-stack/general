@@ -125,7 +125,7 @@ const COLS_LINEA = ['dia', 'orden', 'fecha', 'tipo', 'servicio_id', 'hotel_id', 
 const insertarLinea = (env, cotId, l) => env.DB.prepare(`INSERT INTO ct_lineas (cotizacion_id, ${COLS_LINEA.join(', ')}) VALUES (?, ${COLS_LINEA.map(() => '?').join(', ')})`)
   .bind(cotId, ...COLS_LINEA.map((k) => l[k] ?? (['pisado_neto', 'pisado_venta', 'neto_cent', 'venta_cent'].includes(k) ? 0 : ['cantidad', 'unidades', 'pasajeros'].includes(k) ? 1 : k === 'orden' ? 0 : null)));
 
-async function cambiarEstado(env, pedidoId, estado, por, nota = null) {
+export async function cambiarEstado(env, pedidoId, estado, por, nota = null) {
   return env.DB.batch([
     env.DB.prepare(`UPDATE ct_pedidos SET estado = ?, estado_desde = ${ahora}, actualizado_en = ${ahora} WHERE id = ?`).bind(estado, pedidoId),
     env.DB.prepare(`INSERT INTO ct_pedido_estados (pedido_id, estado, por, nota) VALUES (?, ?, ?, ?)`).bind(pedidoId, estado, por, nota),
@@ -226,7 +226,7 @@ export async function nuevaVersion(env, cotId, por) {
   const nuevoId = await crearCotizacion(env, { id: cot.pedido_id }, por, { version: cot.version + 1, lineas: ls });
   await env.DB.batch([
     env.DB.prepare(`UPDATE ct_cotizaciones SET estado = 'reemplazada', actualizado_en = ${ahora} WHERE id = ?`).bind(cotId),
-    env.DB.prepare(`UPDATE ct_cotizaciones SET notas_alvaro = ? WHERE id = ?`).bind(cot.notas_alvaro, nuevoId),
+    env.DB.prepare(`UPDATE ct_cotizaciones SET notas_alvaro = ?, avisos = ?, revisor = ? WHERE id = ?`).bind(cot.notas_alvaro, cot.avisos, cot.revisor, nuevoId),
   ]);
   await cambiarEstado(env, cot.pedido_id, 'borrador_listo', por, `Versión ${cot.version + 1}`);
   return json({ ok: true, cotizacion_id: nuevoId });

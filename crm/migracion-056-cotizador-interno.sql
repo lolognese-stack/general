@@ -140,6 +140,9 @@ CREATE TABLE IF NOT EXISTS ct_cotizaciones (
   notas_alvaro  TEXT,
   avisos        TEXT,                -- JSON: avisos del armado automático (fechas, servicios que no entran…)
   token_hash    TEXT,                -- SHA-256 del token del link de revisión (el token no se guarda)
+  token_vence   TEXT,                -- el link de revisión deja de andar después de esta fecha (UTC)
+  pedido_cambios TEXT,               -- último pedido de cambios de Álvaro
+  revisor       TEXT,                -- quién revisa por el link (aprobada_por sale de acá)
   aprobada_por  TEXT,
   aprobada_en   TEXT,
   creado_por    TEXT,
