@@ -1,0 +1,9 @@
+{
+  "_nota": "Fase 4: agregar estas reglas al final de `rewrites` en luna-llena-propuestas/vercel.json (NO está aplicado: se hace al publicar). Las carpetas estáticas de dist/ (ulises-b69ed5, terminos, _venta, _demo-*) ganan porque Vercel mira el filesystem antes de los rewrites: la propuesta de Ulises responde igual que hoy. Lo que no es carpeta va al CRM, que sirve la propuesta publicada desde la base (o una página 'no disponible').",
+  "rewrites": [
+    { "source": "/:slug([a-z0-9][a-z0-9-]{2,60})/reservar/", "destination": "https://crm-plantilla.pages.dev/api/propuesta-publica?slug=:slug&reservar=1" },
+    { "source": "/:slug([a-z0-9][a-z0-9-]{2,60})/reservar", "destination": "https://crm-plantilla.pages.dev/api/propuesta-publica?slug=:slug&reservar=1" },
+    { "source": "/:slug([a-z0-9][a-z0-9-]{2,60})/", "destination": "https://crm-plantilla.pages.dev/api/propuesta-publica?slug=:slug" },
+    { "source": "/:slug([a-z0-9][a-z0-9-]{2,60})", "destination": "https://crm-plantilla.pages.dev/api/propuesta-publica?slug=:slug" }
+  ]
+}

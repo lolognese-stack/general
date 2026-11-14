@@ -2360,6 +2360,44 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 #view-cotizaciones .ct-var .acc{display:flex;gap:6px;margin-top:4px}
 #view-cotizaciones .ct-pend{border-color:var(--danger);color:var(--danger);background:var(--danger-bg)}
 #view-cotizaciones .ct-paq{margin:var(--s3) 0}
+#view-cotizaciones .ct-prop-cab{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+#view-cotizaciones .ct-bloq{margin:0 0 4px;padding-left:18px;color:var(--danger);font-size:13px}
+#view-cotizaciones .ct-bloq-caja{border:1px solid var(--danger);background:var(--danger-bg);color:var(--danger);padding:8px 12px;border-radius:var(--radius-sm)}
+#view-cotizaciones dialog.ct-pp{max-width:none;width:min(1500px,97vw);height:94vh;max-height:94vh;overflow:hidden}
+#view-cotizaciones .ct-pp-g{display:grid;grid-template-columns:400px 1fr;height:94vh}
+#view-cotizaciones #ct-pp-f{overflow:auto;padding:14px 16px;gap:10px;border-right:1px solid var(--line);display:flex;flex-direction:column}
+#view-cotizaciones #ct-pp-f label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted);font-weight:600}
+#view-cotizaciones #ct-pp-f input,#view-cotizaciones #ct-pp-f textarea{font:inherit;font-size:13px;font-weight:400;color:var(--ink);padding:7px 9px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper);width:100%;box-sizing:border-box}
+#view-cotizaciones #ct-pp-f textarea{resize:vertical}
+#view-cotizaciones .ct-pp-cab{display:flex;align-items:center;gap:10px}
+#view-cotizaciones .ct-pp-pie{position:sticky;bottom:-14px;background:var(--paper);padding:10px 0;margin-top:auto;border-top:1px solid var(--line)}
+#view-cotizaciones #ct-pp-if{width:100%;height:100%;border:0;background:#fff}
+@media(max-width:900px){#view-cotizaciones .ct-pp-g{grid-template-columns:1fr;grid-template-rows:42% 58%}#view-cotizaciones #ct-pp-f{border-right:0;border-bottom:1px solid var(--line)}}
+#view-propuestas{padding:var(--s3, 14px) 0}
+#view-propuestas .pp-bar{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
+#view-propuestas .pp-nota{color:var(--muted);font-size:.85rem;margin:0 0 14px}
+#view-propuestas h3{margin:22px 0 10px;font:600 .8rem/1.2 inherit;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+#view-propuestas .pp-fila{display:flex;align-items:center;justify-content:space-between;gap:10px}
+#view-propuestas .pp-badge{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:10px;background:var(--brand);color:var(--brand-on);letter-spacing:0}
+#view-propuestas .pp-avisos{list-style:none;margin:0;padding:0;background:var(--paper);border:1px solid var(--line);max-height:340px;overflow:auto}
+#view-propuestas .pp-avisos li{display:flex;gap:12px;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line)}
+#view-propuestas .pp-avisos li.nuevo b:before{content:"● ";color:var(--brand)}
+#view-propuestas .pp-avisos time{flex:none;color:var(--muted);font-size:.82rem;white-space:nowrap}
+#view-propuestas .pp-tabla{overflow:auto;background:var(--paper);border:1px solid var(--line)}
+#view-propuestas table{width:100%;border-collapse:collapse}
+#view-propuestas th,#view-propuestas td{padding:11px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+#view-propuestas th{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;white-space:nowrap}
+#view-propuestas td a{color:var(--ink);font-weight:600}
+#view-propuestas td small{display:block;color:var(--muted);font-size:.8rem}
+#view-propuestas .num{text-align:right;font-variant-numeric:tabular-nums}
+#view-propuestas .pp-si{color:var(--si);font-weight:600}#view-propuestas .pp-no{color:var(--muted)}#view-propuestas .pp-alerta{color:var(--danger);font-weight:600}
+#view-propuestas .pp-vacio{padding:40px 20px;text-align:center;color:var(--muted);background:var(--paper);border:1px solid var(--line)}
+#view-propuestas .pp-discord{margin-top:28px;padding:16px;background:var(--paper);border:1px solid var(--line)}
+#view-propuestas .pp-discord p{margin:0 0 10px;color:var(--ink-2);font-size:.9rem}
+#view-propuestas .pp-discord form{display:flex;gap:10px;flex-wrap:wrap}
+#view-propuestas .pp-discord input{padding:9px 12px;border:1px solid var(--line);border-radius:4px;min-width:260px;font:inherit;background:var(--paper);color:var(--ink)}
+#view-propuestas .pp-estado{font-weight:600}#view-propuestas .pp-estado.on{color:var(--si)}#view-propuestas .pp-msg{margin-top:8px;font-size:.88rem;color:var(--ink-2)}
+@media(max-width:760px){#view-propuestas thead{display:none}#view-propuestas table,#view-propuestas tbody,#view-propuestas tr,#view-propuestas td{display:block;width:100%}#view-propuestas tr{border-bottom:1px solid var(--line);padding:10px 0}#view-propuestas td{border:0;padding:4px 14px;display:flex;justify-content:space-between;gap:12px}#view-propuestas td:before{content:attr(data-t);color:var(--muted);font-size:.78rem;text-transform:uppercase}#view-propuestas td:first-child{display:block}#view-propuestas td:first-child:before{content:none}}
 .ct-toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:var(--ground);padding:10px 16px;border-radius:var(--radius-sm);font-size:13px;z-index:400}
 #view-cotizaciones #ct-raiz button.link, #view-cotizaciones dialog button.link{border:0;background:none;padding:2px 4px;color:var(--brand-ink);text-decoration:underline;font-size:.85rem}
 #view-cotizaciones #ct-raiz button:disabled, #view-cotizaciones dialog button:disabled{opacity:.45;cursor:not-allowed}
@@ -2544,6 +2582,10 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.5 7h7M8.5 11h1M12 11h1M15.5 11h0M8.5 14.5h1M12 14.5h1M8.5 18h1M12 18h1M15.5 14.5v3.5"/></svg>
         <span>Cotizaciones</span>
       </button>
+      <button data-seccion="propuestas" title="Propuestas publicadas: aperturas, avisos y seguimiento">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 12h7M9 16h7"/></svg>
+        <span>Propuestas</span>
+      </button>
       <button data-seccion="formulario">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>
         <span>Formulario</span>
@@ -2618,7 +2660,9 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
     </div>
     <div class="ct-main" id="ct-raiz"><div class="ct-vacio">Cargando…</div></div>
     <dialog id="ct-dlg"><form id="ct-dlg-f" method="dialog"></form></dialog>
+    <dialog id="ct-pp" class="ct-pp"><div class="ct-pp-g"><form id="ct-pp-f" onsubmit="return false"></form><iframe id="ct-pp-if" title="Vista previa de la propuesta" sandbox="allow-scripts allow-popups"></iframe></div></dialog>
   </section>
+    <section class="view" id="view-propuestas" hidden></section>
     <section class="view" id="view-formulario" hidden></section>
 
     <section class="view" id="view-inbox" hidden></section>
@@ -3836,6 +3880,7 @@ function irA(nuevaSeccion){
   el('view-setter').hidden        = seccion !== 'setter';
   el('view-cotizador').hidden     = seccion !== 'cotizador';
   el('view-cotizaciones').hidden  = seccion !== 'cotizaciones';
+  el('view-propuestas').hidden    = seccion !== 'propuestas';
   if(seccion !== 'objetivos') document.body.classList.remove('ob-weekly');
   el('kpis').hidden               = seccion !== 'leads' && seccion !== 'ventas';
   el('subtabs').hidden            = seccion !== 'leads' && seccion !== 'agendas';
@@ -3843,8 +3888,8 @@ function irA(nuevaSeccion){
   if(seccion === 'leads' || seccion === 'agendas') document.querySelectorAll('[data-view]').forEach(x =>
     x.setAttribute('aria-current', String(seccion === 'leads' && x.dataset.view === vista)));
   el('vt-subtabs').hidden         = seccion !== 'ventas';
-  el('search-wrap').hidden        = seccion === 'conversacion' || seccion === 'performance' || seccion === 'objetivos' || seccion === 'web' || seccion === 'formulario' || seccion === 'inbox' || seccion === 'setter' || seccion === 'cotizador' || seccion === 'cotizaciones';
-  el('new-btn').hidden            = seccion === 'conversacion' || seccion === 'performance' || seccion === 'planificador' || seccion === 'historias' || seccion === 'objetivos' || seccion === 'web' || seccion === 'formulario' || seccion === 'inbox' || seccion === 'setter' || seccion === 'cotizador' || seccion === 'cotizaciones';
+  el('search-wrap').hidden        = seccion === 'conversacion' || seccion === 'performance' || seccion === 'objetivos' || seccion === 'web' || seccion === 'formulario' || seccion === 'inbox' || seccion === 'setter' || seccion === 'cotizador' || seccion === 'cotizaciones' || seccion === 'propuestas';
+  el('new-btn').hidden            = seccion === 'conversacion' || seccion === 'performance' || seccion === 'planificador' || seccion === 'historias' || seccion === 'objetivos' || seccion === 'web' || seccion === 'formulario' || seccion === 'inbox' || seccion === 'setter' || seccion === 'cotizador' || seccion === 'cotizaciones' || seccion === 'propuestas';
 
   if(seccion === 'anuncios'){ el('search-wrap').hidden = true; el('new-btn').hidden = true; }
   el('new-btn-txt').textContent   = seccion === 'ventas' ? 'Nueva venta' : 'Nuevo lead';
@@ -3861,6 +3906,7 @@ function irA(nuevaSeccion){
   if(seccion === 'objetivos') cargarObjetivos();
   if(seccion === 'web'){ el('view-title').textContent = 'Web'; if(!wbCargado) cargarWeb(); }
   if(seccion === 'cotizaciones'){ el('view-title').textContent = 'Cotizaciones'; if(window.ct) window.ct.mostrar(); }
+  if(seccion === 'propuestas'){ el('view-title').textContent = 'Propuestas'; if(window.pp) window.pp.mostrar(); }
   if(seccion === 'cotizador'){
     el('view-title').textContent = 'Cotizador';
     if(!czActivo && !el('cz-root')) el('view-cotizador').innerHTML = `<div class="ag-empty">Cargando…</div>`;
@@ -17643,7 +17689,8 @@ function dibujarPedido() {
         <button type="button" class="chico" id="ct-editar-ped">Editar datos</button>
       </div>
     </div>
-    <div id="ct-cot"></div>`;
+    <div id="ct-cot"></div>
+    <div id="ct-prop"></div>`;
   $('#ct-estado').addEventListener('change', async (e) => {
     if (!usuario()) { elegirSoy(); e.target.value = p.estado; return; }
     try { await api(`pedidos/${p.id}/estado`, { method: 'POST', body: { estado: e.target.value } }); toast('Estado: ' + NOMBRE_ESTADO[e.target.value]); pintarPedido(p.id); }
@@ -17652,6 +17699,7 @@ function dibujarPedido() {
   $('#ct-editar-ped').addEventListener('click', () => irA(`editar/${p.id}`));
   $('#ct-hist-est').addEventListener('click', () => abrirDialogo(`<h3>Estados</h3><table><tbody>${ped.estados.map((s) => `<tr><td>${esc(NOMBRE_ESTADO[s.estado] || s.estado)}</td><td>${peru(s.creado_en)}</td><td>${esc(s.por || '')}${s.nota ? ` · ${esc(s.nota)}` : ''}</td></tr>`).join('')}</tbody></table><div class="pie"><button value="cancel" formnovalidate>Cerrar</button></div>`, () => {}));
   dibujarCotizacion();
+  pintarPropuesta();
 }
 
 function dibujarCotizacion() {
@@ -17700,7 +17748,7 @@ function dibujarCotizacion() {
       ${ed && vig && !hayPar ? '<button type="button" class="chico prim" id="ct-a-revision">Mandar a revisión</button>' : ''}
       ${['en_revision', 'cambios_pedidos'].includes(c.estado) && vig && !hayPar ? `<button type="button" class="chico" id="ct-pedir-cambios">Pedir cambios</button><button type="button" class="chico prim" id="ct-aprobar" ${pe.total ? `disabled title="Falta: ${esc(pendTxt)}"` : ''}>Aprobar</button>` : ''}
       ${ed ? '<button type="button" class="chico" id="ct-rearmar">Volver a armar</button>' : ''}
-      ${c.estado === 'aprobada' ? '<button type="button" class="chico prim" id="ct-a-propuesta">Preparar propuesta web</button>' : ''}
+      ${c.estado === 'aprobada' ? '<button type="button" class="chico prim" id="ct-a-propuesta">Propuesta para el cliente ↓</button>' : ''}
       ${!ed && vig ? '<button type="button" class="chico" id="ct-nueva-v">Crear versión nueva</button>' : ''}
       <button type="button" class="chico" id="ct-cambios-cot">Cambios de precio</button></div>
     ${tarjetasVar}
@@ -17753,7 +17801,7 @@ function dibujarCotizacion() {
   $('#ct-ver').addEventListener('change', (e) => { cotElegida = Number(e.target.value); pintarPedido(ped.pedido.id); });
   if ($('#ct-rearmar')) $('#ct-rearmar').addEventListener('click', rearmarCot);
   if ($('#ct-a-revision')) $('#ct-a-revision').addEventListener('click', mandarRevisionDlg);
-  if ($('#ct-a-propuesta')) $('#ct-a-propuesta').addEventListener('click', prepararPropuestaDlg);
+  if ($('#ct-a-propuesta')) $('#ct-a-propuesta').addEventListener('click', () => { const x = $('#ct-prop'); if (x) x.scrollIntoView({ behavior: 'smooth', block: 'start' }); });   // la propuesta se arma abajo, sin armador ni repo
   if ($('#ct-aprobar')) $('#ct-aprobar').addEventListener('click', aprobarDlg);
   if ($('#ct-pedir-cambios')) $('#ct-pedir-cambios').addEventListener('click', pedirCambiosDlg);
   if ($('#ct-nueva-v')) $('#ct-nueva-v').addEventListener('click', async () => {
@@ -18309,6 +18357,124 @@ async function pintarCambios() {
   </tbody></table></div>` : '<div class="vacio">Todavía no hay cambios.</div>');
 }
 
+// ---------- propuesta para el cliente (fase 4) ----------
+// La genera, revisa y publica el equipo (Lorenzo); Álvaro la ve. Sin cotización aprobada y sin precios reales, solo vista previa con banda roja.
+const ESTADO_PROP = { borrador: 'Borrador', publicada: 'Publicada', retirada: 'Retirada' };
+async function pintarPropuesta() {
+  const caja = $('#ct-prop');
+  if (!caja || !ped) return;
+  let prop;
+  try { prop = await api(`pedidos/${ped.pedido.id}/propuesta`); } catch (x) { caja.innerHTML = ''; return; }
+  const equipo = window.crmRol !== 'cotizador';
+  const p = prop.propuesta, bl = prop.bloqueos || [];
+  const bloq = bl.length
+    ? `<p class="nota" style="margin:8px 0 4px"><b>Todavía no se puede mandar al cliente:</b></p><ul class="ct-bloq">${bl.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>`
+    : '<p class="nota" style="margin:8px 0 0">La cotización está lista: se puede publicar.</p>';
+  if (!p) {
+    caja.innerHTML = `<div class="panel"><h3 style="margin:0 0 6px">Propuesta para el cliente</h3>
+      <p class="nota" style="margin:0">La página que recibe el cliente, con el diseño de siempre. Los textos de cada día los redacta la IA desde la ficha de la web y se editan antes de publicar.</p>
+      ${bloq}${equipo ? '<div class="barra" style="margin-top:10px"><button type="button" class="prim" id="ct-prop-gen">Generar propuesta</button></div>' : ''}</div>`;
+    const g = caja.querySelector('#ct-prop-gen'); if (g) g.addEventListener('click', () => generarProp());
+    return;
+  }
+  const pub = p.estado === 'publicada';
+  caja.innerHTML = `<div class="panel"><div class="ct-prop-cab"><h3 style="margin:0">Propuesta para el cliente</h3>
+      <span class="chip ${pub ? 'ok' : ''}">${ESTADO_PROP[p.estado] || p.estado}${pub ? ' · v' + p.version : ''}</span>
+      ${p.textos === 'base' ? '<span class="chip pisado" title="La IA no redactó: quedaron los textos de la ficha de la web">textos de la ficha</span>' : ''}</div>
+    <div class="meta">Vence el ${fecha(p.valid_until)}${pub ? ` · publicada ${peru(p.publicada_en)} por ${esc(p.publicada_por || '')}` : ''}</div>
+    ${pub ? `<div class="meta">Link: <a href="${esc(p.link)}" target="_blank" rel="noopener">${esc(p.link)}</a> <button type="button" class="link" id="ct-prop-copiar">copiar</button></div>` : '<div class="meta">Sin link público hasta publicarla.</div>'}
+    ${bloq}
+    <div class="barra" style="margin-top:10px">
+      <button type="button" class="prim" id="ct-prop-ver">${equipo ? 'Ver y editar' : 'Ver'}</button>
+      ${equipo ? `<button type="button" id="ct-prop-pub" ${bl.length ? 'disabled title="Resuelve lo de arriba para publicar"' : ''}>${pub ? 'Publicar nueva versión' : 'Publicar y marcar enviada'}</button>
+        <button type="button" id="ct-prop-regen">Volver a armar</button>${pub ? '<button type="button" id="ct-prop-retirar">Retirar</button>' : ''}` : ''}
+    </div></div>`;
+  caja.querySelector('#ct-prop-ver').addEventListener('click', () => abrirProp(p.id));
+  const c = caja.querySelector('#ct-prop-copiar'); if (c) c.addEventListener('click', () => { navigator.clipboard.writeText(p.link).then(() => toast('Link copiado')); });
+  const pb = caja.querySelector('#ct-prop-pub'); if (pb) pb.addEventListener('click', () => publicarProp(p));
+  const rg = caja.querySelector('#ct-prop-regen'); if (rg) rg.addEventListener('click', () => { if (confirm('Vuelve a armar la propuesta con la cotización de ahora y pisa los textos que editaste. ¿Seguir?')) generarProp(); });
+  const rt = caja.querySelector('#ct-prop-retirar');
+  if (rt) rt.addEventListener('click', async () => {
+    if (!confirm('Retirar la propuesta: el link deja de funcionar para el cliente. ¿Seguir?')) return;
+    try { await api(`propuestas/${p.id}/retirar`, { method: 'POST', body: {} }); toast('Propuesta retirada'); pintarPropuesta(); } catch (x) { alert(x.message); }
+  });
+}
+
+async function generarProp() {
+  if (!usuario()) { elegirSoy(); return; }
+  const b = $('#ct-prop-gen') || $('#ct-prop-regen');
+  if (b) { b.disabled = true; b.textContent = 'Redactando… puede tardar hasta 40 s'; }
+  try {
+    const r = await api(`pedidos/${ped.pedido.id}/propuesta`, { method: 'POST', body: {} });
+    if (r.aviso) alert(r.aviso); else toast('Propuesta lista para revisar');
+    await pintarPropuesta();
+    abrirProp(r.id);
+  } catch (x) { alert(x.message); pintarPropuesta(); }
+}
+
+async function publicarProp(p) {
+  if (!usuario()) { elegirSoy(); return; }
+  let changelog = '';
+  if (p.estado === 'publicada') { changelog = (prompt('¿Qué cambió en esta versión? Lo ve el cliente.') || '').trim(); if (!changelog) return; }
+  else if (!confirm('Publicar: se crea el link público, el lead pasa a "Propuesta enviada" y arrancan los seguimientos. ¿Seguir?')) return;
+  try {
+    const r = await api(`propuestas/${p.id}/publicar`, { method: 'POST', body: { changelog } });
+    await pintarPropuesta();
+    abrirDialogo(`<h3>Propuesta publicada · versión ${r.version}</h3><p class="nota" style="margin:0">Link para el cliente:</p>
+      <input readonly value="${esc(r.link)}" onclick="this.select()">
+      ${r.etapa ? `<p class="nota" style="margin:0">Lead: ${esc(r.etapa.replace(/_/g, ' '))}.</p>` : ''}${r.seguimiento ? '<p class="nota" style="margin:0">Los seguimientos arrancan hoy (Inbox).</p>' : ''}
+      <div class="pie"><button class="prim" value="ok">Listo</button></div>`, () => {});
+  } catch (x) { alert(x.message); }
+}
+
+// Vista previa con el editor al lado: textos, fotos y vencimiento. El precio y el itinerario salen de la cotización.
+async function abrirProp(id) {
+  let d, v;
+  try { [d, v] = await Promise.all([api(`propuestas/${id}`), api(`propuestas/${id}/vista`)]); } catch (x) { alert(x.message); return; }
+  const equipo = window.crmRol !== 'cotizador';
+  const dat = d.datos, dlg = $('#ct-pp'), f = $('#ct-pp-f'), ifr = $('#ct-pp-if');
+  const campos = [];
+  const campo = (ruta, rotulo, valor, tipo = 'text') => campos.push({ ruta, rotulo, valor: valor ?? '', tipo });
+  campo('validUntil', 'Vence el', dat.validUntil, 'date');
+  campo('portada.foto', 'Foto de portada (link https)', dat.portada.foto);
+  campo('recorrido.copy', 'Texto del recorrido', dat.recorrido.copy, 'area');
+  dat.ciudades.forEach((c, i) => { campo(`ciudades.${i}.titulo`, `${c.nombre} · título`, c.titulo); campo(`ciudades.${i}.linea`, `${c.nombre} · frase`, c.linea); });
+  dat.flujo.forEach((x, i) => {
+    if (x.t !== 'dia') return;
+    campo(`flujo.${i}.titulo`, `${x.label} · título`, x.titulo);
+    campo(`flujo.${i}.relato`, `${x.label} · relato`, x.relato, 'area');
+    campo(`flujo.${i}.foto`, `${x.label} · foto (link https)`, x.foto);
+  });
+  campo('final.titulo', 'Frase de cierre', dat.final.titulo);
+  const input = (c) => c.tipo === 'area'
+    ? `<textarea rows="4" maxlength="700" data-ruta="${c.ruta}" data-orig="${esc(c.valor)}" ${equipo ? '' : 'readonly'}>${esc(c.valor)}</textarea>`
+    : `<input type="${c.tipo}" data-ruta="${c.ruta}" data-orig="${esc(c.valor)}" value="${esc(c.valor)}" ${equipo ? '' : 'readonly'}>`;
+  f.innerHTML = `<div class="ct-pp-cab"><b>Propuesta de ${esc(dat.cliente)}</b><span class="chip ${d.propuesta.estado === 'publicada' ? 'ok' : ''}">${ESTADO_PROP[d.propuesta.estado]}</span></div>
+    ${d.bloqueos.length ? `<div class="ct-bloq-caja"><b>No se puede publicar</b><ul class="ct-bloq">${d.bloqueos.map((b) => `<li>${esc(b)}</li>`).join('')}</ul></div>` : ''}
+    <p class="nota" style="margin:0">Los precios y el itinerario salen de la cotización: para cambiarlos, edita la cotización y vuelve a armar la propuesta.</p>
+    ${d.hay_cambios_sin_publicar ? '<p class="nota" style="margin:0;color:var(--danger)">Hay cambios sin publicar: el cliente todavía ve la versión anterior.</p>' : ''}
+    ${campos.map((c) => `<label>${esc(c.rotulo)}${input(c)}</label>`).join('')}
+    <div class="pie ct-pp-pie"><button type="button" id="ct-pp-cerrar">Cerrar</button>${equipo ? '<button type="button" class="prim" id="ct-pp-guardar">Guardar y actualizar vista</button>' : ''}</div>`;
+  ifr.srcdoc = v.html;
+  $('#ct-pp-cerrar').addEventListener('click', () => dlg.close());
+  const g = $('#ct-pp-guardar');
+  if (g) g.addEventListener('click', async () => {
+    const entradas = [...f.querySelectorAll('[data-ruta]')];
+    const cambios = entradas.filter((i) => i.value !== i.dataset.orig).map((i) => ({ ruta: i.dataset.ruta, valor: i.value }));
+    if (!cambios.length) { toast('No hay cambios'); return; }
+    g.disabled = true;
+    try {
+      await api(`propuestas/${id}`, { method: 'PUT', body: { cambios } });
+      entradas.forEach((i) => { i.dataset.orig = i.value; });
+      ifr.srcdoc = (await api(`propuestas/${id}/vista`)).html;
+      toast('Guardado');
+    } catch (x) { alert(x.message); }
+    finally { g.disabled = false; }
+  });
+  dlg.addEventListener('close', () => { ifr.srcdoc = ''; pintarPropuesta(); }, { once: true });
+  dlg.showModal();
+}
+
 // Entrada desde el panel (irA('cotizaciones')): pinta la pestaña de la URL.
 async function mostrar() {
   if (!token()) return;
@@ -18324,6 +18490,99 @@ async function mostrar() {
   if (!usuario() && !$('#ct-dlg').open) elegirSoy();
 }
 window.ct = { mostrar, tab: () => tab, setTab: (t) => { tab = t || 'pedidos'; } };
+})();
+
+/* ---- Propuestas: aperturas, avisos y seguimiento de lo publicado (antes propuestas-4c1f6a) ---- */
+(function(){
+const R = () => document.getElementById('view-propuestas');
+const $ = (q) => R().querySelector(q);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const tok = () => localStorage.getItem('crm_token');
+const peru = (t) => { if (!t) return null; const d = new Date(Date.parse(t.replace(' ', 'T') + 'Z') - 5 * 3600e3); return d.toISOString().slice(0, 16).replace('T', ' '); };
+const fecha = (t) => { const p = peru(t); return p ? `${p.slice(8, 10)}/${p.slice(5, 7)} ${p.slice(11)}` : '—'; };
+function hace(t) {
+  if (!t) return '';
+  const m = Math.round((Date.now() - Date.parse(t.replace(' ', 'T') + 'Z')) / 60000);
+  if (m < 60) return `hace ${m} min`;
+  if (m < 48 * 60) return `hace ${Math.round(m / 60)} h`;
+  return `hace ${Math.round(m / 1440)} días`;
+}
+const dur = (s) => { s = Number(s) || 0; if (!s) return '—'; const m = Math.round(s / 60); return m < 1 ? `${s} s` : m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60} min`; };
+const siNo = (v) => v ? '<span class="pp-si">Sí</span>' : '<span class="pp-no">No</span>';
+const DISP = { movil: 'teléfono', tablet: 'tablet', desktop: 'compu', desconocido: '?' };
+const TXT_TIPO = { primera_apertura: 'Primera apertura', reapertura: 'Volvió a abrir', vio_inversion: 'Vio la tarifa', cta: 'Clic en un botón', reserva: 'Reserva enviada', seguimientos_hoy: 'Seguimientos de hoy', cotizacion_aprobada: 'Cotización aprobada', cotizacion_cambios: 'Cambios pedidos en una cotización' };
+
+function esqueleto() {
+  R().innerHTML = `<div class="pp-bar"><p class="pp-nota">Una fila por propuesta publicada. Las armas en Cotizaciones, dentro de cada pedido. Aparece cuando se publica o cuando el cliente la abre. Las visitas con <b>?preview=1</b> no se cuentan. Horas de Perú.</p><button type="button" class="btn btn-ghost btn-sm" id="pp-recargar">Actualizar</button></div>
+    <div class="pp-fila"><h3>Avisos <span id="pp-badge" class="pp-badge" hidden></span></h3><button type="button" class="btn btn-ghost btn-sm" id="pp-leidos" hidden>Marcar como leídos</button></div>
+    <ul class="pp-avisos" id="pp-avisos"><li>Cargando…</li></ul>
+    <h3>Propuestas</h3>
+    <div id="pp-raiz"><div class="pp-vacio">Cargando…</div></div>
+    <section class="pp-discord" id="pp-discord" hidden></section>`;
+  $('#pp-recargar').addEventListener('click', cargar);
+  $('#pp-leidos').addEventListener('click', async () => { await fetch('/api/propuestas-alertas', { method: 'POST', headers: { 'x-crm-token': tok() } }); cargar(); });
+}
+
+async function cargar() {
+  let r;
+  try { r = await fetch('/api/propuestas-resumen', { headers: { 'x-crm-token': tok() || '' } }); } catch { $('#pp-raiz').innerHTML = '<div class="pp-vacio">No se pudo conectar.</div>'; return; }
+  if (!r.ok) { $('#pp-raiz').innerHTML = `<div class="pp-vacio">Error ${r.status}.</div>`; return; }
+  const j = await r.json();
+  const { base, propuestas } = j;
+  pintarAvisos(j); pintarDiscord(j);
+  if (!propuestas.length) { $('#pp-raiz').innerHTML = '<div class="pp-vacio">Todavía no hay propuestas registradas.</div>'; return; }
+  const hoy = new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10);
+  $('#pp-raiz').innerHTML = `<div class="pp-tabla"><table><thead><tr>
+      <th>Propuesta</th><th>Última apertura</th><th class="num">Visitas</th><th>Vio la tarifa</th><th>Vio cómo reservar</th><th>Clic en reservar</th><th>Envió la reserva</th><th class="num">Clics en botones</th><th class="num">PDF</th><th class="num">Tiempo total</th><th>Dispositivo</th><th>Vence</th>
+    </tr></thead><tbody>${propuestas.map((p) => {
+      const vencida = p.valid_until && p.valid_until < hoy;
+      return `<tr>
+        <td><a href="${esc(base)}/${esc(p.slug)}/" target="_blank" rel="noopener">${esc(p.cliente || p.slug)}</a><small>${p.numero ? 'N° ' + esc(p.numero) + ' · ' : ''}${esc(p.slug)}</small></td>
+        <td data-t="Última apertura">${p.ultima_apertura ? `${fecha(p.ultima_apertura)}<small>${hace(p.ultima_apertura)}</small>` : '<span class="pp-alerta">No la abrió</span>'}</td>
+        <td data-t="Visitas" class="num">${p.visitas || 0}</td>
+        <td data-t="Vio la tarifa">${siNo(p.vio_tarifa)}</td>
+        <td data-t="Vio cómo reservar">${siNo(p.vio_reserva)}</td>
+        <td data-t="Clic en reservar">${siNo(p.clic_reservar)}</td>
+        <td data-t="Envió la reserva">${p.reservo ? '<span class="pp-si">Sí · ver en Ventas</span>' : '<span class="pp-no">No</span>'}</td>
+        <td data-t="Clics en botones" class="num">${p.clics_cta || 0}</td>
+        <td data-t="PDF" class="num">${p.pdf || 0}</td>
+        <td data-t="Tiempo total" class="num">${dur(p.segundos)}</td>
+        <td data-t="Dispositivo">${esc((p.dispositivos || '').split(',').filter(Boolean).map((d) => DISP[d] || d).join(', ') || '—')}</td>
+        <td data-t="Vence">${p.valid_until ? `<span class="${vencida ? 'pp-alerta' : ''}">${p.valid_until.slice(8, 10)}/${p.valid_until.slice(5, 7)}${vencida ? ' (vencida)' : ''}</span>` : '—'}</td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+}
+function pintarAvisos(j) {
+  const b = $('#pp-badge'); b.hidden = !j.no_leidas; b.textContent = j.no_leidas;
+  $('#pp-leidos').hidden = !j.no_leidas;
+  $('#pp-avisos').innerHTML = j.alertas.length
+    ? j.alertas.map((a) => `<li class="${a.leida ? '' : 'nuevo'}"><span><b>${esc(TXT_TIPO[a.tipo] || a.tipo)}</b> · ${esc(a.texto)} · ${esc(DISP[a.dispositivo] || a.dispositivo || '')}</span><time>${fecha(a.creado_en)}</time></li>`).join('')
+    : '<li>Todavía no hay avisos. Llegan cuando el cliente abre la propuesta, vuelve a abrirla después de 24 h, mira la tarifa o toca un botón (como mucho 1 por tipo cada 6 h).</li>';
+}
+function pintarDiscord(j) {
+  const d = $('#pp-discord'); d.hidden = false;
+  const estado = `<span class="pp-estado ${j.discord ? 'on' : ''}">${j.discord ? 'Conectado' : 'Sin conectar'}</span>`;
+  d.innerHTML = `<p><b>Discord</b> · ${estado}. Los avisos siempre quedan acá; con un webhook también llegan a un canal de Discord (notificación en el teléfono).</p>` +
+    (j.rol === 'admin'
+      ? `<form id="pp-fd"><input id="pp-wh" type="password" placeholder="https://discord.com/api/webhooks/…" autocomplete="off"><button class="btn btn-sm">Guardar</button>${j.discord ? '<button type="button" class="btn btn-ghost btn-sm" id="pp-probar">Mandar prueba</button><button type="button" class="btn btn-ghost btn-sm" id="pp-quitar">Quitar</button>' : ''}</form><div class="pp-msg" id="pp-msg"></div>`
+      : (j.discord ? '<form><button type="button" class="btn btn-ghost btn-sm" id="pp-probar">Mandar prueba</button></form><div class="pp-msg" id="pp-msg"></div>' : '<p>Lo configura un administrador.</p>'));
+  const llamar = async (method, body) => {
+    const r = await fetch('/api/propuestas-config', { method, headers: { 'x-crm-token': tok(), 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+    const x = await r.json().catch(() => ({}));
+    $('#pp-msg').textContent = r.ok ? (method === 'POST' ? 'Mensaje de prueba enviado.' : 'Guardado.') : (x.error || 'Error ' + r.status);
+    if (r.ok && method !== 'POST') cargar();
+  };
+  if ($('#pp-fd')) $('#pp-fd').addEventListener('submit', (e) => { e.preventDefault(); llamar('PUT', { discord_webhook: $('#pp-wh').value }); });
+  if ($('#pp-probar')) $('#pp-probar').addEventListener('click', () => llamar('POST', { prueba: true }));
+  if ($('#pp-quitar')) $('#pp-quitar').addEventListener('click', () => llamar('DELETE'));
+}
+
+function mostrar() {
+  if (!tok()) return;
+  if (!R().firstElementChild) esqueleto();
+  cargar();
+}
+window.pp = { mostrar };
 })();
 
 /* ---- Rol de la sesión: 'cotizador' (Álvaro) solo entra a Cotizaciones ---- */

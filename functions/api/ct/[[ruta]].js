@@ -16,6 +16,7 @@
 //   POST   /api/ct/cotizaciones/:id/nueva-version          GET /api/ct/cotizaciones/:id/cambios
 //   POST   /api/ct/cotizaciones/:id/revision   { revisor, nuevo_link } -> { token } (el token solo se ve esta vez)
 //   GET    /api/ct/cotizaciones/:id/propuesta  { slug, propuesta_json, texto_armador } para la propuesta web (solo aprobadas)
+//   GET|POST /api/ct/pedidos/:id/propuesta     ver / generar la propuesta del cliente (IA)   GET /api/ct/propuestas[/:id[/vista]]   PUT|POST …/publicar|retirar
 // Quién: header x-crm-usuario (lo elige cada dispositivo en la página: "Soy Lorenzo / Soy Álvaro").
 import { rolDeCotizaciones, json } from '../../_lib/auth.js';
 import {
@@ -30,6 +31,7 @@ import { mandarARevision, aprobar, pedirCambios } from '../../_lib/ct-revision.j
 import { paraPropuesta } from '../../_lib/ct-propuesta.js';
 import { cargarCatalogo, esVigente, elegirVariante } from '../../_lib/ct-cotizaciones.js';
 import { leerTanda, vistaDiferencias, aplicarTanda, cerrarLectura, listaWeb } from '../../_lib/ct-web.js';
+import { propuestaDePedido, generarPropuesta, verPropuesta, listarPropuestas, vistaPropuesta, editarPropuesta, publicarPropuesta, retirarPropuesta } from '../../_lib/ct-propuestas.js';
 
 const CONFIG = {
   margen_pct: { min: 0, max: 300, nombre: 'Margen por defecto (%)' },
@@ -44,6 +46,8 @@ function quien(request, rol) {
   u = u.replace(/[^\p{L}\p{N} .'-]/gu, '').trim().slice(0, 40);
   return u || (rol === 'admin' ? 'admin' : rol === 'cotizador' ? 'cotizador' : 'equipo');
 }
+// El cotizador (Álvaro) mira y aprueba; generar, editar y publicar la propuesta es del equipo (Lorenzo): rol cliente o admin.
+const soloEquipo = (rol) => (rol === 'cotizador' ? json({ error: 'Esto lo hace el equipo de Luna Llena (Lorenzo)' }, 403) : null);
 const leerJson = async (request) => { try { return await request.json(); } catch { return {}; } };
 const ahora = "datetime('now')";
 const texto = (v, max = 2000) => { const s = String(v ?? '').replace(/\s+/g, ' ').trim(); return s ? s.slice(0, max) : null; };
@@ -358,6 +362,17 @@ export async function onRequest({ request, env, params }) {
       if (id && !sub && m === 'PUT') return editarPedido(env, id, body, por);
       if (id && sub === 'estado' && m === 'POST') return estadoPedido(env, id, body, por);
       if (id && sub === 'rearmar' && m === 'POST') return rearmar(env, id, por);
+      // Propuesta para el cliente: la genera, revisa y publica el equipo de Luna Llena; Álvaro (cotizador) la puede ver.
+      if (id && sub === 'propuesta' && m === 'GET') return propuestaDePedido(env, id);
+      if (id && sub === 'propuesta' && m === 'POST') return soloEquipo(rol) || generarPropuesta(env, id, por, { conIA: body.con_ia !== false });
+    }
+    if (recurso === 'propuestas') {
+      if (!id && m === 'GET') return listarPropuestas(env);
+      if (id && !sub && m === 'GET') return verPropuesta(env, id);
+      if (id && sub === 'vista' && m === 'GET') return vistaPropuesta(env, id, new URL(request.url).origin);
+      if (id && !sub && m === 'PUT') return soloEquipo(rol) || editarPropuesta(env, id, body);
+      if (id && sub === 'publicar' && m === 'POST') return soloEquipo(rol) || publicarPropuesta(env, id, body, por);
+      if (id && sub === 'retirar' && m === 'POST') return soloEquipo(rol) || retirarPropuesta(env, id, por);
     }
     if (recurso === 'cotizaciones' && id) {
       if (!sub && m === 'GET') { const v = await vistaCotizacion(env, id); return v ? json(v) : json({ error: 'No existe' }, 404); }
