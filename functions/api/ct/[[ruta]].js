@@ -23,7 +23,7 @@ import {
   TIPOS_SERVICIO, CATEGORIAS,
 } from '../../_lib/tarifario.js';
 import {
-  listarPedidos, crearPedido, verPedido, editarPedido, estadoPedido, rearmar, nuevaVersion,
+  listarPedidos, pedidosDe, crearPedido, verPedido, editarPedido, estadoPedido, rearmar, nuevaVersion,
   vistaCotizacion, editarCotizacion, agregarLinea, editarLinea, borrarLinea, cambiosCotizacion,
 } from '../../_lib/ct-cotizaciones.js';
 import { mandarARevision, aprobar, pedirCambios } from '../../_lib/ct-revision.js';
@@ -316,7 +316,12 @@ export async function onRequest({ request, env, params }) {
   try {
     if (recurso === 'tarifario' && m === 'GET') return json(await getTarifario(env));
     if (recurso === 'pedidos') {
-      if (!id && !sub && m === 'GET') return listarPedidos(env);
+      if (!id && !sub && m === 'GET') {
+        const q = new URL(request.url).searchParams;
+        const num = (k) => (/^\d+$/.test(q.get(k) || '') ? Number(q.get(k)) : null);
+        if (q.has('lead') || q.has('conversacion')) return pedidosDe(env, num('lead'), num('conversacion'));
+        return listarPedidos(env);
+      }
       if (!id && !sub && m === 'POST') return crearPedido(env, body, por);
       if (id && !sub && m === 'GET') return verPedido(env, id);
       if (id && !sub && m === 'PUT') return editarPedido(env, id, body, por);

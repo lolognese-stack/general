@@ -2446,6 +2446,18 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 #view-cotizaciones .card .acc{justify-content:flex-start}
 #view-cotizaciones dialog .fila{grid-template-columns:1fr}
 }
+.ib-ped-chip{display:block;margin:0 0 var(--s3);padding:8px var(--s3);border:1px solid var(--line);border-left:3px solid var(--brand);border-radius:var(--radius-sm);background:var(--surface-2);color:var(--ink);text-decoration:none;font-size:12.5px}
+.ib-ped-chip:hover{background:var(--surface-sunk)}
+.ib-ped-chip small{display:block;color:var(--ink-3);font-size:11px}
+.ib-ped-chip[data-estado="aprobada"],.ib-ped-chip[data-estado="enviada"]{border-left-color:var(--si)}
+.ib-ped-chip[data-estado="perdida"],.ib-ped-chip[data-estado="cerrada"]{border-left-color:var(--line);opacity:.7}
+.ib-ped-prueba{display:inline-block;padding:0 5px;border-radius:3px;background:var(--danger);color:#fff;font-size:9.5px;font-weight:700;letter-spacing:.04em}
+#ib-pedido .ib-np-fila{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:var(--s2)}
+#ib-pedido .ib-np-check{display:flex;gap:6px;align-items:flex-start;font-size:12px;color:var(--ink-2);margin:0 0 var(--s3)}
+#ib-pedido .ib-np-dest{display:grid;grid-template-columns:1fr 64px auto auto;gap:var(--s2);align-items:center;margin-bottom:var(--s2)}
+#ib-pedido .ib-np-dest input{border:1px solid var(--line);border-radius:var(--radius-sm);padding:7px 9px;background:var(--surface-2);font-size:13px;min-height:36px;min-width:0}
+#ib-pedido .ib-falta-campo input,#ib-pedido .ib-falta-campo select{border-color:var(--danger);background:var(--danger-bg)}
+#ib-pedido .ib-falta-campo>label{color:var(--danger)}
 </style>
 </head>
 <body>
@@ -15601,6 +15613,12 @@ function renderInbox(){
         <div class="hint" id="ib-pase-res" aria-live="polite"></div>
         <div class="ib-leccion-acc"><button type="button" class="btn btn-ghost btn-sm" id="ib-pase-no">Cerrar</button><button type="button" class="btn btn-ghost btn-sm" id="ib-pase-copiar">Copiar</button><button type="submit" class="btn btn-primary btn-sm" id="ib-pase-ok">Enviar</button></div>
       </form>
+      <form class="ib-leccion" id="ib-pedido" hidden>
+        <h4>Nuevo pedido de cotización</h4>
+        <div id="ib-np-cuerpo"></div>
+        <div class="hint" id="ib-np-res" aria-live="polite"></div>
+        <div class="ib-leccion-acc"><button type="button" class="btn btn-ghost btn-sm" id="ib-np-no">Cerrar</button><button type="submit" class="btn btn-primary btn-sm" id="ib-np-ok">Crear pedido</button></div>
+      </form>
       <div class="ib-seg" id="ib-seg" hidden></div>
       <div id="ib-pie"></div>
     </div>
@@ -15904,6 +15922,7 @@ function ibPintarHilo(){
   const lec = el('ib-leccion'), apr = el('ib-aprender');
   if(lec.dataset.conv !== String(c.id)){ lec.hidden = true; apr.hidden = true; el('ib-pase').hidden = true; lec.dataset.conv = String(c.id); }
   ibEnlazarPase();
+  ibEnlazarPedido();
   if(!apr.dataset.listo){
     apr.dataset.listo = '1';
     el('ib-apr-no').addEventListener('click', () => { apr.hidden = true; });
@@ -16082,6 +16101,8 @@ function ibArmarPase(an){
   lin('Cliente', l.nombre);
   lin('WhatsApp', l.whatsapp || '+' + c.wa_id);
   L.push(`https://wa.me/${c.wa_id}`);
+  const pdAbierto = ibPedidoAbierto();
+  if(pdAbierto) L.push('', `*Pedido en el CRM (${IB_PEDIDO_ESTADO[pdAbierto.estado] || pdAbierto.estado}):*`, `${location.origin}/panel-4c1f6a#/cotizaciones/pedido/${pdAbierto.id}`, '');
   lin('Mail', l.email); lin('País', pais); lin('Residencia', l.residencia);
   L.push('', '*Viaje*');
   lin('Destinos', l.destinos);
@@ -16113,6 +16134,7 @@ async function ibPasarCotizador(){
   if(!ibHilo || !ibHilo.lead) return;
   let cot = null;
   try{ cot = (await api('/api/setter/conversaciones?rol=cotizador'))[0] || null; }catch(e){}
+  await ibCargarPedidos(true);
   const f = el('ib-pase'), ok = el('ib-pase-ok'), res = el('ib-pase-res');
   const sinCot = 'Todavía no hay cotizador marcado: en su chat, Más › Es el cotizador. Mientras, copiá el mensaje y pegalo a mano.';
   f.dataset.cot = cot ? String(cot.id) : '';
@@ -16164,6 +16186,202 @@ async function ibAnalisisParaPase(c){
   const nuevo = ibHilo && ibHilo.conversacion.id === c.id;
   if(nuevo && document.getElementById('ib-wr')) wrPintar(c.id, ibHilo.lead && ibHilo.lead.id, el('ib-wr'), d, clave);
   return { an:dt, aviso };
+}
+
+/* ---- Nuevo pedido desde el inbox (Cotizaciones) ---- */
+// El pedido sale del chat: se lee con el mismo análisis del pase, se precarga y lo que falta se marca
+// para completar ahí. Obligatorios: destinos, días, personas y fecha (puede ser tentativa).
+const IB_PEDIDO_ESTADO = { nuevo:'Nuevo', borrador_listo:'Borrador listo', en_revision:'En revisión', aprobada:'Aprobada', enviada:'Enviada', cerrada:'Cerrada', perdida:'Perdida' };
+let ibPedidos = [], ibPedidosDe = null, ibPedidosAt = 0, ibCtActivo = true;
+
+const ibPedidoAbierto = () => ibPedidos.find(p => !['cerrada', 'perdida'].includes(p.estado)) || null;
+function ibHace(t){
+  if(!t) return '';
+  const m = Math.max(0, Math.round((Date.now() - Date.parse(String(t).replace(' ', 'T') + 'Z')) / 60000));
+  return m < 60 ? m + ' min' : m < 48 * 60 ? Math.round(m / 60) + ' h' : Math.round(m / 1440) + ' días';
+}
+
+// Trae los pedidos del lead / chat. `forzar` salta el caché de 30 s (el pase lo necesita al día).
+async function ibCargarPedidos(forzar){
+  if(!ibHilo || !ibHilo.lead) return;
+  const l = ibHilo.lead, convId = ibHilo.conversacion.id, clave = l.id + ':' + convId;
+  if(!forzar && ibPedidosDe === clave && Date.now() - ibPedidosAt < 30000){ ibPintarPedidos(); return; }
+  try{
+    const r = await api(`/api/ct/pedidos?lead=${l.id}&conversacion=${convId}`);
+    if(!ibHilo || ibHilo.conversacion.id !== convId) return;
+    ibPedidos = r.pedidos || []; ibCtActivo = true; ibPedidosDe = clave; ibPedidosAt = Date.now();
+  }catch(e){
+    if(e.message === 'unauthorized') return;
+    ibPedidos = []; ibCtActivo = false;   // CRM sin cotizaciones: el botón no aparece
+  }
+  ibPintarPedidos();
+}
+
+function ibPintarPedidos(){
+  const box = el('ib-pedidos'), b = el('ib-nuevo-pedido');
+  if(b) b.hidden = !ibCtActivo;
+  if(!box) return;
+  box.innerHTML = ibPedidos.map(p => `<a class="ib-ped-chip" data-estado="${esc(p.estado)}" href="#/cotizaciones/pedido/${p.id}" title="Abrir el pedido en Cotizaciones">
+    <b>Pedido #${p.id}</b> · ${esc(IB_PEDIDO_ESTADO[p.estado] || p.estado)}${p.usa_prueba ? ' · <span class="ib-ped-prueba">PRUEBA</span>' : ''}${p.fecha_tentativa ? ' · fecha tentativa' : ''}
+    <small>hace ${esc(ibHace(p.estado_desde))}${p.total_venta_cent ? ' · US$ ' + (p.total_venta_cent / 100).toLocaleString('es-PE', { maximumFractionDigits: 0 }) : ''}</small></a>`).join('');
+}
+
+const ibEntero = v => { const m = String(v ?? '').match(/\d+/); return m ? Number(m[0]) : 0; };
+// Solo fechas que se leen sin dudar: AAAA-MM-DD o DD/MM/AAAA. "marzo 2027" no es una fecha.
+function ibFechaISO(v){
+  const s = String(v || '').trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
+  return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : '';
+}
+function ibCategoriaHotel(v){
+  const s = String(v || '').toLowerCase();
+  if(/econ|hostal|3\s*\*|barat/.test(s)) return 'economico';
+  if(/prem|lujo|5\s*\*|4\s*\*/.test(s)) return 'premium';
+  return 'confort';
+}
+
+// Destinos [{ciudad, noches}] desde el itinerario de la ficha o desde el texto de destinos.
+function ibDestinosPedido(l, dias){
+  let it = null;
+  try{ const x = JSON.parse(l.itinerario || 'null'); if(Array.isArray(x) && x.some(t => t && Array.isArray(t.dias) && t.dias.length)) it = x; }catch(e){}
+  if(it){
+    const ts = it.filter(t => t && t.titulo && Array.isArray(t.dias) && t.dias.length);
+    return ts.map((t, i) => ({ ciudad: String(t.titulo).trim(), noches: i === ts.length - 1 ? Math.max(0, t.dias.length - 1) : t.dias.length }));
+  }
+  const nombres = String(l.destinos || '').split(/[,;·\/+>→]|\s+y\s+|\s+-\s+/).map(x => x.trim()).filter(Boolean).slice(0, 8);
+  if(!nombres.length) return [];
+  const noches = dias ? Math.max(0, dias - 1) : nombres.length;
+  const base = Math.floor(noches / nombres.length), resto = noches % nombres.length;
+  return nombres.map((c, i) => ({ ciudad: c, noches: base + (i < resto ? 1 : 0) }));
+}
+
+function ibPrecargaPedido(l, an){
+  const { diasTot } = ibDatosViaje(l);
+  const dias = ibEntero(diasTot);
+  const v = an && an.viaje ? an.viaje : null;
+  return {
+    nombre: l.nombre || '', pais: l.pais || (v && v.desde_donde) || '',
+    pasajeros: ibEntero(l.personas) || '',
+    fecha_inicio: ibFechaISO(l.llegada) || ibFechaISO(l.fecha_viaje), fecha_tentativa: false,
+    dias: dias || '', categoria_hotel: ibCategoriaHotel(l.categoria_hotel),
+    destinos: ibDestinosPedido(l, dias),
+    pedidos_especiales: [l.ocasion ? 'Ocasión: ' + l.ocasion : '', an && an.que_busca ? an.que_busca : ''].filter(Boolean).join('. '),
+  };
+}
+
+function ibPintarPedidoForm(v){
+  const hoy = new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10);
+  el('ib-np-cuerpo').innerHTML = `
+    <div class="field" data-np="nombre"><label>Cliente</label><input name="nombre" maxlength="120" value="${esc(v.nombre)}"></div>
+    <div class="ib-np-fila">
+      <div class="field" data-np="pasajeros"><label>Personas *</label><input name="pasajeros" type="number" min="1" max="60" value="${esc(v.pasajeros)}"></div>
+      <div class="field" data-np="dias"><label>Días *</label><input name="dias" type="number" min="1" max="90" value="${esc(v.dias)}"></div>
+      <div class="field" data-np="fecha"><label>Llega *</label><input name="fecha_inicio" type="date" value="${esc(v.fecha_inicio)}"></div>
+    </div>
+    <label class="ib-np-check"><input type="checkbox" name="fecha_tentativa" ${v.fecha_tentativa ? 'checked' : ''}> Fecha tentativa: el cliente no dio una y se elige un día para poder cotizar</label>
+    <div class="field" data-np="destinos"><label>Destinos, en orden *</label><div id="ib-np-dests"></div>
+      <div><button type="button" class="btn btn-ghost btn-sm" id="ib-np-mas">+ Destino</button> <span class="hint" id="ib-np-noches"></span></div></div>
+    <div class="ib-np-fila">
+      <div class="field"><label>País</label><input name="pais" maxlength="60" value="${esc(v.pais)}"></div>
+      <div class="field"><label>Hotel</label><select name="categoria_hotel">${[['economico','Económico'],['confort','Confort'],['premium','Premium'],['sin_hotel','Sin hotel']].map(([k, n]) => `<option value="${k}" ${k === v.categoria_hotel ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+    </div>
+    <div class="field"><label>Pedidos especiales</label><textarea name="pedidos_especiales" rows="2" maxlength="2000">${esc(v.pedidos_especiales)}</textarea></div>`;
+  const filas = el('ib-np-dests');
+  const fila = (d = { ciudad: '', noches: 1 }) => {
+    const r = document.createElement('div'); r.className = 'ib-np-dest';
+    r.innerHTML = `<input name="d-ciudad" placeholder="Ciudad" value="${esc(d.ciudad)}"><input name="d-noches" type="number" min="0" max="60" value="${esc(d.noches)}" title="Noches"><span class="hint">noches</span><button type="button" class="btn btn-ghost btn-sm">Quitar</button>`;
+    r.querySelector('button').addEventListener('click', () => { r.remove(); ibNpValidar(); });
+    filas.appendChild(r);
+  };
+  (v.destinos.length ? v.destinos : []).forEach(fila);
+  el('ib-np-mas').addEventListener('click', () => { fila(); ibNpValidar(); });
+  const f = el('ib-pedido');
+  f.querySelector('[name=fecha_tentativa]').addEventListener('change', e => {
+    const d = f.querySelector('[name=fecha_inicio]');
+    if(e.target.checked && !d.value){   // sugerencia: el 1 del mes siguiente a 45 días; la persona la cambia
+      const x = new Date(Date.parse(hoy + 'T12:00:00Z') + 45 * 86400e3); x.setUTCDate(1); x.setUTCMonth(x.getUTCMonth() + 1);
+      d.value = x.toISOString().slice(0, 10);
+    }
+    ibNpValidar();
+  });
+  el('ib-np-cuerpo').addEventListener('input', ibNpValidar);
+}
+
+// Lee el formulario del pedido y marca lo que falta de los cuatro obligatorios.
+function ibNpLeer(){
+  const f = el('ib-pedido');
+  const g = n => f.querySelector(`[name=${n}]`);
+  const destinos = [...f.querySelectorAll('.ib-np-dest')].map(r => ({ ciudad: r.querySelector('[name=d-ciudad]').value.trim(), noches: Number(r.querySelector('[name=d-noches]').value || 0) })).filter(d => d.ciudad);
+  return {
+    nombre: g('nombre').value.trim(), pais: g('pais').value.trim(), pasajeros: Number(g('pasajeros').value) || 0, dias: Number(g('dias').value) || 0,
+    fecha_inicio: g('fecha_inicio').value, fecha_tentativa: g('fecha_tentativa').checked, categoria_hotel: g('categoria_hotel').value,
+    destinos, pedidos_especiales: g('pedidos_especiales').value.trim(),
+  };
+}
+function ibNpValidar(){
+  const f = el('ib-pedido');
+  if(!f || f.hidden || !el('ib-np-cuerpo').children.length) return false;
+  const v = ibNpLeer();
+  const faltan = [];
+  if(!v.destinos.length) faltan.push(['destinos', 'destinos']);
+  if(!v.dias) faltan.push(['dias', 'días']);
+  if(!v.pasajeros) faltan.push(['pasajeros', 'personas']);
+  if(!v.fecha_inicio) faltan.push(['fecha', 'fecha (o una fecha tentativa)']);
+  f.querySelectorAll('[data-np]').forEach(x => x.classList.toggle('ib-falta-campo', faltan.some(([k]) => k === x.dataset.np)));
+  const noches = v.destinos.reduce((n, d) => n + d.noches, 0);
+  el('ib-np-noches').textContent = v.destinos.length && v.dias && noches + 1 !== v.dias ? `${noches} noches = ${noches + 1} días, el cliente pidió ${v.dias}: se avisa en el pedido.` : '';
+  el('ib-np-ok').disabled = faltan.length > 0 || !v.nombre;
+  const base = el('ib-np-res').dataset.base || '';
+  el('ib-np-res').textContent = [base, faltan.length ? 'Falta: ' + faltan.map(x => x[1]).join(', ') + '.' : '', !v.nombre ? 'Falta el nombre.' : ''].filter(Boolean).join(' ');
+  return !faltan.length && !!v.nombre;
+}
+
+async function ibNuevoPedido(){
+  if(!ibHilo || !ibHilo.lead) return;
+  const f = el('ib-pedido'), res = el('ib-np-res'), ok = el('ib-np-ok');
+  f.hidden = false; ok.disabled = true; el('ib-np-cuerpo').innerHTML = ''; res.dataset.base = '';
+  res.textContent = 'Leyendo el chat…';
+  const convId = ibHilo.conversacion.id;
+  let an = null, aviso = '';
+  try{ ({ an, aviso } = await ibAnalisisParaPase(ibHilo.conversacion)); }
+  catch(e){ if(e.message === 'unauthorized') return; aviso = 'No se pudo leer el chat (' + e.message + '): se precarga con lo que tiene la ficha.'; }
+  if(!ibHilo || ibHilo.conversacion.id !== convId) return;   // se cambió de chat mientras tanto
+  await ibCargarPedidos(true);
+  const ya = ibPedidoAbierto();
+  ibPintarPedidoForm(ibPrecargaPedido(ibHilo.lead, an));
+  res.dataset.base = [aviso, ya ? `Ya hay un pedido abierto (#${ya.id}). Si creás otro, queda aparte.` : ''].filter(Boolean).join(' ');
+  ibNpValidar();
+  f.scrollIntoView({ block:'nearest' });
+}
+
+function ibEnlazarPedido(){
+  const f = el('ib-pedido');
+  if(!f || f.dataset.listo) return;
+  f.dataset.listo = '1';
+  el('ib-np-no').addEventListener('click', () => { f.hidden = true; });
+  f.addEventListener('submit', async e => {
+    e.preventDefault();
+    if(!ibNpValidar() || !ibHilo || !ibHilo.lead) return;
+    const v = ibNpLeer(), ok = el('ib-np-ok'), res = el('ib-np-res');
+    const lead = ibHilo.lead, conv = ibHilo.conversacion;
+    ok.disabled = true; res.textContent = 'Creando y armando el borrador…';
+    let usuario = ''; try{ usuario = localStorage.getItem('ct_usuario') || ''; }catch(x){}
+    try{
+      const r = await api('/api/ct/pedidos', { method:'POST', headers:{ 'x-crm-usuario': encodeURIComponent(usuario) },
+        body: JSON.stringify({ ...v, servicios: [], origen:'inbox', lead_id: lead.id, conversacion_id: conv.id }) });
+      f.hidden = true;
+      toast('Pedido creado: borrador armado', { tipo:'ok', ms: 5000 });
+      ibPedidosAt = 0;
+      await ibCargarPedidos(true);
+      if(r && r.id) location.hash = '#/cotizaciones/pedido/' + r.id;
+    }catch(err){
+      if(err.message === 'unauthorized') return;
+      res.textContent = 'No se pudo crear: ' + err.message;
+      ok.disabled = false;
+    }
+  });
 }
 
 function ibEnlazarPase(){
@@ -16222,7 +16440,8 @@ function ibPintarFicha(){
       ${fila('Código web', l.codigo_web)}${fila('Abrió', c.abierta_por === 'nosotros' ? 'Nosotros' : 'El lead')}
     </dl>
     ${l.ia_resumen ? `<h3>Resumen de la IA</h3><p>${esc(l.ia_resumen)}</p>` : ''}
-    <div class="ib-ficha-acc"><button type="button" class="btn btn-primary btn-sm" id="ib-pase-ficha">Pasar al cotizador</button><button type="button" class="btn btn-ghost btn-sm" id="ib-abrir-lead">Abrir la ficha completa</button>${l.manychat_id ? `<a class="btn btn-ghost btn-sm" href="${esc(MANYCHAT_CHAT(l.manychat_id))}" target="_blank" rel="noopener">Abrir chat en ManyChat</a>` : ''}</div>
+    <div id="ib-pedidos"></div>
+    <div class="ib-ficha-acc"><button type="button" class="btn btn-primary btn-sm" id="ib-pase-ficha">Pasar al cotizador</button><button type="button" class="btn btn-primary btn-sm" id="ib-nuevo-pedido" title="Arma la cotización en Cotizaciones con lo que dice el chat">Nuevo pedido</button><button type="button" class="btn btn-ghost btn-sm" id="ib-abrir-lead">Abrir la ficha completa</button>${l.manychat_id ? `<a class="btn btn-ghost btn-sm" href="${esc(MANYCHAT_CHAT(l.manychat_id))}" target="_blank" rel="noopener">Abrir chat en ManyChat</a>` : ''}</div>
     <h3 style="margin-top:var(--s5)">Análisis</h3>
     ${a ? `<dl>
       ${fila('Intención', a.intencion_inicial)}${fila('Tipo', a.tipo_lead)}${fila('Próxima acción', a.proxima_accion)}${fila('Prioridad', a.prioridad)}
@@ -16232,6 +16451,9 @@ function ibPintarFicha(){
     <h3 style="margin-top:var(--s5)">Análisis de WhatsApp</h3>
     <div id="ib-wr"></div>`;
   el('ib-pase-ficha').addEventListener('click', ibPasarCotizador);
+  el('ib-nuevo-pedido').addEventListener('click', ibNuevoPedido);
+  ibPintarPedidos();
+  ibCargarPedidos();
   wrBloque(c.id, l.id, null, el('ib-wr'), c.ultimo_en || '');
   el('ib-abrir-lead').addEventListener('click', () => {
     if(!leads.find(x => x.id === l.id)) return alert('El lead todavía no está cargado en el panel. Prueba en unos segundos.');
@@ -17297,7 +17519,7 @@ async function pintarPedidos() {
   const visibles = ESTADOS.filter(([k]) => verCerrados || !['cerrada', 'perdida'].includes(k));
   const tarjeta = (p) => `<a class="ped" href="#/cotizaciones/pedido/${p.id}">
       <b>${esc(p.nombre)}</b>${p.usa_prueba ? ' <span class="prueba">PRUEBA</span>' : ''}
-      <small>${p.pasajeros} pax · ${p.fecha_inicio ? fecha(p.fecha_inicio) : 'sin fecha'}${p.pais ? ' · ' + esc(p.pais) : ''}</small>
+      <small>${p.pasajeros} pax · ${p.fecha_inicio ? fecha(p.fecha_inicio) + (p.fecha_tentativa ? ' (tentativa)' : '') : 'sin fecha'}${p.pais ? ' · ' + esc(p.pais) : ''}</small>
       <small>${esc(p.destinos.map((d) => d.ciudad).join(' · '))}</small>
       ${p.total_venta_cent ? `<small><b>${usd(Math.round(p.total_venta_cent / p.pasajeros))}</b> p/p · v${p.version}${p.problemas ? ` · <span class="err">${p.problemas} sin precio</span>` : ''}</small>` : ''}
       <span class="hace" title="Tiempo en este estado">hace ${haceCuanto(p.estado_desde)}</span></a>`;
@@ -17324,6 +17546,8 @@ async function pintarFormPedido(p) {
         <label>Pasajeros<input name="pasajeros" type="number" min="1" max="60" required value="${esc(v.pasajeros)}"></label>
         <label>Llega<input name="fecha_inicio" type="date" value="${esc(v.fecha_inicio)}"></label>
         <label>Se va<input name="fecha_fin" type="date" value="${esc(v.fecha_fin)}"></label>
+        <label>Días<input name="dias" type="number" min="1" max="90" value="${esc(v.dias)}"></label>
+        <label class="check"><input type="checkbox" name="fecha_tentativa" ${v.fecha_tentativa ? 'checked' : ''}> Fecha tentativa (el cliente no dio una)</label>
         <label>Hotel<select name="categoria_hotel">${[['economico', 'Económico'], ['confort', 'Confort'], ['premium', 'Premium'], ['sin_hotel', 'Sin hotel']].map(([k, n]) => `<option value="${k}" ${k === v.categoria_hotel ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
       </div>
       <h2>Destinos, en orden</h2><div id="ct-dests"></div>
@@ -17371,7 +17595,7 @@ async function pintarFormPedido(p) {
     if (!usuario()) { elegirSoy(); return; }
     RAIZ().querySelectorAll('#ct-servs input:checked').forEach((c) => elegidos.add(Number(c.value)));
     RAIZ().querySelectorAll('#ct-servs input:not(:checked)').forEach((c) => elegidos.delete(Number(c.value)));
-    const body = { nombre: f.nombre.value, pais: f.pais.value, pasajeros: Number(f.pasajeros.value), fecha_inicio: f.fecha_inicio.value || null, fecha_fin: f.fecha_fin.value || null,
+    const body = { nombre: f.nombre.value, pais: f.pais.value, pasajeros: Number(f.pasajeros.value), fecha_inicio: f.fecha_inicio.value || null, fecha_fin: f.fecha_fin.value || null, dias: f.dias.value || null, fecha_tentativa: f.fecha_tentativa.checked,
       categoria_hotel: f.categoria_hotel.value, destinos: destinos(), servicios: [...elegidos], pedidos_especiales: f.pedidos_especiales.value, lead_id: v.lead_id ?? null };
     const btn = f.querySelector('button.prim'); btn.disabled = true;
     try {
@@ -17400,7 +17624,7 @@ function dibujarPedido() {
   $('#ct-raiz').innerHTML = `<p><a href="#/cotizaciones/pedidos">← Pedidos</a></p>
     <div class="panel cab-ped">
       <div><h2 style="margin:0 0 6px">${esc(p.nombre)}${p.pais ? ' · ' + esc(p.pais) : ''}</h2>
-        <div class="meta">${p.pasajeros} pasajeros · ${p.fecha_inicio ? `${fecha(p.fecha_inicio)} al ${fecha(p.fecha_fin)}` : 'sin fechas'} · hotel ${esc({ economico: 'económico', confort: 'confort', premium: 'premium', sin_hotel: 'no' }[p.categoria_hotel] || '—')}</div>
+        <div class="meta">${p.pasajeros} pasajeros · ${p.fecha_inicio ? `${fecha(p.fecha_inicio)} al ${fecha(p.fecha_fin)}` : 'sin fechas'}${p.fecha_tentativa ? ' <span class="chip pisado" title="El cliente no dio fecha: se eligió un día para poder cotizar">fecha tentativa</span>' : ''} · hotel ${esc({ economico: 'económico', confort: 'confort', premium: 'premium', sin_hotel: 'no' }[p.categoria_hotel] || '—')}</div>
         <div class="meta">${esc(p.destinos.map((d) => `${d.ciudad} (${d.noches} n)`).join(' → '))}</div>
         ${p.pedidos_especiales ? `<div class="meta">Pedidos especiales: ${esc(p.pedidos_especiales)}</div>` : ''}
         <div class="meta">Cargado por ${esc(p.creado_por || '—')} el ${peru(p.creado_en)}</div></div>
@@ -17460,6 +17684,7 @@ function dibujarCotizacion() {
     ${c.estado === 'en_revision' ? `<p class="aviso">En revisión de ${esc(c.revisor || '—')}. Los cambios de precio quedan en "Cambios de precio".</p>` : ''}
     ${c.estado === 'cambios_pedidos' ? `<div class="avisos-cot"><b>${esc(c.revisor || 'Álvaro')} pidió cambios:</b> ${esc(c.pedido_cambios || '')}</div>` : ''}
     ${c.estado === 'aprobada' ? `<p class="ok">Aprobada por ${esc(c.aprobada_por || '—')} el ${peru(c.aprobada_en)}. No se edita: para cambiar algo, versión nueva.</p>` : ''}
+    ${p.fecha_tentativa ? `<p class="aviso"><b>Fecha tentativa:</b> el cliente no dio fecha, se cotiza con el ${fecha(p.fecha_inicio)}. Hay que confirmarla antes de mandar la propuesta.</p>` : ''}
     ${c.avisos.length ? `<ul class="avisos-cot">${c.avisos.map((a) => `<li>${esc(a)}</li>`).join('')}</ul>` : ''}
     ${t.problemas ? `<p class="err"><b>${t.problemas} línea${t.problemas > 1 ? 's' : ''} sin precio.</b> Cargá la tarifa, cambiá el hotel o poné el precio a mano.</p>` : ''}
     <div class="card dias">${dias}</div>
