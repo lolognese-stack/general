@@ -1032,6 +1032,14 @@ tr:hover .pz-link-edit,.pz-link-edit:focus-visible{opacity:1}
 .pz-copiar{width:36px;height:auto;align-self:stretch}
 #pz-asociar-wrap .sa-sel{max-width:none}
 .sa-btn{flex:none}
+.pz-cal-piece.pz-cal-importado,.pz-cal-piece.pz-cal-importado[data-estado="Subido"]{background:color-mix(in srgb,#F2C94C 38%,var(--surface));border:1.5px dashed #D9A81E}
+.pz-cal-piece.pz-cal-importado:hover{border-color:#F2C94C;background:color-mix(in srgb,#F2C94C 48%,var(--surface))}
+.pz-cal-imp-badge{align-self:flex-start;font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#111;background:#F2C94C;border-radius:4px;padding:1px 6px}
+.pz-imp-box{border:1.5px dashed #D9A81E;background:color-mix(in srgb,#F2C94C 22%,var(--surface));border-radius:var(--radius-sm);padding:var(--s3) var(--s4);margin-bottom:var(--s4)}
+.pz-imp-box h3{margin:0 0 4px;font-size:14px;font-weight:700;color:var(--ink);text-transform:none;letter-spacing:0}
+.pz-imp-box .hint{display:block;margin-bottom:var(--s3)}
+.pz-imp-box .sa-sel{max-width:none;width:100%;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--radius-sm);padding:8px 10px;min-height:38px}
+.pz-imp-box .pz-link-row{display:flex;gap:8px}
 .pz-cal-piece[data-estado="Editando"]{background:color-mix(in srgb,#F2C94C 22%,var(--surface));border-color:color-mix(in srgb,#F2C94C 45%,var(--line-soft))}
 .pz-cal-piece.dragging{opacity:.45}
 .pz-cal-day.dragover{border-color:var(--glacier);background:var(--glacier-soft)}
@@ -2800,6 +2808,11 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
   </div>
 
   <div class="drawer-body">
+    <div class="pz-imp-box" id="pz-imp-wrap" hidden>
+      <h3>Posteo importado sin clasificar</h3>
+      <span class="hint">Elegí a qué pieza (etiqueta) corresponde. Al asociar, la pieza toma el link, la fecha y las métricas de este posteo.</span>
+      <div class="pz-link-row"><select id="pz-imp-sel" class="sa-sel" aria-label="Pieza a la que corresponde"></select><button type="button" class="btn" id="pz-imp-btn" disabled>Asociar</button></div>
+    </div>
     <div id="pz-hero"></div>
     <input type="hidden" id="pz-f-id">
 
@@ -4335,9 +4348,8 @@ const TEMA_SIN_ASOCIAR = '(importado, sin clasificar)';
 const pzSinAsociar = () => piezas.filter(p => p.tema === TEMA_SIN_ASOCIAR)
   .sort((a,b) => (b.fecha || '').localeCompare(a.fecha || ''));
 
-function pzSinAsociarHtml(){
-  const sueltos = pzSinAsociar();
-  if(!sueltos.length) return '';
+// <option>s con las piezas a las que se puede asociar un posteo suelto.
+function pzOpcionesAsociar(){
   const libres = piezas.filter(p => p.tema !== TEMA_SIN_ASOCIAR && p.estado !== 'Subido' && !p.video_url)
     .sort((a,b) => (a.fecha || '9999').localeCompare(b.fecha || '9999'));
   const nombre = (p) => (p.etiqueta_manychat || p.tema) + (p.fecha ? ' · ' + fechaCorta(p.fecha) : '');
@@ -4345,7 +4357,13 @@ function pzSinAsociarHtml(){
     ? `<optgroup label="${esc(titulo)}">${items.map(p => `<option value="${p.id}" title="${esc(p.tema)}">${esc(nombre(p))}</option>`).join('')}</optgroup>` : '';
   const editadas = libres.filter(p => p.estado === 'Editado');
   const otras = libres.filter(p => p.estado !== 'Editado');
-  const opciones = `<option value="">Elegí la pieza…</option>${grupo('Editadas', editadas)}${grupo('Otras sin link', otras)}`;
+  return `<option value="">Elegí la pieza…</option>${grupo('Editadas', editadas)}${grupo('Otras sin link', otras)}`;
+}
+
+function pzSinAsociarHtml(){
+  const sueltos = pzSinAsociar();
+  if(!sueltos.length) return '';
+  const opciones = pzOpcionesAsociar();
   return `<details class="sa-barra" open>
     <summary>${sueltos.length} ${sueltos.length === 1 ? 'posteo sin asociar' : 'posteos sin asociar'}<span class="hint">elegí a qué pieza corresponde cada uno</span></summary>
     <div class="sa-lista">${sueltos.map(p => `
@@ -4630,11 +4648,35 @@ function pzMetricasHtml(views, comentarios){
 
 // Calendario real: grid lunes-domingo por semana, piezas ubicadas en su día.
 function pzCalPiezaHtml(p){
+  // Posteo traído de Instagram sin clasificar: amarillo, con la portada del posteo.
+  if(p.tema === TEMA_SIN_ASOCIAR){
+    return `<button type="button" class="pz-cal-piece pz-cal-importado" data-id="${p.id}" data-estado="${esc(p.estado || '')}" draggable="true" title="Tocá para asociarlo a su pieza">
+    ${p.foto_v ? `<img class="pz-cal-piece-mini" src="/api/foto-pieza/${p.id}?v=${p.foto_v}" alt="" loading="lazy" decoding="async" draggable="false" onerror="this.remove()">` : ''}
+    <span class="pz-cal-imp-badge">Sin clasificar</span>
+    <span class="pz-cal-piece-estado"><span${p.formato ? '' : ' class="pz-cal-sin-formato"'}>${esc(p.formato || 'Sin formato')}</span>${pzMetricasHtml(p.views, p.comentarios)}</span>
+  </button>`;
+  }
   return `<button type="button" class="pz-cal-piece" data-id="${p.id}" data-estado="${esc(p.estado || '')}" draggable="true">
     ${p.drive_miniatura_id ? `<img class="pz-cal-piece-mini" src="${pzMiniaturaUrl(p.drive_miniatura_id)}" alt="" loading="lazy" draggable="false" onerror="this.remove()">` : ''}
     <span class="pz-cal-piece-tema">${esc(p.tema)}</span>
     <span class="pz-cal-piece-estado"><span${p.formato ? '' : ' class="pz-cal-sin-formato"'}>${esc(p.formato || 'Sin formato')}${p.portada ? ' · Portada' : ''}</span>${pzMetricasHtml(p.views, p.comentarios)}${p.angulo_nombre ? `<span class="pz-cal-piece-ang">${angPuntoHtml(p.angulo_nombre, p.angulo_categoria, p.angulo_id)}</span>` : ''}</span>
   </button>`;
+}
+
+// Los posteos importados no siempre traen portada: se piden de a una (hasta 8
+// por render, una sola vez por sesión) y el calendario se re-dibuja al volver.
+async function pzTraerFotosImportadas(lista){
+  const faltan = lista.filter(p => p.tema === TEMA_SIN_ASOCIAR && !p.foto_v && /instagram\.com/.test(p.video_url || '') && !pfFotoPedida.has(p.id)).slice(0, 8);
+  if(!faltan.length) return;
+  let alguna = false;
+  for(const p of faltan){
+    pfFotoPedida.add(p.id);
+    try{
+      const r = await api('/api/foto-pieza/' + p.id, { method:'POST' });
+      if(r.foto_v){ p.foto_v = r.foto_v; alguna = true; }
+    }catch(e){ /* sin portada: queda la tarjeta sin foto */ }
+  }
+  if(alguna && seccion === 'planificador' && pzVista === 'calendario') renderPlanificador();
 }
 
 function renderPlanificadorCalendario(lista){
@@ -4749,6 +4791,7 @@ function renderPlanificadorCalendario(lista){
   pzWireBandeja(el('pz-body'));
   pzWireRows(el('pz-body'));
   pzWireDistribuciones(el('pz-body'));
+  pzTraerFotosImportadas(lista);
   el('pz-body').querySelectorAll('.pz-cal-piece').forEach(b => {
     b.addEventListener('click', () => abrirDrawerPieza(Number(b.dataset.id)));
     b.addEventListener('dragstart', e => {
@@ -6324,9 +6367,7 @@ function renderPlanificador(){
       </div>
       <div class="pz-periodo-t">${pzPeriodoTituloHtml()}</div>
     </div>` : ''}
-    ${enMatriz ? '' : pzSinAsociarHtml()}
     <div id="pz-body"></div>`;
-  if(!enMatriz) pzSinAsociarWire(el('view-planificador'));
 
   if(pzVista === 'tabla') renderPlanificadorTabla(lista);
   else if(pzVista === 'calendario') renderPlanificadorCalendario(lista);
@@ -11533,6 +11574,7 @@ function abrirDrawerPieza(id){
   if(p && !inEtiqueta.value.trim()) inEtiqueta.value = pzEtiquetaSugerida(p);
 
   pzPintarAsociar(p);
+  pzPintarImportada(p);
   el('pz-delete-btn').style.display = p ? '' : 'none';
   pzPintarDiag(p);
   pzCargarSerie(p);
@@ -11547,7 +11589,9 @@ function abrirDrawerPieza(id){
   el('drawer-pieza').classList.add('open');
   el('drawer-pieza').setAttribute('aria-hidden','false');
   el('pz-scrim').classList.add('open');
-  el('pz-f-tema').focus();
+  // En un posteo importado lo primero es la lista de asociar: no se manda el foco al tema (scrolleaba el drawer).
+  if(p && p.tema === TEMA_SIN_ASOCIAR) el('pz-imp-sel').focus({ preventScroll:true });
+  else el('pz-f-tema').focus();
 }
 
 // En el drawer de una pieza sin publicar: elegir cuál de los posteos sueltos
@@ -11562,6 +11606,27 @@ function pzPintarAsociar(p){
   el('pz-asociar-sel').innerHTML = `<option value="">Elegí el posteo…</option>` + sueltos.map(s => `<option value="${s.id}">${esc(desc(s))}</option>`).join('');
   el('pz-asociar-btn').disabled = true;
   el('pz-asociar-btn').textContent = 'Asociar';
+}
+
+// Drawer de un posteo importado sin clasificar: lo primero es la lista de
+// piezas (con su etiqueta) para asociarlo. Si no trajo portada, se pide.
+function pzPintarImportada(p){
+  const wrap = el('pz-imp-wrap');
+  const ver = !!(p && p.tema === TEMA_SIN_ASOCIAR);
+  wrap.hidden = !ver;
+  if(!ver) return;
+  el('pz-imp-sel').innerHTML = pzOpcionesAsociar();
+  el('pz-imp-btn').disabled = true;
+  el('pz-imp-btn').textContent = 'Asociar';
+  if(!p.foto_v && /instagram\.com/.test(p.video_url || '') && !pfFotoPedida.has(p.id)){
+    pfFotoPedida.add(p.id);
+    api('/api/foto-pieza/' + p.id, { method:'POST' }).then(r => {
+      if(r && r.foto_v){
+        p.foto_v = r.foto_v;
+        if(Number(el('pz-f-id').value) === p.id) el('pz-hero').innerHTML = pzHeroHtml(p);
+      }
+    }).catch(() => {});
+  }
 }
 
 // Mismo nombre que la carpeta de Drive: FORMATO | Ángulo | DD-MM (ver nombre_carpeta en pieza.py).
@@ -12679,6 +12744,23 @@ el('pz-copiar-etiqueta').addEventListener('click', async () => {
   const b = el('pz-copiar-etiqueta');
   b.innerHTML = PZ_OK_SVG; b.title = 'Copiado';
   setTimeout(() => { b.innerHTML = PZ_COPIAR_SVG; b.title = 'Copiar etiqueta'; }, 1500);
+});
+el('pz-imp-sel').addEventListener('change', () => { el('pz-imp-btn').disabled = !el('pz-imp-sel').value; });
+el('pz-imp-btn').addEventListener('click', async () => {
+  const id = Number(el('pz-f-id').value), sel = el('pz-imp-sel'), btn = el('pz-imp-btn');
+  if(!id || !sel.value) return;
+  const destino = Number(sel.value);
+  btn.disabled = true; btn.textContent = 'Asociando…';
+  try{
+    await api('/api/piezas/asociar', { method:'POST', body:JSON.stringify({ importada_id:id, destino_id:destino }) });
+    toast('Posteo asociado a la pieza. Quedó como Subido.');
+    await cargarPiezas();
+    // La fila importada ya no existe: se abre la pieza que quedó con el posteo.
+    abrirDrawerPieza(destino);
+  }catch(e){
+    btn.textContent = 'Asociar'; btn.disabled = false;
+    if(e.message !== 'unauthorized') toast('No se pudo asociar: ' + e.message, { tipo:'error' });
+  }
 });
 el('pz-asociar-sel').addEventListener('change', () => { el('pz-asociar-btn').disabled = !el('pz-asociar-sel').value; });
 el('pz-asociar-btn').addEventListener('click', async () => {
