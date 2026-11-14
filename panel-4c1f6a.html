@@ -2341,6 +2341,8 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 }
 #view-cotizaciones .ct-bar{display:flex;align-items:center;gap:var(--s3);margin:0 0 var(--s4);flex-wrap:wrap}
 #view-cotizaciones .ct-bar .subtabs{max-width:100%;overflow-x:auto}
+#view-cotizaciones .ct-sub{margin:0 0 var(--s4);max-width:100%;overflow-x:auto}
+#view-cotizaciones .ct-sub[hidden]{display:none}
 #view-cotizaciones .ct-main{max-width:1100px;margin:0 auto}
 #view-cotizaciones .ct-vacio{padding:var(--s6) var(--s5);text-align:center;color:var(--ink-3)}
 #view-cotizaciones table{white-space:normal}
@@ -2644,16 +2646,19 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
     <div class="ct-bar">
       <nav class="subtabs" id="ct-tabs" role="tablist" aria-label="Cotizaciones">
         <button type="button" role="tab" data-tab="pedidos" aria-current="true">Pedidos</button>
-        <button type="button" role="tab" data-tab="servicios" aria-current="false">Servicios</button>
-        <button type="button" role="tab" data-tab="hoteles" aria-current="false">Hoteles</button>
-        <button type="button" role="tab" data-tab="itinerarios" aria-current="false">Itinerarios</button>
-        <button type="button" role="tab" data-tab="importar" aria-current="false">Importar</button>
         <button type="button" role="tab" data-tab="config" aria-current="false">Configuración</button>
-        <button type="button" role="tab" data-tab="cambios" aria-current="false">Registro</button>
       </nav>
       <span class="spacer"></span>
       <button id="ct-soy" type="button" class="btn btn-ghost btn-sm" title="Queda registrado en cada cambio de precio">Soy …</button>
     </div>
+    <nav class="subtabs ct-sub" id="ct-sub" role="tablist" aria-label="Configuración de cotizaciones" hidden>
+      <button type="button" role="tab" data-tab="config" aria-current="false">Márgenes y reglas</button>
+      <button type="button" role="tab" data-tab="servicios" aria-current="false">Servicios</button>
+      <button type="button" role="tab" data-tab="hoteles" aria-current="false">Hoteles</button>
+      <button type="button" role="tab" data-tab="itinerarios" aria-current="false">Itinerarios</button>
+      <button type="button" role="tab" data-tab="importar" aria-current="false">Importar</button>
+      <button type="button" role="tab" data-tab="cambios" aria-current="false">Registro</button>
+    </nav>
     <div class="ct-main" id="ct-raiz"><div class="ct-vacio">Cargando…</div></div>
     <dialog id="ct-dlg"><form id="ct-dlg-f" method="dialog"></form></dialog>
     <dialog id="ct-pp" class="ct-pp"><div class="ct-pp-g"><form id="ct-pp-f" onsubmit="return false"></form><iframe id="ct-pp-if" title="Vista previa de la propuesta" sandbox="allow-scripts allow-popups"></iframe></div></dialog>
@@ -17487,9 +17492,13 @@ function abrirDialogo(html, alGuardar) {
 }
 
 // ---------- pestañas ----------
+const TABS_CONFIG = ['config', 'servicios', 'hoteles', 'itinerarios', 'importar', 'cambios'];
 function marcarTab() {
-  const base = /^(pedido|nuevo|editar)/.test(tab) ? 'pedidos' : tab;
+  const enConfig = TABS_CONFIG.includes(tab);
+  const base = enConfig ? 'config' : 'pedidos';
   RAIZ().querySelectorAll('#ct-tabs button').forEach((b) => b.setAttribute('aria-current', String(b.dataset.tab === base)));
+  const sub = $('#ct-sub');
+  if (sub) { sub.hidden = !enConfig; sub.querySelectorAll('button').forEach((b) => b.setAttribute('aria-current', String(b.dataset.tab === tab))); }
 }
 function elegirTab(t) {
   tab = t; history.replaceState(null, '', '#/cotizaciones/' + t);
@@ -17783,6 +17792,19 @@ function dibujarPedido() {
   pintarPropuesta();
 }
 
+// Dónde está el viaje cada día según los destinos y sus noches: el día de cambio muestra "Origen → Destino".
+function destinoDelDia(destinos, d) {
+  const tr = []; let desde = 1;
+  for (const x of destinos || []) { if (!x.noches) continue; tr.push({ ciudad: x.ciudad, desde, hasta: desde + x.noches }); desde += x.noches; }
+  if (!tr.length) return null;
+  const i = tr.findIndex((t) => d >= t.desde && d < t.hasta);   // duerme en tr[i]
+  const salida = tr.find((t) => t.hasta === d);                   // día en que sale de su ciudad
+  if (i === -1) return salida ? { txt: salida.ciudad, duerme: null } : null;   // último día: vuelve desde la última ciudad
+  const t = tr[i];
+  if (d === t.desde && salida && salida !== t) return { txt: `${salida.ciudad} → ${t.ciudad}`, duerme: t.ciudad };
+  return { txt: t.ciudad, duerme: t.ciudad };
+}
+
 function dibujarCotizacion() {
   const el = $('#ct-cot');
   if (!cot) { el.innerHTML = `<div class="vacio">Sin cotización. <button type="button" id="ct-armar">Armar borrador</button></div>`; $('#ct-armar').addEventListener('click', rearmarCot); return; }
@@ -17803,7 +17825,8 @@ function dibujarCotizacion() {
   for (let d = 1; d <= nDias; d++) {
     const ls = porDia.get(d) || [];
     const fechaD = p.fecha_inicio ? (() => { const x = new Date(Date.parse(p.fecha_inicio + 'T12:00:00Z') + (d - 1) * 86400e3); return x.toISOString().slice(0, 10); })() : null;
-    dias += `<div class="dia"><div class="dia-cab"><b>Día ${d}</b> <span class="nota" style="margin:0">${diaTxt(fechaD)}</span>${ed ? `<button type="button" class="link" data-mas="${d}">+ Agregar</button>` : ''}</div>
+    const dd = destinoDelDia(p.destinos, d);
+    dias += `<div class="dia"><div class="dia-cab"><b>Día ${d}</b>${dd ? ` <span class="chip" title="${dd.duerme ? 'Duerme en ' + esc(dd.duerme) : 'Último día: salida'}">${esc(dd.txt)}</span>` : ''} <span class="nota" style="margin:0">${diaTxt(fechaD)}</span>${ed ? `<button type="button" class="link" data-mas="${d}">+ Agregar</button>` : ''}</div>
       ${ls.length ? `<table class="t-resp"><tbody>${ls.map(fila).join('')}</tbody></table>` : '<p class="nota" style="padding:4px 14px;margin:0">Libre</p>'}</div>`;
   }
   const sinDia = cot.lineas.filter((l) => !l.dia || l.dia > nDias);
@@ -18564,7 +18587,7 @@ async function mostrar() {
   if (!mostrar.listo) {
     mostrar.listo = true;
     $('#ct-soy').addEventListener('click', elegirSoy);
-    RAIZ().querySelectorAll('#ct-tabs button').forEach((b) => b.addEventListener('click', () => elegirTab(b.dataset.tab)));
+    RAIZ().querySelectorAll('#ct-tabs button, #ct-sub button').forEach((b) => b.addEventListener('click', () => elegirTab(b.dataset.tab)));
   }
   pintarSoy();
   marcarTab();
