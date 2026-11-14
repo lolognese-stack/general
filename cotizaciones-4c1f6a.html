@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="referrer" content="no-referrer">
+<title>Cotizaciones · Luna Llena Travel</title>
+<style>
+:root{--bg:#F6F1EA;--paper:#FFFDF9;--ink:#161616;--ink2:#4A443E;--muted:#857B70;--line:#E2D9CE;--brand:#FF7A00;--brand-ink:#A34A00;--ok:#1F7A4D;--err:#B42318;--err-bg:#FDECEA;--warn-bg:#FFF4E8}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line);background:var(--paper);flex-wrap:wrap}
+header a{color:var(--ink2);text-decoration:none;font-size:.9rem}header h1{margin:0;font-size:1.1rem;font-weight:600;line-height:1.2}
+header .der{margin-left:auto;display:flex;gap:10px;align-items:center}
+nav.tabs{display:flex;gap:4px;padding:0 20px;background:var(--paper);border-bottom:1px solid var(--line);overflow-x:auto}
+nav.tabs button{border:0;border-bottom:2px solid transparent;border-radius:0;background:none;padding:12px 12px;color:var(--ink2);white-space:nowrap}
+nav.tabs button[aria-selected=true]{border-bottom-color:var(--brand);color:var(--ink);font-weight:600}
+button{font:inherit;padding:8px 14px;border:1px solid var(--ink);background:var(--paper);color:var(--ink);border-radius:4px;cursor:pointer}
+button.prim{background:var(--ink);color:#fff}button.chico{padding:4px 10px;font-size:.85rem}
+button.link{border:0;background:none;padding:2px 4px;color:var(--brand-ink);text-decoration:underline;font-size:.85rem}
+button:disabled{opacity:.45;cursor:not-allowed}
+main{padding:20px;max-width:1100px;margin:0 auto}
+.nota{color:var(--muted);font-size:.85rem;margin:0 0 14px}
+.banner{background:var(--err-bg);border:2px solid var(--err);color:var(--err);padding:12px 14px;margin-bottom:16px;font-weight:600}
+.banner small{display:block;font-weight:400;color:var(--ink2)}
+.prueba{display:inline-block;padding:1px 7px;border-radius:3px;background:var(--err);color:#fff;font-size:.7rem;font-weight:700;letter-spacing:.04em;vertical-align:middle}
+.chip{display:inline-block;padding:1px 7px;border-radius:3px;border:1px solid var(--line);color:var(--ink2);font-size:.75rem;vertical-align:middle}
+.barra{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+input,select,textarea{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:4px;background:#fff;color:var(--ink);min-width:0}
+textarea{width:100%;min-height:60px}
+.card{background:var(--paper);border:1px solid var(--line);margin-bottom:12px}
+.card>.cab{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line)}
+.card h3{margin:0;font-size:1rem}.card .meta{color:var(--muted);font-size:.83rem}
+.card .acc{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.card.inactivo{opacity:.55}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+th{font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;white-space:nowrap}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.vacio,.error{padding:30px 20px;text-align:center;color:var(--muted);background:var(--paper);border:1px solid var(--line)}
+h2{margin:26px 0 10px;font-size:.8rem;font-weight:600;line-height:1.2;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2)}
+h2:first-child{margin-top:0}
+.ciudad{margin:22px 0 8px;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.err{color:var(--err)}.ok{color:var(--ok)}.aviso{color:var(--brand-ink)}
+tr.fila-err td{background:var(--err-bg)}tr.fila-aviso td{background:var(--warn-bg)}
+.resumen{display:flex;gap:16px;flex-wrap:wrap;margin:12px 0;font-weight:600}
+.panel{background:var(--paper);border:1px solid var(--line);padding:16px;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--ink2)}
+label.check{flex-direction:row;align-items:center;gap:8px}
+dialog{border:1px solid var(--line);border-radius:6px;padding:0;max-width:560px;width:calc(100% - 24px);background:var(--paper);color:var(--ink)}
+dialog::backdrop{background:rgba(0,0,0,.35)}
+dialog form{padding:18px;display:flex;flex-direction:column;gap:12px}
+dialog h3{margin:0}dialog .fila{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+dialog .pie{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.msg{font-size:.88rem;color:var(--err);min-height:1.2em}
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:4px;font-size:.9rem;z-index:9}
+.scroll{overflow-x:auto}
+.login{max-width:420px;margin:40px auto}
+@media(max-width:700px){
+  main{padding:14px}header{padding:12px 14px}nav.tabs{padding:0 8px}
+  .t-resp thead{display:none}.t-resp,.t-resp tbody,.t-resp tr,.t-resp td{display:block;width:100%}
+  .t-resp tr{border-bottom:1px solid var(--line);padding:6px 0}.t-resp td{border:0;padding:3px 14px;display:flex;justify-content:space-between;gap:12px;text-align:right}
+  .t-resp td:before{content:attr(data-t);color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;text-align:left}
+  .t-resp td.full{display:block;text-align:left}.t-resp td.full:before{content:none}
+  .card>.cab{flex-direction:column}.card .acc{justify-content:flex-start}
+  dialog .fila{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<header>
+  <a href="/panel-4c1f6a">← Panel</a><h1>Cotizaciones</h1>
+  <div class="der"><button id="soy" type="button" class="chico" title="Queda registrado en cada cambio de precio">Soy …</button></div>
+</header>
+<nav class="tabs" id="tabs" role="tablist">
+  <button role="tab" data-tab="servicios" aria-selected="true">Servicios</button>
+  <button role="tab" data-tab="hoteles">Hoteles</button>
+  <button role="tab" data-tab="importar">Importar</button>
+  <button role="tab" data-tab="config">Configuración</button>
+  <button role="tab" data-tab="cambios">Registro</button>
+</nav>
+<main id="raiz"><div class="vacio">Cargando…</div></main>
+
+<dialog id="dlg"><form id="dlg-f" method="dialog"></form></dialog>
+
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const token = () => localStorage.getItem('crm_token');
+const usuario = () => { try { return localStorage.getItem('ct_usuario') || ''; } catch { return ''; } };
+const XLSX_URL = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs';
+const TIPOS = { tour: 'Tour', traslado: 'Traslado', tren: 'Tren', entrada: 'Entrada', paquete: 'Paquete' };
+const CATS = { economico: 'Económico', confort: 'Confort', premium: 'Premium' };
+const TEMP = { todas: 'Todo el año', alta: 'Alta', baja: 'Baja' };
+const dinero = (cent, mon) => `${mon === 'PEN' ? 'S/' : 'US$'} ${(cent / 100).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fecha = (iso) => iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : '—';
+const peru = (t) => { if (!t) return '—'; const d = new Date(Date.parse(t.replace(' ', 'T') + 'Z') - 5 * 3600e3); const s = d.toISOString(); return `${s.slice(8, 10)}/${s.slice(5, 7)} ${s.slice(11, 16)}`; };
+const tramo = (t) => t.pax_hasta == null ? `${t.pax_desde}+` : t.pax_desde === t.pax_hasta ? `${t.pax_desde}` : `${t.pax_desde}-${t.pax_hasta}`;
+const hoy = () => new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10);
+
+let tab = (location.hash || '#servicios').slice(1);
+let datos = null;          // tarifario
+let filtro = { ciudad: '', q: '', inactivos: false };
+let imp = null;            // estado del importador
+
+function toast(t) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 2600); }
+
+async function api(ruta, opt = {}) {
+  const r = await fetch('/api/ct/' + ruta, {
+    method: opt.method || 'GET',
+    headers: { 'x-crm-token': token() || '', 'x-crm-usuario': encodeURIComponent(usuario()), ...(opt.body ? { 'content-type': 'application/json' } : {}) },
+    body: opt.body ? JSON.stringify(opt.body) : undefined,
+  });
+  const j = await r.json().catch(() => ({}));
+  if (r.status === 401) { pedirToken('El token no es válido.'); throw new Error('401'); }
+  if (!r.ok) { const e = new Error(j.error || 'Error ' + r.status); e.datos = j; throw e; }
+  return j;
+}
+
+function pedirToken(msg) {
+  $('#raiz').innerHTML = `<div class="vacio login">${esc(msg)}<form id="f" style="display:flex;gap:8px;margin-top:12px"><input id="t" type="password" placeholder="Token del CRM" autocomplete="current-password" style="flex:1"><button class="prim">Entrar</button></form></div>`;
+  $('#f').addEventListener('submit', (e) => { e.preventDefault(); localStorage.setItem('crm_token', $('#t').value.trim()); iniciar(); });
+}
+
+// ---------- quién soy ----------
+function pintarSoy() { $('#soy').textContent = usuario() ? `Soy ${usuario()}` : 'Elegí quién sos'; }
+function elegirSoy() {
+  abrirDialogo(`<h3>¿Quién usa este dispositivo?</h3>
+    <p class="nota" style="margin:0">Queda registrado en cada cambio de precio. Se recuerda en este navegador.</p>
+    <div class="barra"><button type="button" data-n="Lorenzo">Lorenzo</button><button type="button" data-n="Álvaro">Álvaro</button></div>
+    <label>Otro nombre<input name="otro" maxlength="40" value=""></label>
+    <div class="pie"><button value="cancel" formnovalidate>Cancelar</button><button class="prim" value="ok">Guardar</button></div>`,
+    (f) => { const n = f.otro.value.trim(); if (!n) return 'Escribí un nombre o tocá uno de los botones'; localStorage.setItem('ct_usuario', n.slice(0, 40)); pintarSoy(); });
+  document.querySelectorAll('#dlg [data-n]').forEach((b) => b.addEventListener('click', () => { localStorage.setItem('ct_usuario', b.dataset.n); pintarSoy(); $('#dlg').close(); }));
+}
+$('#soy').addEventListener('click', elegirSoy);
+
+// ---------- diálogo genérico ----------
+// html = contenido del form; alGuardar(form) puede devolver un texto de error o una promesa.
+function abrirDialogo(html, alGuardar) {
+  const dlg = $('#dlg'), f = $('#dlg-f');
+  f.innerHTML = html + '<div class="msg" id="dlg-msg"></div>';
+  f.onsubmit = async (e) => {
+    const btn = e.submitter;
+    if (btn && btn.value === 'cancel') return;
+    e.preventDefault();
+    if (btn) btn.disabled = true;
+    try {
+      const err = await alGuardar(f);
+      if (err) { $('#dlg-msg').textContent = err; return; }
+      dlg.close();
+    } catch (x) { $('#dlg-msg').textContent = x.message; }
+    finally { if (btn) btn.disabled = false; }
+  };
+  dlg.showModal();
+  const primero = f.querySelector('input:not([type=hidden]),select,textarea'); if (primero) primero.focus();
+}
+
+// ---------- pestañas ----------
+function elegirTab(t) {
+  tab = t; history.replaceState(null, '', '#' + t);
+  document.querySelectorAll('#tabs button').forEach((b) => b.setAttribute('aria-selected', b.dataset.tab === t));
+  pintar();
+}
+document.querySelectorAll('#tabs button').forEach((b) => b.addEventListener('click', () => elegirTab(b.dataset.tab)));
+
+async function cargarTarifario() { datos = await api('tarifario'); }
+
+async function pintar() {
+  const raiz = $('#raiz');
+  try {
+    if (tab === 'servicios' || tab === 'hoteles') { if (!datos) await cargarTarifario(); return tab === 'servicios' ? pintarServicios() : pintarHoteles(); }
+    if (tab === 'importar') return pintarImportar();
+    if (tab === 'config') return pintarConfig();
+    if (tab === 'cambios') return pintarCambios();
+  } catch (e) { if (e.message !== '401') raiz.innerHTML = `<div class="error">${esc(e.message)}</div>`; }
+}
+
+function bannerPrueba() {
+  const n = datos?.resumen?.ilustrativas || 0;
+  return n ? `<div class="banner">Hay ${n} tarifas de PRUEBA (precios inventados).<small>Toda cotización que use una sale con el cartel "PRECIOS DE PRUEBA" y no se puede mandar al cliente. Para cargar las reales: pestaña Importar, con "Reemplazar las de prueba".</small></div>` : '';
+}
+
+function barraFiltro(lista, extra) {
+  const ciudades = [...new Set(lista.map((x) => x.ciudad))].sort((a, b) => a.localeCompare(b, 'es'));
+  return `<div class="barra">
+    <select id="f-ciudad"><option value="">Todas las ciudades</option>${ciudades.map((c) => `<option ${c === filtro.ciudad ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
+    <input id="f-q" type="search" placeholder="Buscar…" value="${esc(filtro.q)}">
+    <label class="check"><input id="f-in" type="checkbox" ${filtro.inactivos ? 'checked' : ''}> Ver inactivos</label>
+    <span style="flex:1"></span>${extra}</div>`;
+}
+function engancharFiltro() {
+  $('#f-ciudad').addEventListener('change', (e) => { filtro.ciudad = e.target.value; pintar(); });
+  $('#f-q').addEventListener('input', (e) => { filtro.q = e.target.value; clearTimeout(engancharFiltro.t); engancharFiltro.t = setTimeout(() => { pintar(); const q = $('#f-q'); q.focus(); q.setSelectionRange(q.value.length, q.value.length); }, 250); });
+  $('#f-in').addEventListener('change', (e) => { filtro.inactivos = e.target.checked; pintar(); });
+}
+const pasaFiltro = (x) => (!filtro.ciudad || x.ciudad === filtro.ciudad) && (filtro.inactivos || x.activo) &&
+  (!filtro.q || (x.nombre + ' ' + x.ciudad).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes(filtro.q.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')));
+
+function porCiudad(lista, pintarUno) {
+  const grupos = new Map();
+  for (const x of lista) (grupos.get(x.ciudad) || grupos.set(x.ciudad, []).get(x.ciudad)).push(x);
+  return [...grupos.entries()].sort((a, b) => a[0].localeCompare(b[0], 'es')).map(([c, xs]) => `<div class="ciudad">${esc(c)} · ${xs.length}</div>${xs.map(pintarUno).join('')}`).join('');
+}
+
+function filaVigencia(t) {
+  const vencida = t.vigente_hasta < hoy();
+  return `${fecha(t.vigente_desde)} al ${fecha(t.vigente_hasta)}${vencida ? ' <span class="err">(vencida)</span>' : ''}`;
+}
+
+// ---------- servicios ----------
+function pintarServicios() {
+  const lista = datos.servicios.filter(pasaFiltro);
+  $('#raiz').innerHTML = bannerPrueba() + barraFiltro(datos.servicios, '<button class="prim" id="nuevo-serv" type="button">+ Servicio</button>') +
+    (lista.length ? porCiudad(lista, (s) => `
+    <div class="card ${s.activo ? '' : 'inactivo'}">
+      <div class="cab"><div><h3>${esc(s.nombre)} ${s.activo ? '' : '<span class="chip">inactivo</span>'}</h3>
+        <div class="meta">${TIPOS[s.tipo]} · ${esc(s.duracion || 'sin duración')} · mínimo ${s.pax_min} pax ${s.precio_es_venta ? ' · <span class="chip" title="Lo opera Luna Llena: la tarifa ya es precio de venta, no se le suma margen">precio de venta</span>' : ''}</div>
+        ${s.incluye ? `<div class="meta">Incluye: ${esc(s.incluye)}</div>` : ''}${s.no_incluye ? `<div class="meta">No incluye: ${esc(s.no_incluye)}</div>` : ''}</div>
+        <div class="acc"><button class="chico" data-ed-serv="${s.id}" type="button">Editar</button><button class="chico" data-nueva-tar="${s.id}" type="button">+ Tarifa</button></div></div>
+      ${s.tarifas.length ? `<table class="t-resp"><thead><tr><th>Pasajeros</th><th>Temporada</th><th class="num">Neto por persona</th><th>Vigencia</th><th></th></tr></thead><tbody>
+        ${s.tarifas.map((t) => `<tr><td data-t="Pasajeros">${tramo(t)} ${t.es_ilustrativa ? '<span class="prueba">PRUEBA</span>' : ''}</td><td data-t="Temporada">${TEMP[t.temporada]}</td>
+          <td data-t="Neto" class="num">${dinero(t.neto_cent, t.moneda)}</td><td data-t="Vigencia">${filaVigencia(t)}</td>
+          <td class="num"><button class="link" data-ed-tar="${t.id}" type="button">Editar</button><button class="link" data-hist="tarifa:${t.id}" type="button">Historial</button><button class="link" data-del-tar="${t.id}" type="button">Borrar</button></td></tr>`).join('')}
+      </tbody></table>` : '<p class="nota" style="padding:10px 14px;margin:0">Sin tarifas: no se puede cotizar.</p>'}
+    </div>`) : '<div class="vacio">No hay servicios con ese filtro.</div>');
+  engancharFiltro();
+  $('#nuevo-serv').addEventListener('click', () => editarServicio(null));
+  document.querySelectorAll('[data-ed-serv]').forEach((b) => b.addEventListener('click', () => editarServicio(datos.servicios.find((s) => s.id == b.dataset.edServ))));
+  document.querySelectorAll('[data-nueva-tar]').forEach((b) => b.addEventListener('click', () => editarTarifa('servicio', datos.servicios.find((s) => s.id == b.dataset.nuevaTar), null)));
+  document.querySelectorAll('[data-ed-tar]').forEach((b) => b.addEventListener('click', () => { const s = datos.servicios.find((x) => x.tarifas.some((t) => t.id == b.dataset.edTar)); editarTarifa('servicio', s, s.tarifas.find((t) => t.id == b.dataset.edTar)); }));
+  document.querySelectorAll('[data-del-tar]').forEach((b) => b.addEventListener('click', () => borrarTarifa('tarifas', b.dataset.delTar)));
+  engancharHistorial();
+}
+
+function editarServicio(s) {
+  const v = s || { tipo: 'tour', pax_min: 1, activo: 1 };
+  abrirDialogo(`<h3>${s ? 'Editar servicio' : 'Nuevo servicio'}</h3>
+    <label>Nombre<input name="nombre" required maxlength="160" value="${esc(v.nombre)}"></label>
+    <div class="fila"><label>Ciudad<input name="ciudad" required maxlength="60" value="${esc(v.ciudad)}" list="ciudades"></label>
+      <label>Tipo<select name="tipo">${Object.entries(TIPOS).map(([k, n]) => `<option value="${k}" ${k === v.tipo ? 'selected' : ''}>${n}</option>`).join('')}</select></label></div>
+    <div class="fila"><label>Duración<input name="duracion" maxlength="80" value="${esc(v.duracion)}" placeholder="Medio día, 2D/1N…"></label>
+      <label>Mínimo de pasajeros<input name="pax_min" type="number" min="1" step="1" value="${esc(v.pax_min)}"></label></div>
+    <label>Qué incluye<textarea name="incluye">${esc(v.incluye)}</textarea></label>
+    <label>Qué no incluye<textarea name="no_incluye">${esc(v.no_incluye)}</textarea></label>
+    <label class="check"><input type="checkbox" name="precio_es_venta" ${v.precio_es_venta ? 'checked' : ''}> Lo opera Luna Llena: la tarifa ya es precio de venta (sin margen)</label>
+    ${s ? `<label class="check"><input type="checkbox" name="activo" ${v.activo ? 'checked' : ''}> Activo (se puede cotizar)</label>` : ''}
+    <datalist id="ciudades">${[...new Set([...datos.servicios, ...datos.hoteles].map((x) => x.ciudad))].map((c) => `<option>${esc(c)}</option>`).join('')}</datalist>
+    <div class="pie"><button value="cancel" formnovalidate>Cancelar</button><button class="prim" value="ok">Guardar</button></div>`,
+    async (f) => {
+      await api(s ? `servicios/${s.id}` : 'servicios', { method: s ? 'PUT' : 'POST', body: { nombre: f.nombre.value, ciudad: f.ciudad.value, tipo: f.tipo.value, duracion: f.duracion.value, pax_min: Number(f.pax_min.value || 1), incluye: f.incluye.value, no_incluye: f.no_incluye.value, precio_es_venta: f.precio_es_venta.checked, activo: s ? f.activo.checked : true } });
+      await cargarTarifario(); pintar(); toast('Servicio guardado');
+    });
+}
+
+// clase = 'servicio' | 'hotel'; padre = servicio u hotel; t = tarifa o null
+function editarTarifa(clase, padre, t) {
+  if (!usuario()) { elegirSoy(); return; }
+  const v = t || { moneda: 'USD', temporada: 'todas', pax_desde: 1, pax_hasta: null, habitacion: 'DBL', vigente_desde: hoy(), vigente_hasta: `${hoy().slice(0, 4)}-12-31`, es_ilustrativa: 0 };
+  abrirDialogo(`<h3>${t ? 'Editar tarifa' : 'Nueva tarifa'}</h3><p class="nota" style="margin:0">${esc(padre.nombre)} · ${esc(padre.ciudad)}</p>
+    ${clase === 'hotel'
+      ? `<label>Habitación<select name="habitacion">${['SGL', 'DBL', 'TPL'].map((h) => `<option ${h === v.habitacion ? 'selected' : ''}>${h}</option>`).join('')}</select></label>`
+      : `<div class="fila"><label>Pasajeros desde<input name="pax_desde" type="number" min="1" step="1" required value="${esc(v.pax_desde)}"></label>
+         <label>Pasajeros hasta<input name="pax_hasta" type="number" min="1" step="1" value="${esc(v.pax_hasta ?? '')}" placeholder="vacío = y más"></label></div>`}
+    <div class="fila"><label>Precio neto ${clase === 'hotel' ? 'por habitación y noche' : 'por persona'}<input name="precio_neto" inputmode="decimal" required value="${t ? (t.neto_cent / 100).toFixed(2) : ''}"></label>
+      <label>Moneda<select name="moneda">${['USD', 'PEN'].map((m) => `<option ${m === v.moneda ? 'selected' : ''}>${m}</option>`).join('')}</select></label></div>
+    <label>Temporada<select name="temporada">${Object.entries(TEMP).map(([k, n]) => `<option value="${k}" ${k === v.temporada ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+    <div class="fila"><label>Vigente desde<input name="vigente_desde" type="date" required value="${esc(v.vigente_desde)}"></label>
+      <label>Vigente hasta<input name="vigente_hasta" type="date" required value="${esc(v.vigente_hasta)}"></label></div>
+    <label class="check"><input type="checkbox" name="es_ilustrativa" ${v.es_ilustrativa ? 'checked' : ''}> Tarifa de prueba (precio inventado)</label>
+    ${t ? '<label>Motivo del cambio (opcional)<input name="motivo" maxlength="200"></label>' : ''}
+    <p class="nota" style="margin:0">Queda registrado: ${esc(usuario())}, ahora.</p>
+    <div class="pie"><button value="cancel" formnovalidate>Cancelar</button><button class="prim" value="ok">Guardar</button></div>`,
+    async (f) => {
+      const body = { precio_neto: f.precio_neto.value, moneda: f.moneda.value, temporada: f.temporada.value, vigente_desde: f.vigente_desde.value, vigente_hasta: f.vigente_hasta.value, es_ilustrativa: f.es_ilustrativa.checked, motivo: f.motivo?.value };
+      if (clase === 'hotel') Object.assign(body, { hotel_id: padre.id, habitacion: f.habitacion.value });
+      else Object.assign(body, { servicio_id: padre.id, pax_desde: f.pax_desde.value, pax_hasta: f.pax_hasta.value });
+      const ruta = clase === 'hotel' ? 'hotel-tarifas' : 'tarifas';
+      await api(t ? `${ruta}/${t.id}` : ruta, { method: t ? 'PUT' : 'POST', body });
+      await cargarTarifario(); pintar(); toast('Tarifa guardada');
+    });
+}
+
+async function borrarTarifa(ruta, id) {
+  if (!usuario()) { elegirSoy(); return; }
+  if (!confirm('¿Borrar esta tarifa? Queda en el registro de cambios.')) return;
+  try { await api(`${ruta}/${id}`, { method: 'DELETE' }); await cargarTarifario(); pintar(); toast('Tarifa borrada'); } catch (e) { alert(e.message); }
+}
+
+function engancharHistorial() {
+  document.querySelectorAll('[data-hist]').forEach((b) => b.addEventListener('click', async () => {
+    const [ent, id] = b.dataset.hist.split(':');
+    const j = await api(`cambios?entidad=${ent}&id=${id}`);
+    abrirDialogo(`<h3>Historial de la tarifa</h3>${j.cambios.length ? `<table><tbody>${j.cambios.map((c) => `<tr><td>${peru(c.creado_en)}</td><td>${esc(c.por)}</td><td>${esc(c.antes || '—')} → ${esc(c.despues || 'borrada')}${c.motivo ? `<br><small>${esc(c.motivo)}</small>` : ''}</td></tr>`).join('')}</tbody></table>` : '<p class="nota">Sin cambios de precio registrados (viene del seed o de una importación).</p>'}
+      <div class="pie"><button value="cancel" formnovalidate>Cerrar</button></div>`, () => {});
+  }));
+}
+
+// ---------- hoteles ----------
+function pintarHoteles() {
+  const lista = datos.hoteles.filter(pasaFiltro);
+  $('#raiz').innerHTML = bannerPrueba() + barraFiltro(datos.hoteles, '<button class="prim" id="nuevo-hotel" type="button">+ Hotel</button>') +
+    (lista.length ? porCiudad(lista, (h) => `
+    <div class="card ${h.activo ? '' : 'inactivo'}">
+      <div class="cab"><div><h3>${esc(h.nombre)} ${h.es_ilustrativo ? '<span class="prueba">PRUEBA</span>' : ''} ${h.activo ? '' : '<span class="chip">inactivo</span>'}</h3>
+        <div class="meta">${CATS[h.categoria]} · precio por habitación y por noche${h.precio_es_venta ? ' · <span class="chip" title="La tarifa ya es precio de venta: no se le suma margen">precio de venta</span>' : ''}</div></div>
+        <div class="acc"><button class="chico" data-ed-hotel="${h.id}" type="button">Editar</button><button class="chico" data-nueva-htar="${h.id}" type="button">+ Tarifa</button></div></div>
+      ${h.tarifas.length ? `<table class="t-resp"><thead><tr><th>Habitación</th><th>Temporada</th><th class="num">Neto por noche</th><th>Vigencia</th><th></th></tr></thead><tbody>
+        ${h.tarifas.map((t) => `<tr><td data-t="Habitación">${t.habitacion} ${t.es_ilustrativa ? '<span class="prueba">PRUEBA</span>' : ''}</td><td data-t="Temporada">${TEMP[t.temporada]}</td>
+          <td data-t="Neto" class="num">${dinero(t.neto_cent, t.moneda)}</td><td data-t="Vigencia">${filaVigencia(t)}</td>
+          <td class="num"><button class="link" data-ed-htar="${t.id}" type="button">Editar</button><button class="link" data-hist="hotel_tarifa:${t.id}" type="button">Historial</button><button class="link" data-del-htar="${t.id}" type="button">Borrar</button></td></tr>`).join('')}
+      </tbody></table>` : '<p class="nota" style="padding:10px 14px;margin:0">Sin tarifas.</p>'}
+    </div>`) : '<div class="vacio">No hay hoteles con ese filtro.</div>');
+  engancharFiltro();
+  $('#nuevo-hotel').addEventListener('click', () => editarHotel(null));
+  document.querySelectorAll('[data-ed-hotel]').forEach((b) => b.addEventListener('click', () => editarHotel(datos.hoteles.find((h) => h.id == b.dataset.edHotel))));
+  document.querySelectorAll('[data-nueva-htar]').forEach((b) => b.addEventListener('click', () => editarTarifa('hotel', datos.hoteles.find((h) => h.id == b.dataset.nuevaHtar), null)));
+  document.querySelectorAll('[data-ed-htar]').forEach((b) => b.addEventListener('click', () => { const h = datos.hoteles.find((x) => x.tarifas.some((t) => t.id == b.dataset.edHtar)); editarTarifa('hotel', h, h.tarifas.find((t) => t.id == b.dataset.edHtar)); }));
+  document.querySelectorAll('[data-del-htar]').forEach((b) => b.addEventListener('click', () => borrarTarifa('hotel-tarifas', b.dataset.delHtar)));
+  engancharHistorial();
+}
+
+function editarHotel(h) {
+  const v = h || { categoria: 'confort', activo: 1 };
+  abrirDialogo(`<h3>${h ? 'Editar hotel' : 'Nuevo hotel'}</h3>
+    <label>Nombre<input name="nombre" required maxlength="160" value="${esc(v.nombre)}"></label>
+    <div class="fila"><label>Ciudad<input name="ciudad" required maxlength="60" value="${esc(v.ciudad)}" list="ciudades"></label>
+      <label>Categoría<select name="categoria">${Object.entries(CATS).map(([k, n]) => `<option value="${k}" ${k === v.categoria ? 'selected' : ''}>${n}</option>`).join('')}</select></label></div>
+    <label class="check"><input type="checkbox" name="precio_es_venta" ${v.precio_es_venta ? 'checked' : ''}> La tarifa ya es precio de venta (sin margen)</label>
+    <label class="check"><input type="checkbox" name="es_ilustrativo" ${v.es_ilustrativo ? 'checked' : ''}> Hotel de prueba (inventado)</label>
+    ${h ? `<label class="check"><input type="checkbox" name="activo" ${v.activo ? 'checked' : ''}> Activo (se puede cotizar)</label>` : ''}
+    <datalist id="ciudades">${[...new Set([...datos.servicios, ...datos.hoteles].map((x) => x.ciudad))].map((c) => `<option>${esc(c)}</option>`).join('')}</datalist>
+    <div class="pie"><button value="cancel" formnovalidate>Cancelar</button><button class="prim" value="ok">Guardar</button></div>`,
+    async (f) => {
+      await api(h ? `hoteles/${h.id}` : 'hoteles', { method: h ? 'PUT' : 'POST', body: { nombre: f.nombre.value, ciudad: f.ciudad.value, categoria: f.categoria.value, es_ilustrativo: f.es_ilustrativo.checked, precio_es_venta: f.precio_es_venta.checked, activo: h ? f.activo.checked : true } });
+      await cargarTarifario(); pintar(); toast('Hotel guardado');
+    });
+}
+
+// ---------- importar ----------
+const COLS = ['tipo', 'nombre', 'ciudad', 'categoria_hotel', 'habitacion', 'precio_neto', 'moneda', 'pax_desde', 'pax_hasta', 'temporada', 'vigente_desde', 'vigente_hasta', 'precio_es_venta', 'duracion', 'incluye', 'no_incluye', 'pax_min', 'es_ilustrativa'];
+const AYUDA = {
+  tipo: 'tour, traslado, tren, entrada, paquete u hotel', nombre: 'Nombre del servicio o del hotel', ciudad: 'Cusco, Lima, Puno, Aguas Calientes…',
+  categoria_hotel: 'Solo hoteles: economico, confort o premium', habitacion: 'Solo hoteles: SGL, DBL o TPL (precio por habitación y por noche)',
+  precio_neto: 'Servicios: por persona. Hoteles: por habitación y noche. Ej. 45 o 45,50', moneda: 'USD o PEN',
+  pax_desde: 'Tramo de pasajeros: desde (vacío = 1)', pax_hasta: 'Tramo de pasajeros: hasta (vacío = y más, ej. 7+)', temporada: 'todas, alta o baja (vacío = todas)',
+  vigente_desde: 'AAAA-MM-DD o DD/MM/AAAA', vigente_hasta: 'AAAA-MM-DD o DD/MM/AAAA', precio_es_venta: '"si" si el precio ya es de venta (lo opera o lo vende Luna Llena): no se le suma margen',
+  duracion: 'Opcional: "Medio día", "2D/1N"', incluye: 'Opcional', no_incluye: 'Opcional', pax_min: 'Opcional: mínimo de pasajeros', es_ilustrativa: 'Opcional: "si" para tarifas de prueba',
+};
+const EJEMPLOS = [
+  ['tour', 'City Tour Cusco', 'Cusco', '', '', '28', 'USD', 2, 3, 'todas', '2027-01-01', '2027-12-31', 'si', 'Medio día', 'Guía y transporte', 'Boleto turístico', 1, ''],
+  ['tour', 'City Tour Cusco', 'Cusco', '', '', '22', 'USD', 4, '', 'todas', '2027-01-01', '2027-12-31', 'si', '', '', '', '', ''],
+  ['entrada', 'Circuito Mágico del Agua', 'Lima', '', '', '15', 'PEN', 1, '', 'todas', '2027-01-01', '2027-12-31', '', '', '', '', '', ''],
+  ['hotel', 'Hotel Ejemplo', 'Cusco', 'confort', 'DBL', '95', 'USD', '', '', 'alta', '2027-06-01', '2027-08-31', '', '', '', '', '', ''],
+];
+
+let XLSXmod = null;
+async function xlsx() { if (!XLSXmod) XLSXmod = await import(XLSX_URL); return XLSXmod; }
+
+async function bajarPlantilla(formato) {
+  const X = await xlsx();
+  const wb = X.utils.book_new();
+  X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet([COLS]), 'Tarifas');
+  X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet([COLS, ...EJEMPLOS]), 'Ejemplos');
+  X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet([['Columna', 'Qué va'], ...COLS.map((c) => [c, AYUDA[c]]),
+    [], ['Una fila = una tarifa. Varias filas con el mismo tipo, ciudad y nombre son el mismo servicio (un tramo de pasajeros o temporada cada una).'],
+    ['Los hoteles van con una fila por habitación (SGL, DBL, TPL).'], ['Se carga la hoja "Tarifas". La hoja "Ejemplos" no se carga.']]), 'Instrucciones');
+  if (formato === 'csv') {
+    const csv = X.utils.sheet_to_csv(X.utils.aoa_to_sheet([COLS, ...EJEMPLOS]));
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv' })); a.download = 'plantilla-tarifas-ejemplo.csv'; a.click();
+  } else X.writeFile(wb, 'plantilla-tarifas-luna-llena.xlsx');
+}
+
+async function leerArchivo(file) {
+  const X = await xlsx();
+  const buf = await file.arrayBuffer();
+  const esCsv = /\.csv$/i.test(file.name) || file.type === 'text/csv';
+  // CSV: raw para que "01/11/2026" no se lea como fecha de EE. UU.
+  // Excel: fechas como Date con la fecha local que se ve en la planilla (el número de serie se corre por la zona horaria).
+  const wb = esCsv ? X.read(new TextDecoder('utf-8').decode(buf), { type: 'string', raw: true }) : X.read(buf, { type: 'array', cellDates: true });
+  const hoja = wb.SheetNames.find((n) => /^tarifas$/i.test(n.trim())) || wb.SheetNames[0];
+  const dosD = (n) => String(n).padStart(2, '0');
+  const filas = X.utils.sheet_to_json(wb.Sheets[hoja], { defval: '', raw: true, blankrows: true }).map((f) => {
+    for (const k of Object.keys(f)) if (f[k] instanceof Date) { const d = f[k]; f[k] = `${d.getFullYear()}-${dosD(d.getMonth() + 1)}-${dosD(d.getDate())}`; }
+    return f;
+  });
+  return { hoja, filas };
+}
+
+function pintarImportar() {
+  $('#raiz').innerHTML = `
+    <div class="panel"><h2>1. Plantilla</h2>
+      <p class="nota">Una fila por tarifa. Se carga la hoja "Tarifas"; en "Ejemplos" e "Instrucciones" está cómo completarla. Excel (.xlsx) o CSV.</p>
+      <div class="barra"><button type="button" id="pl-x">Descargar plantilla Excel</button><button type="button" id="pl-c">Ejemplo en CSV</button></div></div>
+    <div class="panel"><h2>2. Subir y revisar</h2>
+      <div class="grid"><label>Archivo<input type="file" id="arch" accept=".xlsx,.xls,.csv"></label>
+        <label>Fuente (de dónde salen los precios)<input id="fuente" maxlength="120" placeholder="Tarifario proveedor X 2027"></label></div>
+      <label class="check" style="margin-top:12px"><input type="checkbox" id="reemp"> Reemplazar las de prueba (al cargar borra todas las tarifas de prueba y desactiva los hoteles de prueba y los servicios que queden sin tarifa)</label>
+      <div class="barra" style="margin-top:12px"><button class="prim" type="button" id="revisar" disabled>Revisar</button></div>
+      <div id="vista"></div></div>`;
+  $('#pl-x').addEventListener('click', () => bajarPlantilla('xlsx').catch((e) => alert('No se pudo armar la plantilla: ' + e.message)));
+  $('#pl-c').addEventListener('click', () => bajarPlantilla('csv').catch((e) => alert(e.message)));
+  $('#arch').addEventListener('change', async (e) => {
+    const f = e.target.files[0]; imp = null; $('#vista').innerHTML = ''; $('#revisar').disabled = !f;
+    if (f && !$('#fuente').value) $('#fuente').value = f.name.replace(/\.[^.]+$/, '');
+  });
+  $('#reemp').addEventListener('change', () => { if (imp) revisar(); });
+  $('#revisar').addEventListener('click', revisar);
+}
+
+async function revisar() {
+  const f = $('#arch').files[0]; if (!f) return;
+  $('#vista').innerHTML = '<p class="nota">Revisando…</p>';
+  try {
+    const { hoja, filas } = await leerArchivo(f);
+    const j = await api('importar', { method: 'POST', body: { filas, aplicar: false, reemplazar_ilustrativas: $('#reemp').checked } });
+    imp = { ...j, crudas: filas, hoja };
+    pintarVista();
+  } catch (e) { if (e.message !== '401') $('#vista').innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+}
+
+function pintarVista() {
+  const { resumen, filas, hoja } = imp;
+  const r = resumen;
+  $('#vista').innerHTML = `<div class="resumen"><span>Hoja "${esc(hoja)}": ${r.total} filas</span><span class="ok">${r.ok} bien</span><span class="${r.con_error ? 'err' : ''}">${r.con_error} con error</span><span>${r.servicios} servicios · ${r.hoteles} hoteles</span></div>
+    ${r.con_error ? '<p class="err">Corregí las filas en rojo en el archivo y volvé a subirlo. No se carga nada hasta que no haya errores.</p>' : ''}
+    <div class="scroll"><table class="t-resp"><thead><tr><th>Fila</th><th>Tipo</th><th>Nombre</th><th>Ciudad</th><th>Pax / hab.</th><th>Temporada</th><th class="num">Neto</th><th>Vigencia</th><th>Revisión</th></tr></thead><tbody>
+      ${filas.map((x) => { const d = x.d; return `<tr class="${x.errores.length ? 'fila-err' : x.avisos.length ? 'fila-aviso' : ''}">
+        <td data-t="Fila">${x.n}</td><td data-t="Tipo">${esc(d.tipo || '?')}${d.es_ilustrativa ? ' <span class="prueba">PRUEBA</span>' : ''}</td><td data-t="Nombre">${esc(d.nombre)}</td><td data-t="Ciudad">${esc(d.ciudad)}</td>
+        <td data-t="Pax / hab.">${d.clase === 'hotel' ? esc((CATS[d.categoria] || '?') + ' ' + (d.habitacion || '?')) : (d.pax_desde ? tramo(d) : '?')}</td><td data-t="Temporada">${esc(TEMP[d.temporada] || '?')}</td>
+        <td data-t="Neto" class="num">${d.neto_cent != null && d.moneda ? dinero(d.neto_cent, d.moneda) : '?'}</td><td data-t="Vigencia">${d.vigente_desde ? fecha(d.vigente_desde) : '?'} al ${d.vigente_hasta ? fecha(d.vigente_hasta) : '?'}</td>
+        <td data-t="Revisión" class="full">${x.errores.map((e) => `<div class="err">✗ ${esc(e)}</div>`).join('')}${x.avisos.map((e) => `<div class="aviso">! ${esc(e)}</div>`).join('')}${!x.errores.length && !x.avisos.length ? '<span class="ok">✓</span>' : ''}</td></tr>`; }).join('')}
+    </tbody></table></div>
+    <div class="barra" style="margin-top:14px"><button class="prim" type="button" id="aplicar" ${r.con_error || !r.total ? 'disabled' : ''}>Cargar ${r.total} tarifas${$('#reemp').checked ? ' y borrar las de prueba' : ''}</button></div>`;
+  $('#aplicar').addEventListener('click', aplicar);
+}
+
+async function aplicar() {
+  if (!usuario()) { elegirSoy(); return; }
+  const reemp = $('#reemp').checked;
+  if (!confirm(`¿Cargar ${imp.resumen.total} tarifas${reemp ? ' y borrar TODAS las tarifas de prueba' : ''}?`)) return;
+  $('#aplicar').disabled = true;
+  try {
+    await api('importar', { method: 'POST', body: { filas: imp.crudas, aplicar: true, reemplazar_ilustrativas: reemp, fuente: $('#fuente').value } });
+    datos = null; imp = null;
+    toast('Tarifas cargadas'); elegirTab('servicios');
+  } catch (e) {
+    if (e.datos?.filas) { imp = { ...imp, ...e.datos }; pintarVista(); }
+    alert(e.message);
+  }
+}
+
+// ---------- configuración ----------
+async function pintarConfig() {
+  const j = await api('config');
+  const c = j.config;
+  $('#raiz').innerHTML = `<form id="fc">
+    <div class="panel"><h2>Valores</h2><p class="nota">Se usan al calcular cada cotización y quedan guardados en ella (si después cambian, las cotizaciones viejas no cambian). Un valor "de prueba" hace que la cotización salga con el cartel PRECIOS DE PRUEBA hasta que alguien lo confirme guardándolo.</p>
+      <div class="grid">${Object.entries(c).map(([k, x]) => `<label>${esc(x.nombre)} ${x.es_prueba ? '<span class="prueba">PRUEBA</span>' : ''}
+        <input name="${k}" inputmode="decimal" required value="${esc(x.valor ?? '')}">
+        <small class="nota" style="margin:0">${x.actualizado_por ? `Lo confirmó ${esc(x.actualizado_por)} el ${peru(x.actualizado_en)}` : x.es_prueba ? 'Sin confirmar' : 'Valor inicial'}</small></label>`).join('')}</div></div>
+    <div class="panel"><h2>Temporadas</h2><p class="nota">Rangos que se repiten todos los años (pueden cruzar el año, ej. 20/12 al 05/01). Los días fuera de una temporada alta son temporada baja. ${j.temporadas.some((t) => t.es_prueba) ? '<span class="prueba">PRUEBA</span> Las fechas actuales son de prueba.' : ''}</p>
+      <div id="temps"></div><button type="button" id="mas-temp" class="chico">+ Rango</button></div>
+    <div class="barra"><button class="prim">Guardar y confirmar</button><span class="msg" id="cmsg"></span></div></form>`;
+  const md2 = (md) => md ? `${md.slice(3)}/${md.slice(0, 2)}` : '';
+  const filaTemp = (t = { temporada: 'alta', desde_md: '', hasta_md: '', nota: '' }) => {
+    const d = document.createElement('div'); d.className = 'barra temp';
+    d.innerHTML = `<select name="t-temp"><option value="alta" ${t.temporada === 'alta' ? 'selected' : ''}>Alta</option><option value="baja" ${t.temporada === 'baja' ? 'selected' : ''}>Baja</option></select>
+      <input name="t-desde" placeholder="DD/MM" size="6" value="${md2(t.desde_md)}"> al <input name="t-hasta" placeholder="DD/MM" size="6" value="${md2(t.hasta_md)}">
+      <input name="t-nota" placeholder="Nota" value="${esc(t.nota || '')}" style="flex:1;min-width:140px"><button type="button" class="link">Quitar</button>`;
+    d.querySelector('.link').addEventListener('click', () => d.remove());
+    $('#temps').appendChild(d);
+  };
+  j.temporadas.forEach(filaTemp);
+  $('#mas-temp').addEventListener('click', () => filaTemp());
+  $('#fc').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!usuario()) { elegirSoy(); return; }
+    const aMd = (s) => { const m = String(s).trim().match(/^(\d{1,2})[/-](\d{1,2})$/); return m ? `${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : 'x'; };
+    const valores = {}; for (const k of Object.keys(c)) valores[k] = e.target[k].value;
+    const temporadas = [...document.querySelectorAll('.temp')].map((d) => ({ temporada: d.querySelector('[name=t-temp]').value, desde_md: aMd(d.querySelector('[name=t-desde]').value), hasta_md: aMd(d.querySelector('[name=t-hasta]').value), nota: d.querySelector('[name=t-nota]').value }));
+    try { await api('config', { method: 'PUT', body: { valores, temporadas } }); toast('Configuración guardada'); pintarConfig(); }
+    catch (x) { $('#cmsg').textContent = x.message; }
+  });
+}
+
+// ---------- registro ----------
+async function pintarCambios() {
+  const j = await api('cambios');
+  const ENT = { tarifa: 'Tarifa', hotel_tarifa: 'Tarifa de hotel', config: 'Configuración', importacion: 'Importación', linea: 'Cotización' };
+  $('#raiz').innerHTML = `<p class="nota">Últimos 100 cambios de precio, configuración e importaciones.</p>` + (j.cambios.length ? `<div class="card"><table class="t-resp"><thead><tr><th>Cuándo</th><th>Quién</th><th>Qué</th><th>Antes</th><th>Después</th></tr></thead><tbody>
+    ${j.cambios.map((c) => `<tr><td data-t="Cuándo">${peru(c.creado_en)}</td><td data-t="Quién">${esc(c.por)}</td><td data-t="Qué">${esc(ENT[c.entidad] || c.entidad)} ${esc(c.entidad_id)} · ${esc(c.campo)}${c.motivo ? `<br><small>${esc(c.motivo)}</small>` : ''}</td><td data-t="Antes">${esc(c.antes || '—')}</td><td data-t="Después">${esc(c.despues || '—')}</td></tr>`).join('')}
+  </tbody></table></div>` : '<div class="vacio">Todavía no hay cambios.</div>');
+}
+
+async function iniciar() {
+  if (!token()) return pedirToken('Entrá con el mismo token del panel.');
+  pintarSoy();
+  document.querySelectorAll('#tabs button').forEach((b) => b.setAttribute('aria-selected', b.dataset.tab === tab));
+  await pintar();
+  if (!usuario() && token()) elegirSoy();
+}
+iniciar();
+</script>
+</body>
+</html>
