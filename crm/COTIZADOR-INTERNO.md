@@ -46,3 +46,16 @@ Cotización aprobada → "Preparar propuesta web": texto para el armador (Cotiza
 2. Seed de prueba (opcional): `npx wrangler d1 execute crm-plantilla --remote --file crm/seed-cotizador-ilustrativo.sql`
 3. Tarifas reales: pestaña Importar con "Reemplazar las de prueba" (no van en git: el repo es público).
 4. Deploy del CRM con `deploy-demo.py` (flags de Luna Llena) y diff contra producción, como siempre.
+
+## Itinerarios y armado automático (Fase 3 del plan Cotizaciones en el CRM)
+
+- Pestaña **Itinerarios**: "Actualizar desde la web" lee `/data/catalogo.json` y las fichas de la web publicada (`WEB_URL`,
+  por defecto lunallenatravel.vercel.app) en tandas de 30, muestra qué cambió y recién ahí aplica (`ct_web_*`, migración 060).
+  Une solos los servicios del tarifario con su tour por nombre (`ct_servicios.web_id`); se corrigen en la misma pestaña.
+- Armado (`_lib/ct-armado.js`, funciones puras con `crm/probar-armado.mjs`): paquete publicado tal cual (mismas ciudades y días),
+  a medida (hoteles del tarifario + tours en los días libres), dos borradores A/B si los días no alcanzan, destino que la web no
+  tiene = línea ILUSTRATIVA sin precio. La IA (`ct-armado-ia.js`, solo con ANTHROPIC_API_KEY) propone tours por clave sin ver
+  precios; el código valida y completa. Sin IA queda el orden base.
+- Precio de la web = sugerido: la línea sale "sin confirmar" y, junto con las ilustraciones y el precio del paquete, **bloquea
+  la aprobación** hasta que se confirme o se corrija. En paquetes se ven los dos totales y se marca cuál vale.
+- Reglas de viaje (`ct_reglas`, Configuración): avisan, no bloquean; "de prueba" hasta que alguien las valide.

@@ -2,7 +2,7 @@
 // El link es /r/#<token>: el token va después del # para que no viaje en la URL al servidor ni quede en logs ni en el Referer.
 // En la base solo queda el SHA-256 del token. Vence a los 30 días; generar uno nuevo invalida el anterior.
 import { json } from './auth.js';
-import { vistaCotizacion, cambiarEstado } from './ct-cotizaciones.js';
+import { vistaCotizacion, cambiarEstado, esVigente, hermana } from './ct-cotizaciones.js';
 import { webhookDiscord, mandarDiscord } from './propuestas.js';
 
 const DIAS_VALIDEZ = 30;
@@ -24,8 +24,9 @@ export async function mandarARevision(env, cotId, body, por) {
   const cot = await env.DB.prepare(`SELECT * FROM ct_cotizaciones WHERE id = ?`).bind(cotId).first();
   if (!cot) return json({ error: 'No existe' }, 404);
   if (!['borrador', 'cambios_pedidos', 'en_revision'].includes(cot.estado)) return json({ error: 'Esta versión ya no se puede mandar a revisión' }, 409);
-  const ult = await env.DB.prepare(`SELECT id FROM ct_cotizaciones WHERE pedido_id = ? ORDER BY version DESC LIMIT 1`).bind(cot.pedido_id).first();
-  if (ult.id !== cot.id) return json({ error: 'Hay una versión más nueva' }, 409);
+  if (!(await esVigente(env, cot))) return json({ error: 'Hay una versión más nueva' }, 409);
+  const otra = await hermana(env, cot);
+  if (otra) return json({ error: `Hay dos borradores (A y B): elegí uno antes de mandar a revisión` }, 409);
   const vista = await vistaCotizacion(env, cotId);
   if (!vista.lineas.length) return json({ error: 'La cotización no tiene líneas' }, 400);
   const revisor = String(body.revisor || 'Álvaro').replace(/[^\p{L}\p{N} .'-]/gu, '').trim().slice(0, 40) || 'Álvaro';
@@ -66,6 +67,12 @@ export async function aprobar(env, cot, body) {
   if (!['en_revision', 'cambios_pedidos'].includes(cot.estado)) return json({ error: cot.estado === 'aprobada' ? 'Ya está aprobada' : 'Esta versión ya no se puede aprobar' }, 409);
   const vista = await vistaCotizacion(env, cot.id);
   if (vista.totales.problemas) return json({ error: `Hay ${vista.totales.problemas} líneas sin precio: completalas antes de aprobar` }, 409);
+  // Lo que armó el sistema sin una tarifa propia no se aprueba hasta que alguien lo confirme o lo corrija.
+  const pe = vista.pendientes || { total: 0 };
+  if (pe.total) {
+    const partes = [pe.ilustrativas && `${pe.ilustrativas} línea${pe.ilustrativas > 1 ? 's' : ''} ilustrativa${pe.ilustrativas > 1 ? 's' : ''} (destino que la web no tiene)`, pe.sin_confirmar && `${pe.sin_confirmar} precio${pe.sin_confirmar > 1 ? 's' : ''} de la web sin confirmar`, pe.paquete_web && 'el precio del paquete web sin confirmar'].filter(Boolean);
+    return json({ error: `No se puede aprobar: ${partes.join(', ')}. Corregilas o confirmalas en cada línea.`, pendientes: pe }, 409);
+  }
   const por = cot.revisor || 'Revisión';
   const nota = String(body.nota || '').trim().slice(0, 1000) || null;
   await env.DB.batch([

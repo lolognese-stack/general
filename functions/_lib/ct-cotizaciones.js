@@ -2,6 +2,8 @@
 import { json } from './auth.js';
 import { aCentavos, aFecha, CATEGORIAS, HABITACIONES } from './tarifario.js';
 import { armarBorrador, precioLinea, totales, usaPrueba, sumarDias } from './cotizar.js';
+import { armarItinerario, indexarReglas } from './ct-armado.js';
+import { elegirConIA } from './ct-armado-ia.js';
 
 export const ESTADOS_PEDIDO = ['nuevo', 'borrador_listo', 'en_revision', 'aprobada', 'enviada', 'cerrada', 'perdida'];
 const EDITABLES = ['borrador', 'cambios_pedidos', 'en_revision'];
@@ -83,6 +85,14 @@ function leerPedido(b) {
   return { errores, d: { nombre, pais: texto(b.pais, 60), fecha_inicio: fi, fecha_fin: fin, pasajeros, destinos, categoria_hotel: cat, servicios, pedidos_especiales: texto(b.pedidos_especiales, 2000), lead_id: lead, dias, fecha_tentativa: tentativa, conversacion_id: conversacion, origen } };
 }
 
+// Lo que impide aprobar: ilustraciones, precios web sin confirmar y el precio del paquete sin confirmar.
+export function pendientesDe(cot, lineas, tot) {
+  const ilustrativas = lineas.filter((l) => l.es_ilustrativa && l.origen_precio === 'ilustrativa').length;
+  const sinConfirmar = lineas.filter((l) => l.sin_confirmar).length;
+  const paquete = tot.modo === 'paquete_web' && !cot.paquete_web_confirmado ? 1 : 0;
+  return { ilustrativas, sin_confirmar: sinConfirmar, paquete_web: paquete, total: ilustrativas + sinConfirmar + paquete };
+}
+
 // ---------- cotización: recalcular y ver ----------
 const CAMPOS_CALCULADOS = ['tarifa_id', 'neto_unit_cent', 'moneda', 'neto_cent', 'venta_cent', 'margen_pct', 'precio_es_venta', 'es_ilustrativa', 'problema'];
 
@@ -109,7 +119,7 @@ export async function vistaCotizacion(env, cotId, { catalogo = null } = {}) {
       return n;
     });
   }
-  const tot = totales(lineas, { pax: pedido.pasajeros, config });
+  const tot = totales(lineas, { pax: pedido.pasajeros, config, modo: cot.precio_modo, paquete_web_cent: cot.paquete_web_cent });
   const prueba = editable ? (usaPrueba(lineas, config) ? 1 : 0) : cot.usa_prueba;
   if (editable && (cot.total_neto_cent !== tot.neto_cent || cot.total_venta_cent !== tot.venta_cent || cot.usa_prueba !== prueba || cot.problemas !== tot.problemas)) {
     stmts.push(env.DB.prepare(`UPDATE ct_cotizaciones SET total_neto_cent = ?, total_venta_cent = ?, usa_prueba = ?, problemas = ?, actualizado_en = ${ahora} WHERE id = ?`)
@@ -120,25 +130,27 @@ export async function vistaCotizacion(env, cotId, { catalogo = null } = {}) {
   return {
     cotizacion: { ...publica, total_neto_cent: tot.neto_cent, total_venta_cent: tot.venta_cent, usa_prueba: prueba, problemas: tot.problemas, config: config, avisos: parse(cot.avisos, []), editable, tiene_link: !!token_hash },
     pedido, lineas, totales: tot,
+    pendientes: pendientesDe(cot, lineas, tot),
   };
 }
 
-async function crearCotizacion(env, pedido, por, { version = 1, lineas = null, catalogo = null } = {}) {
+async function crearCotizacion(env, pedido, por, { version = 1, lineas = null, catalogo = null, extra = {} } = {}) {
   catalogo = catalogo || await cargarCatalogo(env);
   const config = await configActual(env);
-  let avisos = [];
-  if (!lineas) ({ lineas, avisos } = armarBorrador(pedido, catalogo));
-  const r = await env.DB.prepare(`INSERT INTO ct_cotizaciones (pedido_id, version, estado, config_json, avisos, creado_por) VALUES (?, ?, 'borrador', ?, ?, ?)`)
-    .bind(pedido.id, version, JSON.stringify(config), JSON.stringify(avisos), por).run();
+  let avisos = extra.avisos || [];
+  if (!lineas) { const a = armarBorrador(pedido, catalogo); lineas = a.lineas; avisos = [...avisos, ...a.avisos]; }
+  const r = await env.DB.prepare(`INSERT INTO ct_cotizaciones (pedido_id, version, estado, config_json, avisos, creado_por, variante, precio_modo, paquete_web_cent, paquete_web_confirmado) VALUES (?, ?, 'borrador', ?, ?, ?, ?, ?, ?, 0)`)
+    .bind(pedido.id, version, JSON.stringify(config), JSON.stringify(avisos), por, extra.variante || null, extra.precio_modo || 'componentes', extra.paquete_web_cent ?? null).run();
   const cotId = r.meta.last_row_id;
   if (lineas.length) await env.DB.batch(lineas.map((l) => insertarLinea(env, cotId, l)));
   return cotId;
 }
 
 const COLS_LINEA = ['dia', 'orden', 'fecha', 'tipo', 'servicio_id', 'hotel_id', 'descripcion', 'pasajeros', 'cantidad', 'habitacion', 'unidades',
-  'neto_cent', 'venta_cent', 'margen_fijo', 'pisado_neto', 'pisado_venta', 'nota'];
+  'neto_cent', 'venta_cent', 'margen_fijo', 'pisado_neto', 'pisado_venta', 'nota',
+  'precio_es_venta', 'es_ilustrativa', 'origen_precio', 'sin_confirmar', 'web_producto_id', 'web_dia'];
 const insertarLinea = (env, cotId, l) => env.DB.prepare(`INSERT INTO ct_lineas (cotizacion_id, ${COLS_LINEA.join(', ')}) VALUES (?, ${COLS_LINEA.map(() => '?').join(', ')})`)
-  .bind(cotId, ...COLS_LINEA.map((k) => l[k] ?? (['pisado_neto', 'pisado_venta', 'neto_cent', 'venta_cent'].includes(k) ? 0 : ['cantidad', 'unidades', 'pasajeros'].includes(k) ? 1 : k === 'orden' ? 0 : null)));
+  .bind(cotId, ...COLS_LINEA.map((k) => l[k] ?? (['pisado_neto', 'pisado_venta', 'neto_cent', 'venta_cent', 'precio_es_venta', 'es_ilustrativa', 'sin_confirmar'].includes(k) ? 0 : k === 'origen_precio' ? 'tarifario' : ['cantidad', 'unidades', 'pasajeros'].includes(k) ? 1 : k === 'orden' ? 0 : null)));
 
 export async function cambiarEstado(env, pedidoId, estado, por, nota = null) {
   return env.DB.batch([
@@ -148,6 +160,54 @@ export async function cambiarEstado(env, pedidoId, estado, por, nota = null) {
 }
 
 const ultimaCotizacion = (env, pedidoId) => env.DB.prepare(`SELECT * FROM ct_cotizaciones WHERE pedido_id = ? ORDER BY version DESC LIMIT 1`).bind(pedidoId).first();
+
+// ---------- armado automático (Fase 3) ----------
+export async function cargarWeb(env) {
+  const [p, d] = await env.DB.batch([
+    env.DB.prepare(`SELECT * FROM ct_web_productos WHERE activo = 1`),
+    env.DB.prepare(`SELECT w.* FROM ct_web_dias w JOIN ct_web_productos p ON p.id = w.producto_id WHERE p.activo = 1 ORDER BY w.producto_id, w.dia`),
+  ]);
+  const dias = new Map();
+  for (const x of d.results) (dias.get(x.producto_id) || dias.set(x.producto_id, []).get(x.producto_id)).push(x);
+  return p.results.map((x) => ({ ...x, ciudades: parse(x.ciudades, []), dias_detalle: dias.get(x.id) || [] }));
+}
+
+// Arma el itinerario del pedido y deja las cotizaciones (una, o dos si los días no alcanzan: A y B).
+// Sin lectura de la web cargada, o con servicios elegidos a mano, queda el borrador de siempre.
+async function generarCotizaciones(env, pedido, por, version0 = 1) {
+  const catalogo = await cargarCatalogo(env);
+  const web = await cargarWeb(env);
+  let variantes = null, falla = null;
+  if (web.length && !(pedido.servicios || []).length) {
+    try {
+      const reglas = indexarReglas((await env.DB.prepare(`SELECT * FROM ct_reglas`).all()).results);
+      variantes = (await armarItinerario({ pedido, catalogo, web, reglas, elegir: elegirConIA(env) })).variantes;
+    } catch (e) { falla = `El armado automático falló (${String(e.message || e).slice(0, 80)}): quedó el borrador básico.`; }
+  }
+  if (!variantes || !variantes.length) return [await crearCotizacion(env, pedido, por, { version: version0, catalogo, extra: { avisos: falla ? [falla] : [] } })];
+  const ids = [];
+  let v = version0;
+  for (const vr of variantes) {
+    ids.push(await crearCotizacion(env, pedido, por, { version: v++, lineas: vr.lineas, catalogo, extra: { variante: vr.variante, precio_modo: vr.precio_modo, paquete_web_cent: vr.paquete_web_cent, avisos: vr.avisos } }));
+  }
+  await env.DB.prepare(`UPDATE ct_pedidos SET paquete_web_id = ? WHERE id = ?`).bind(variantes[0].paquete_web_id || null, pedido.id).run();
+  return ids;
+}
+
+// ¿Esta versión es de la ronda vigente? (la última, o la A de un par A/B todavía abierto)
+export async function esVigente(env, cot) {
+  const ult = await ultimaCotizacion(env, cot.pedido_id);
+  if (!ult) return false;
+  if (ult.id === cot.id) return true;
+  return ult.variante === 'B' && cot.variante === 'A' && cot.version === ult.version - 1;
+}
+// La otra variante del par, si sigue abierta.
+export async function hermana(env, cot) {
+  if (!cot.variante) return null;
+  const v = cot.variante === 'A' ? cot.version + 1 : cot.version - 1;
+  const h = await env.DB.prepare(`SELECT * FROM ct_cotizaciones WHERE pedido_id = ? AND version = ? AND variante = ? AND estado != 'reemplazada'`).bind(cot.pedido_id, v, cot.variante === 'A' ? 'B' : 'A').first();
+  return h || null;
+}
 
 // ---------- endpoints ----------
 export async function listarPedidos(env) {
@@ -178,10 +238,10 @@ export async function crearPedido(env, body, por) {
   const id = r.meta.last_row_id;
   await env.DB.prepare(`INSERT INTO ct_pedido_estados (pedido_id, estado, por) VALUES (?, 'nuevo', ?)`).bind(id, por).run();
   // El sistema arma el borrador solo.
-  const cotId = await crearCotizacion(env, { ...d, id }, 'sistema');
-  await cambiarEstado(env, id, 'borrador_listo', 'sistema', 'Borrador armado automáticamente');
-  await vistaCotizacion(env, cotId);
-  return json({ ok: true, id, cotizacion_id: cotId });
+  const ids = await generarCotizaciones(env, { ...d, id }, 'sistema');
+  await cambiarEstado(env, id, 'borrador_listo', 'sistema', ids.length > 1 ? 'Dos borradores armados (A y B): los días no alcanzan' : 'Borrador armado automáticamente');
+  for (const cid of ids) await vistaCotizacion(env, cid);
+  return json({ ok: true, id, cotizacion_id: ids[0], cotizaciones: ids });
 }
 
 export async function verPedido(env, id) {
@@ -189,9 +249,10 @@ export async function verPedido(env, id) {
   if (!p) return json({ error: 'No existe' }, 404);
   const [est, cots] = await env.DB.batch([
     env.DB.prepare(`SELECT * FROM ct_pedido_estados WHERE pedido_id = ? ORDER BY id`).bind(id),
-    env.DB.prepare(`SELECT id, version, estado, total_venta_cent, usa_prueba, problemas, aprobada_por, aprobada_en, creado_en FROM ct_cotizaciones WHERE pedido_id = ? ORDER BY version DESC`).bind(id),
+    env.DB.prepare(`SELECT id, version, estado, variante, precio_modo, paquete_web_cent, total_venta_cent, usa_prueba, problemas, avisos, aprobada_por, aprobada_en, creado_en FROM ct_cotizaciones WHERE pedido_id = ? ORDER BY version DESC`).bind(id),
   ]);
-  return json({ pedido: pedidoDe(p), estados: est.results, cotizaciones: cots.results });
+  const cotizaciones = cots.results.map((c, i, todas) => ({ ...c, avisos: parse(c.avisos, []), vigente: i === 0 || (todas[0].variante === 'B' && c.variante === 'A' && c.version === todas[0].version - 1) }));
+  return json({ pedido: pedidoDe(p), estados: est.results, cotizaciones });
 }
 
 export async function editarPedido(env, id, body, por) {
@@ -231,31 +292,35 @@ export async function rearmar(env, id, por) {
   if (!p) return json({ error: 'No existe' }, 404);
   const cot = await ultimaCotizacion(env, id);
   if (cot && !EDITABLES.includes(cot.estado)) return json({ error: 'La última versión está aprobada: creá una versión nueva' }, 409);
-  const catalogo = await cargarCatalogo(env);
-  const { lineas, avisos } = armarBorrador(p, catalogo);
-  const config = await configActual(env);
-  if (!cot) { const cotId = await crearCotizacion(env, p, por, { catalogo }); return json({ ok: true, cotizacion_id: cotId }); }
+  if (!cot) { const ids = await generarCotizaciones(env, p, por); return json({ ok: true, cotizacion_id: ids[0], cotizaciones: ids }); }
+  // Ronda nueva: las versiones abiertas de la ronda vigente quedan reemplazadas y se arman las de ahora (una o A y B).
+  const vigentes = (await env.DB.prepare(`SELECT id, version, estado, variante FROM ct_cotizaciones WHERE pedido_id = ? ORDER BY version DESC LIMIT 2`).bind(id).all()).results
+    .filter((c, i) => i === 0 || (c.variante === 'A' && cot.variante === 'B' && c.version === cot.version - 1));
+  const ids = await generarCotizaciones(env, p, por, cot.version + 1);
   await env.DB.batch([
-    env.DB.prepare(`DELETE FROM ct_lineas WHERE cotizacion_id = ?`).bind(cot.id),
-    env.DB.prepare(`UPDATE ct_cotizaciones SET avisos = ?, config_json = ?, actualizado_en = ${ahora} WHERE id = ?`).bind(JSON.stringify(avisos), JSON.stringify(config), cot.id),
-    ...lineas.map((l) => insertarLinea(env, cot.id, l)),
+    ...vigentes.filter((c) => EDITABLES.includes(c.estado)).map((c) => env.DB.prepare(`UPDATE ct_cotizaciones SET estado = 'reemplazada', actualizado_en = ${ahora} WHERE id = ?`).bind(c.id)),
     env.DB.prepare(`INSERT INTO ct_cambios_precio (entidad, entidad_id, campo, antes, despues, por) VALUES ('cotizacion', ?, 'rearmada', ?, NULL, ?)`).bind(String(cot.id), usd(cot.total_venta_cent), por),
   ]);
-  return json({ ok: true, cotizacion_id: cot.id });
+  for (const cid of ids) await vistaCotizacion(env, cid);
+  await cambiarEstado(env, id, 'borrador_listo', por, `Rearmado: versión ${cot.version + 1}${ids.length > 1 ? ' y siguiente (A y B)' : ''}`);
+  return json({ ok: true, cotizacion_id: ids[0], cotizaciones: ids });
 }
 
 export async function nuevaVersion(env, cotId, por) {
   const cot = await env.DB.prepare(`SELECT * FROM ct_cotizaciones WHERE id = ?`).bind(cotId).first();
   if (!cot) return json({ error: 'No existe' }, 404);
+  if (!(await esVigente(env, cot))) return json({ error: 'Ya hay una versión más nueva' }, 409);
   const ult = await ultimaCotizacion(env, cot.pedido_id);
-  if (ult.id !== cot.id) return json({ error: 'Ya hay una versión más nueva' }, 409);
+  const sib = await hermana(env, cot);
+  if (sib && EDITABLES.includes(sib.estado)) return json({ error: 'Elegí primero entre la variante A y la B' }, 409);
   const ls = (await env.DB.prepare(`SELECT * FROM ct_lineas WHERE cotizacion_id = ? ORDER BY dia, orden, id`).bind(cotId).all()).results;
-  const nuevoId = await crearCotizacion(env, { id: cot.pedido_id }, por, { version: cot.version + 1, lineas: ls });
+  const nuevoId = await crearCotizacion(env, { id: cot.pedido_id }, por, { version: ult.version + 1, lineas: ls, extra: { variante: cot.variante, precio_modo: cot.precio_modo, paquete_web_cent: cot.paquete_web_cent } });
   await env.DB.batch([
+    env.DB.prepare(`UPDATE ct_cotizaciones SET paquete_web_confirmado = ? WHERE id = ?`).bind(cot.paquete_web_confirmado, nuevoId),
     env.DB.prepare(`UPDATE ct_cotizaciones SET estado = 'reemplazada', actualizado_en = ${ahora} WHERE id = ?`).bind(cotId),
     env.DB.prepare(`UPDATE ct_cotizaciones SET notas_alvaro = ?, avisos = ?, revisor = ? WHERE id = ?`).bind(cot.notas_alvaro, cot.avisos, cot.revisor, nuevoId),
   ]);
-  await cambiarEstado(env, cot.pedido_id, 'borrador_listo', por, `Versión ${cot.version + 1}`);
+  await cambiarEstado(env, cot.pedido_id, 'borrador_listo', por, `Versión ${ult.version + 1}`);
   return json({ ok: true, cotizacion_id: nuevoId });
 }
 
@@ -275,6 +340,21 @@ export async function editarCotizacion(env, cotId, body, por) {
     stmts.push(env.DB.prepare(`UPDATE ct_cotizaciones SET config_json = ? WHERE id = ?`).bind(JSON.stringify(config), cotId));
     stmts.push(env.DB.prepare(`INSERT INTO ct_cambios_precio (entidad, entidad_id, campo, antes, despues, por) VALUES ('cotizacion', ?, 'configuración', ?, ?, ?)`)
       .bind(String(cotId), `margen ${parse(cot.config_json, {}).margen_pct}%`, `margen ${config.margen_pct}%`, por));
+  }
+  if (body.precio_modo !== undefined) {
+    if (!['componentes', 'paquete_web'].includes(body.precio_modo)) return json({ error: 'modo de precio no válido' }, 400);
+    if (body.precio_modo === 'paquete_web' && cot.paquete_web_cent == null) return json({ error: 'Esta cotización no tiene un paquete publicado con precio' }, 400);
+    if (body.precio_modo !== cot.precio_modo) {
+      stmts.push(env.DB.prepare(`UPDATE ct_cotizaciones SET precio_modo = ?, paquete_web_confirmado = 0 WHERE id = ?`).bind(body.precio_modo, cotId));
+      stmts.push(env.DB.prepare(`INSERT INTO ct_cambios_precio (entidad, entidad_id, campo, antes, despues, por, motivo) VALUES ('cotizacion', ?, 'precio vale', ?, ?, ?, ?)`)
+        .bind(String(cotId), cot.precio_modo, body.precio_modo, por, texto(body.motivo, 200)));
+    }
+  }
+  if (body.confirmar_paquete_web) {
+    if ((body.precio_modo || cot.precio_modo) !== 'paquete_web') return json({ error: 'El precio vigente es por componentes' }, 400);
+    stmts.push(env.DB.prepare(`UPDATE ct_cotizaciones SET paquete_web_confirmado = 1 WHERE id = ?`).bind(cotId));
+    stmts.push(env.DB.prepare(`INSERT INTO ct_cambios_precio (entidad, entidad_id, campo, antes, despues, por) VALUES ('cotizacion', ?, 'precio del paquete web confirmado', ?, ?, ?)`)
+      .bind(String(cotId), 'sin confirmar', usd(cot.paquete_web_cent), por));
   }
   if (body.notas_alvaro !== undefined) stmts.push(env.DB.prepare(`UPDATE ct_cotizaciones SET notas_alvaro = ? WHERE id = ?`).bind(texto(body.notas_alvaro, 4000), cotId));
   if (stmts.length) await env.DB.batch(stmts);
@@ -354,6 +434,14 @@ export async function editarLinea(env, cotId, lid, body, por) {
     const c = aCentavos(body.venta); if (c === null) return json({ error: 'la venta tiene que ser un número (USD)' }, 400);
     if (c !== l.venta_cent || !l.pisado_venta) { set('venta_cent', c); set('pisado_venta', 1); log.push(['venta', usd(l.venta_cent), usd(c)]); }
   }
+  const cambiaPrecio = sets.some((s) => s.startsWith('neto_cent') || s.startsWith('venta_cent'));
+  if (l.sin_confirmar && (body.confirmar || cambiaPrecio)) {
+    set('sin_confirmar', 0);
+    log.push(['precio web confirmado', 'sin confirmar', usd(sets.some((s) => s.startsWith('venta_cent')) ? vals[sets.findIndex((s) => s.startsWith('venta_cent'))] : l.venta_cent)]);
+  }
+  if (l.es_ilustrativa && (cambiaPrecio || body.ilustrativa === false)) {
+    set('es_ilustrativa', 0); set('origen_precio', 'manual'); log.push(['ilustración corregida', 'ilustrativa', 'con precio']);
+  }
   if (body.restaurar) { set('pisado_neto', 0); set('pisado_venta', 0); set('margen_fijo', null); log.push(['restaurado', `${usd(l.neto_cent)} / ${usd(l.venta_cent)}`, 'según tarifario']); }
   if (body.nota !== undefined) set('nota', texto(body.nota, 500));
   if (!sets.length) return json(await vistaCotizacion(env, cotId));
@@ -363,6 +451,21 @@ export async function editarLinea(env, cotId, lid, body, por) {
       .bind(`${cotId}:${lid}`, `${campo} · ${l.descripcion}`.slice(0, 200), antes, despues, por, motivo)),
   ]);
   return json(await vistaCotizacion(env, cotId));
+}
+
+// Se queda con una de las dos variantes (A o B): la otra pasa a "reemplazada".
+export async function elegirVariante(env, cotId, por) {
+  const cot = await env.DB.prepare(`SELECT * FROM ct_cotizaciones WHERE id = ?`).bind(cotId).first();
+  if (!cot) return json({ error: 'No existe' }, 404);
+  if (!cot.variante) return json({ error: 'Esta cotización no es una variante' }, 400);
+  const sib = await hermana(env, cot);
+  if (!sib) return json({ ok: true, cotizacion_id: cotId });
+  if (!EDITABLES.includes(cot.estado) || !EDITABLES.includes(sib.estado)) return json({ error: 'Alguna de las dos ya no se edita' }, 409);
+  await env.DB.batch([
+    env.DB.prepare(`UPDATE ct_cotizaciones SET estado = 'reemplazada', actualizado_en = ${ahora} WHERE id = ?`).bind(sib.id),
+    env.DB.prepare(`INSERT INTO ct_cambios_precio (entidad, entidad_id, campo, antes, despues, por) VALUES ('cotizacion', ?, 'variante elegida', ?, ?, ?)`).bind(String(cot.pedido_id), sib.variante, cot.variante, por),
+  ]);
+  return json({ ok: true, cotizacion_id: cotId });
 }
 
 export async function borrarLinea(env, cotId, lid, por) {

@@ -28,7 +28,8 @@ import {
 } from '../../_lib/ct-cotizaciones.js';
 import { mandarARevision, aprobar, pedirCambios } from '../../_lib/ct-revision.js';
 import { paraPropuesta } from '../../_lib/ct-propuesta.js';
-import { cargarCatalogo } from '../../_lib/ct-cotizaciones.js';
+import { cargarCatalogo, esVigente, elegirVariante } from '../../_lib/ct-cotizaciones.js';
+import { leerTanda, vistaDiferencias, aplicarTanda, cerrarLectura, listaWeb } from '../../_lib/ct-web.js';
 
 const CONFIG = {
   margen_pct: { min: 0, max: 300, nombre: 'Margen por defecto (%)' },
@@ -305,6 +306,36 @@ export async function onRequest({ request, env, params }) {
   if (!rol) return json({ error: 'unauthorized' }, 401);
   const partes = [].concat(params.ruta || []);
   const [recurso, idTxt, sub, subIdTxt] = partes;
+  const m0 = request.method;
+  try {
+    // Itinerarios de la web: leer en tandas, ver qué cambió y aplicar (Cloudflare deja 50 lecturas por pedido).
+    if (recurso === 'web') {
+      const cuerpo = m0 === 'POST' ? await leerJson(request) : {};
+      if (!idTxt && m0 === 'GET') return listaWeb(env);
+      if (idTxt === 'tanda' && m0 === 'POST') return json(await leerTanda(env, { desde: Math.max(0, Number(cuerpo.desde) || 0) }));
+      if (idTxt === 'diferencias' && m0 === 'POST') return json(await vistaDiferencias(env, Array.isArray(cuerpo.productos) ? cuerpo.productos : [], cuerpo.ids));
+      if (idTxt === 'aplicar' && m0 === 'POST') return aplicarTanda(env, cuerpo.productos);
+      if (idTxt === 'cerrar' && m0 === 'POST') return cerrarLectura(env, cuerpo, quien(request, rol));
+      if (idTxt === 'servicio' && m0 === 'PUT') {
+        const sid = Number(cuerpo.servicio_id), wid = cuerpo.web_id ? String(cuerpo.web_id) : null;
+        if (!Number.isInteger(sid)) return json({ error: 'servicio no válido' }, 400);
+        if (wid && !(await env.DB.prepare(`SELECT id FROM ct_web_productos WHERE id = ?`).bind(wid).first())) return json({ error: 'Ese tour no está en la web leída' }, 400);
+        await env.DB.prepare(`UPDATE ct_servicios SET web_id = ? WHERE id = ?`).bind(wid, sid).run();
+        return json({ ok: true });
+      }
+    }
+    if (recurso === 'reglas') {
+      if (!idTxt && m0 === 'GET') return json({ reglas: (await env.DB.prepare(`SELECT * FROM ct_reglas ORDER BY tipo, clave`).all()).results });
+      if (/^\d+$/.test(idTxt || '') && m0 === 'PUT') {
+        const cuerpo = await leerJson(request);
+        let datos; try { datos = JSON.parse(typeof cuerpo.datos === 'string' ? cuerpo.datos : JSON.stringify(cuerpo.datos)); } catch { return json({ error: 'Los datos tienen que ser un JSON válido' }, 400); }
+        await env.DB.prepare(`UPDATE ct_reglas SET datos = ?, es_prueba = ?, actualizado_por = ?, actualizado_en = datetime('now') WHERE id = ?`).bind(JSON.stringify(datos), cuerpo.validada ? 0 : 1, quien(request, rol), Number(idTxt)).run();
+        return json({ ok: true });
+      }
+    }
+  } catch (e) {
+    return json({ error: String(e.message || e).slice(0, 200) }, e.message && /web no devolvi/.test(e.message) ? 502 : 500);
+  }
   const id = idTxt === undefined ? null : Number(idTxt);
   if (idTxt !== undefined && !Number.isInteger(id)) return json({ error: 'id no válido' }, 400);
   const subId = subIdTxt === undefined ? null : Number(subIdTxt);
@@ -337,12 +368,12 @@ export async function onRequest({ request, env, params }) {
       if (sub === 'nueva-version' && m === 'POST') return nuevaVersion(env, id, por);
       if (sub === 'cambios' && m === 'GET') return cambiosCotizacion(env, id);
       if (sub === 'revision' && m === 'POST') return mandarARevision(env, id, body, por);
+      if (sub === 'elegir-variante' && m === 'POST') return elegirVariante(env, id, por);
       // Álvaro aprueba o pide cambios desde el mismo editor (antes era desde el link /r/). Queda registrado quién fue.
       if ((sub === 'aprobar' || sub === 'pedir-cambios') && m === 'POST') {
         const cot = await env.DB.prepare(`SELECT * FROM ct_cotizaciones WHERE id = ?`).bind(id).first();
         if (!cot) return json({ error: 'No existe' }, 404);
-        const ult = await env.DB.prepare(`SELECT id FROM ct_cotizaciones WHERE pedido_id = ? ORDER BY version DESC LIMIT 1`).bind(cot.pedido_id).first();
-        if (ult.id !== cot.id) return json({ error: 'Hay una versión más nueva' }, 409);
+        if (!(await esVigente(env, cot))) return json({ error: 'Hay una versión más nueva' }, 409);
         const quienes = { ...cot, revisor: por };
         return sub === 'aprobar' ? aprobar(env, quienes, body) : pedirCambios(env, quienes, body);
       }

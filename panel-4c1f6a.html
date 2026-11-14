@@ -2353,6 +2353,13 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 #view-cotizaciones #ct-raiz button.link,#view-cotizaciones dialog button.link{min-height:0}
 #view-cotizaciones #ct-raiz button:disabled,#view-cotizaciones dialog button:disabled{opacity:.45;cursor:not-allowed}
 #view-cotizaciones input,#view-cotizaciones select,#view-cotizaciones textarea{background:var(--surface-2)}
+#view-cotizaciones .ct-vars{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--s3);margin:0 0 var(--s3)}
+#view-cotizaciones .ct-var{display:flex;flex-direction:column;gap:4px;padding:var(--s3) var(--s4);border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow)}
+#view-cotizaciones .ct-var-ver{border-color:var(--brand)}
+#view-cotizaciones .ct-var-tot{font-size:22px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+#view-cotizaciones .ct-var .acc{display:flex;gap:6px;margin-top:4px}
+#view-cotizaciones .ct-pend{border-color:var(--danger);color:var(--danger);background:var(--danger-bg)}
+#view-cotizaciones .ct-paq{margin:var(--s3) 0}
 .ct-toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:var(--ground);padding:10px 16px;border-radius:var(--radius-sm);font-size:13px;z-index:400}
 #view-cotizaciones #ct-raiz button.link, #view-cotizaciones dialog button.link{border:0;background:none;padding:2px 4px;color:var(--brand-ink);text-decoration:underline;font-size:.85rem}
 #view-cotizaciones #ct-raiz button:disabled, #view-cotizaciones dialog button:disabled{opacity:.45;cursor:not-allowed}
@@ -2601,6 +2608,7 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
         <button type="button" role="tab" data-tab="pedidos" aria-current="true">Pedidos</button>
         <button type="button" role="tab" data-tab="servicios" aria-current="false">Servicios</button>
         <button type="button" role="tab" data-tab="hoteles" aria-current="false">Hoteles</button>
+        <button type="button" role="tab" data-tab="itinerarios" aria-current="false">Itinerarios</button>
         <button type="button" role="tab" data-tab="importar" aria-current="false">Importar</button>
         <button type="button" role="tab" data-tab="config" aria-current="false">Configuración</button>
         <button type="button" role="tab" data-tab="cambios" aria-current="false">Registro</button>
@@ -17457,6 +17465,7 @@ async function pintar() {
     if ((m = tab.match(/^pedido\/(\d+)$/))) return await pintarPedido(Number(m[1]));
     if ((m = tab.match(/^editar\/(\d+)$/))) return await pintarFormPedido((await api(`pedidos/${m[1]}`)).pedido);
     if (tab === 'servicios' || tab === 'hoteles') { if (!datos) await cargarTarifario(); return tab === 'servicios' ? pintarServicios() : pintarHoteles(); }
+    if (tab === 'itinerarios') return await pintarItinerarios();
     if (tab === 'importar') return pintarImportar();
     if (tab === 'config') return pintarConfig();
     if (tab === 'cambios') return pintarCambios();
@@ -17654,13 +17663,13 @@ function dibujarCotizacion() {
   for (const l of cot.lineas) (porDia.get(l.dia) || porDia.set(l.dia, []).get(l.dia)).push(l);
   const fila = (l) => `<tr class="${l.problema ? 'fila-err' : ''}">
       <td class="full"><b>${esc(l.descripcion)}</b> <span class="chip">${esc(l.tipo === 'hotel' ? 'hotel' : TIPOS[l.tipo] || l.tipo)}</span>
-        ${l.es_ilustrativa ? '<span class="prueba">PRUEBA</span>' : ''}${l.pisado_neto || l.pisado_venta ? ' <span class="chip pisado" title="Precio cambiado a mano">a mano</span>' : ''}${l.precio_es_venta ? ' <span class="chip" title="Tarifa ya es precio de venta">propio</span>' : ''}
+        ${l.origen_precio === 'ilustrativa' ? '<span class="prueba" title="La web no publica este destino: hay que armarlo y ponerle precio">ILUSTRACIÓN</span>' : l.es_ilustrativa ? '<span class="prueba">PRUEBA</span>' : ''}${l.sin_confirmar ? ' <span class="chip pisado" title="Precio publicado en la web, sin tarifa propia: confirmalo o corregilo antes de aprobar">precio web sin confirmar</span>' : l.origen_precio === 'web' && l.web_dia ? ' <span class="chip">de la web</span>' : ''}${l.pisado_neto || l.pisado_venta ? ' <span class="chip pisado" title="Precio cambiado a mano">a mano</span>' : ''}${l.precio_es_venta ? ' <span class="chip" title="Tarifa ya es precio de venta">propio</span>' : ''}
         ${l.problema ? `<div class="err">${esc(l.problema)}</div>` : ''}${l.nota ? `<div class="nota" style="margin:0">${esc(l.nota)}</div>` : ''}</td>
       <td data-t="Pax">${l.tipo === 'hotel' ? `${l.unidades} ${l.habitacion} × ${l.cantidad} n` : l.pasajeros}</td>
       <td data-t="Neto" class="num">${usd(l.neto_cent)}${l.moneda === 'PEN' && l.neto_unit_cent != null ? `<small class="nota" style="display:block;margin:0">S/ ${(l.neto_unit_cent / 100).toFixed(2)} c/u</small>` : ''}</td>
       <td data-t="Margen" class="num">${l.margen_pct != null ? l.margen_pct + '%' : '—'}</td>
       <td data-t="Venta" class="num"><b>${usd(l.venta_cent)}</b></td>
-      <td class="num">${ed ? `<button type="button" class="link" data-ed-lin="${l.id}">Editar</button>` : ''}</td></tr>`;
+      <td class="num">${ed && l.sin_confirmar ? `<button type="button" class="link" data-conf-lin="${l.id}">Confirmar</button>` : ''}${ed ? `<button type="button" class="link" data-ed-lin="${l.id}">Editar</button>` : ''}</td></tr>`;
   let dias = '';
   for (let d = 1; d <= nDias; d++) {
     const ls = porDia.get(d) || [];
@@ -17670,17 +17679,32 @@ function dibujarCotizacion() {
   }
   const sinDia = cot.lineas.filter((l) => !l.dia || l.dia > nDias);
   const versiones = ped.cotizaciones;
+  const vig = !!(versiones.find((v) => v.id === c.id) || {}).vigente;
+  const par = versiones.filter((v) => v.vigente && v.variante && v.estado !== 'reemplazada');
+  const hayPar = par.length === 2;
+  const pe = cot.pendientes || { total: 0 };
+  const etiquetaVar = { A: 'A · entra en los días pedidos (recortado)', B: 'B · lo que pidió el cliente' };
+  const tarjetasVar = hayPar ? `<div class="ct-vars">${par.slice().sort((a, b) => a.variante.localeCompare(b.variante)).map((v) => `<div class="ct-var ${v.id === c.id ? 'ct-var-ver' : ''}">
+      <b>${esc(etiquetaVar[v.variante] || v.variante)}</b>
+      <span class="ct-var-tot">${v.total_venta_cent ? usd(v.total_venta_cent) : '—'}</span>
+      <small>${v.avisos.length} aviso${v.avisos.length === 1 ? '' : 's'}${v.problemas ? ` · ${v.problemas} sin precio` : ''}</small>
+      <div class="acc"><button type="button" class="chico" data-ver-var="${v.id}" ${v.id === c.id ? 'disabled' : ''}>Ver</button><button type="button" class="chico prim" data-elegir-var="${v.id}">Elegir esta</button></div></div>`).join('')}</div>
+    <p class="nota">Los días no alcanzan para lo que pidió el cliente: hay dos borradores. Elegí uno para seguir; el otro queda reemplazado.</p>` : '';
+  const pendTxt = [pe.ilustrativas && `${pe.ilustrativas} línea${pe.ilustrativas > 1 ? 's' : ''} ilustrativa${pe.ilustrativas > 1 ? 's' : ''}`, pe.sin_confirmar && `${pe.sin_confirmar} precio${pe.sin_confirmar > 1 ? 's' : ''} de la web sin confirmar`, pe.paquete_web && 'el precio del paquete web'].filter(Boolean).join(', ');
+  const modoPaq = t.paquete_web_cent != null;
   el.innerHTML = `
     ${c.usa_prueba ? '<div class="banner grande">PRECIOS DE PRUEBA<small>Usa tarifas de prueba o valores de configuración sin confirmar: no se puede mandar al cliente.</small></div>' : ''}
     <div class="barra"><h2 style="margin:0">Cotización</h2>
-      <select id="ct-ver">${versiones.map((v) => `<option value="${v.id}" ${v.id === c.id ? 'selected' : ''}>Versión ${v.version} · ${COT_ESTADO[v.estado] || v.estado}</option>`).join('')}</select>
+      <select id="ct-ver">${versiones.map((v) => `<option value="${v.id}" ${v.id === c.id ? 'selected' : ''}>Versión ${v.version}${v.variante ? ' · ' + v.variante : ''} · ${COT_ESTADO[v.estado] || v.estado}</option>`).join('')}</select>
       <span style="flex:1"></span>
-      ${ed && c.id === versiones[0].id ? '<button type="button" class="chico prim" id="ct-a-revision">Mandar a revisión</button>' : ''}
-      ${['en_revision', 'cambios_pedidos'].includes(c.estado) && c.id === versiones[0].id ? '<button type="button" class="chico" id="ct-pedir-cambios">Pedir cambios</button><button type="button" class="chico prim" id="ct-aprobar">Aprobar</button>' : ''}
+      ${ed && vig && !hayPar ? '<button type="button" class="chico prim" id="ct-a-revision">Mandar a revisión</button>' : ''}
+      ${['en_revision', 'cambios_pedidos'].includes(c.estado) && vig && !hayPar ? `<button type="button" class="chico" id="ct-pedir-cambios">Pedir cambios</button><button type="button" class="chico prim" id="ct-aprobar" ${pe.total ? `disabled title="Falta: ${esc(pendTxt)}"` : ''}>Aprobar</button>` : ''}
       ${ed ? '<button type="button" class="chico" id="ct-rearmar">Volver a armar</button>' : ''}
       ${c.estado === 'aprobada' ? '<button type="button" class="chico prim" id="ct-a-propuesta">Preparar propuesta web</button>' : ''}
-      ${!ed && c.id === versiones[0].id ? '<button type="button" class="chico" id="ct-nueva-v">Crear versión nueva</button>' : ''}
+      ${!ed && vig ? '<button type="button" class="chico" id="ct-nueva-v">Crear versión nueva</button>' : ''}
       <button type="button" class="chico" id="ct-cambios-cot">Cambios de precio</button></div>
+    ${tarjetasVar}
+    ${ed && pe.total ? `<div class="avisos-cot ct-pend"><b>Para aprobar falta:</b> ${esc(pendTxt)}. ${pe.sin_confirmar ? 'Confirmá o corregí cada precio de la web (botón "Confirmar" de la línea). ' : ''}${pe.ilustrativas ? 'Las ilustraciones se corrigen cargándoles precio. ' : ''}</div>` : ''}
     ${c.estado === 'en_revision' ? `<p class="aviso">En revisión de ${esc(c.revisor || '—')}. Los cambios de precio quedan en "Cambios de precio".</p>` : ''}
     ${c.estado === 'cambios_pedidos' ? `<div class="avisos-cot"><b>${esc(c.revisor || 'Álvaro')} pidió cambios:</b> ${esc(c.pedido_cambios || '')}</div>` : ''}
     ${c.estado === 'aprobada' ? `<p class="ok">Aprobada por ${esc(c.aprobada_por || '—')} el ${peru(c.aprobada_en)}. No se edita: para cambiar algo, versión nueva.</p>` : ''}
@@ -17697,9 +17721,35 @@ function dibujarCotizacion() {
       <div><span>Con factura (+${c.config.igv_pct}% IGV)</span><b>${usd(t.con_factura_cent)}</b></div>
       <div><span>Con tarjeta (+${c.config.recargo_tarjeta_pct}%)</span><b>${usd(t.con_tarjeta_cent)}</b></div>
     </div>
+    ${modoPaq ? `<div class="wb-panel ct-paq"><b>Paquete publicado en la web</b>
+      <div class="totales"><div><span>Por componentes</span><b>${usd(t.componentes_venta_cent)}</b></div><div><span>Precio web del paquete</span><b>${usd(t.paquete_web_cent)}</b></div></div>
+      <p class="nota" style="margin:6px 0">Por componentes solo suma lo que tiene tarifa cargada (hoteles y tours con tarifario): casi siempre queda por debajo del paquete. El precio de la web es el publicado: sugerido, no confirmado.</p>
+      ${ed ? `<div class="barra"><label class="check"><input type="radio" name="ct-pmodo" value="paquete_web" ${t.modo === 'paquete_web' ? 'checked' : ''}> Vale el precio del paquete</label>
+        <label class="check"><input type="radio" name="ct-pmodo" value="componentes" ${t.modo !== 'paquete_web' ? 'checked' : ''}> Vale la suma por componentes</label>
+        ${t.modo === 'paquete_web' ? (c.paquete_web_confirmado ? '<span class="ok">Precio del paquete confirmado</span>' : '<button type="button" class="chico prim" id="ct-conf-paq">Confirmar precio del paquete</button>') : ''}</div>` : `<p class="nota">Vale: ${t.modo === 'paquete_web' ? 'el precio del paquete' : 'la suma por componentes'}.</p>`}</div>` : ''}
     <p class="nota">Calculada con margen ${c.config.margen_pct}% y tipo de cambio S/ ${c.config.tc_pen_por_usd} por dólar${Object.keys(c.config.es_prueba || {}).length ? ' <span class="prueba">PRUEBA</span>' : ''}.
       ${ed ? '<button type="button" class="link" id="ct-usar-config">Usar la configuración actual</button>' : ''}</p>
     <div class="panel"><h2>Notas de Álvaro</h2>${ed ? `<textarea id="ct-notas" maxlength="4000">${esc(c.notas_alvaro)}</textarea><div class="barra" style="margin-top:8px"><button type="button" class="chico" id="ct-guardar-notas">Guardar notas</button></div>` : `<p>${esc(c.notas_alvaro || '—')}</p>`}</div>`;
+  RAIZ().querySelectorAll('[data-ver-var]').forEach((b) => b.addEventListener('click', () => { cotElegida = Number(b.dataset.verVar); pintarPedido(ped.pedido.id); }));
+  RAIZ().querySelectorAll('[data-elegir-var]').forEach((b) => b.addEventListener('click', async () => {
+    if (!usuario()) { elegirSoy(); return; }
+    const v = par.find((x) => x.id === Number(b.dataset.elegirVar));
+    if (!confirm(`¿Seguir con la variante ${v.variante}? La otra queda reemplazada.`)) return;
+    try { await api(`cotizaciones/${v.id}/elegir-variante`, { method: 'POST' }); cotElegida = v.id; toast('Variante ' + v.variante + ' elegida'); pintarPedido(ped.pedido.id); } catch (x) { alert(x.message); }
+  }));
+  RAIZ().querySelectorAll('[name=ct-pmodo]').forEach((r) => r.addEventListener('change', async () => {
+    if (!usuario()) { elegirSoy(); return; }
+    try { cot = await api(`cotizaciones/${c.id}`, { method: 'PUT', body: { precio_modo: r.value } }); toast('Ahora vale ' + (r.value === 'paquete_web' ? 'el precio del paquete' : 'la suma por componentes')); dibujarCotizacion(); } catch (x) { alert(x.message); }
+  }));
+  if ($('#ct-conf-paq')) $('#ct-conf-paq').addEventListener('click', async () => {
+    if (!usuario()) { elegirSoy(); return; }
+    if (!confirm(`¿Confirmás ${usd(t.paquete_web_cent)} como precio del paquete? Es el precio publicado en la web.`)) return;
+    try { cot = await api(`cotizaciones/${c.id}`, { method: 'PUT', body: { confirmar_paquete_web: true } }); toast('Precio del paquete confirmado'); dibujarCotizacion(); } catch (x) { alert(x.message); }
+  });
+  RAIZ().querySelectorAll('[data-conf-lin]').forEach((b) => b.addEventListener('click', async () => {
+    if (!usuario()) { elegirSoy(); return; }
+    try { cot = await api(`cotizaciones/${c.id}/lineas/${b.dataset.confLin}`, { method: 'PUT', body: { confirmar: true } }); toast('Precio confirmado'); dibujarCotizacion(); } catch (x) { alert(x.message); }
+  }));
   $('#ct-ver').addEventListener('change', (e) => { cotElegida = Number(e.target.value); pintarPedido(ped.pedido.id); });
   if ($('#ct-rearmar')) $('#ct-rearmar').addEventListener('click', rearmarCot);
   if ($('#ct-a-revision')) $('#ct-a-revision').addEventListener('click', mandarRevisionDlg);
@@ -18135,6 +18185,86 @@ async function aplicar() {
 }
 
 // ---------- configuración ----------
+// ---------- itinerarios de la web ----------
+async function pintarItinerarios() {
+  const j = await api('web');
+  const ult = j.lecturas[0];
+  const act = j.productos.filter((p) => p.activo);
+  const toursWeb = act.filter((p) => p.tipo === 'tour');
+  const fila = (p) => `<tr class="${p.activo ? '' : 'fila-aviso'}"><td data-t="Producto"><b>${esc(p.nombre)}</b> <span class="chip">${p.tipo === 'paquete' ? 'paquete' : 'tour'}</span>${p.activo ? '' : ' <span class="chip">ya no está en la web</span>'}</td>
+    <td data-t="Ciudades">${esc(p.ciudades.join(' · '))}</td><td data-t="Días" class="num">${p.dias}</td>
+    <td data-t="Precio web" class="num">${p.precio_web_cent != null ? usd(p.precio_web_cent) : 'a consultar'}</td></tr>`;
+  $('#ct-raiz').innerHTML = `<div class="wb-panel"><div class="barra"><h2 style="margin:0">Itinerarios de la web</h2><span style="flex:1"></span>
+      <button type="button" class="prim" id="ct-web-act">Actualizar desde la web</button></div>
+    <p class="nota" style="margin:6px 0 0">${ult ? `Última lectura: ${peru(ult.cuando)} · ${ult.altas} nuevos, ${ult.cambios} cambiados, ${ult.bajas} dados de baja.` : 'Todavía no se leyó la web: el armado automático no tiene itinerarios ni tours para usar.'} ${act.length} productos activos (${act.filter((p) => p.tipo === 'paquete').length} paquetes, ${toursWeb.length} tours). El precio de la web es el publicado: siempre queda como sugerido hasta que alguien lo confirma.</p></div>
+    <div id="ct-web-prog"></div>
+    ${j.productos.length ? `<div class="card"><div class="scroll"><table class="t-resp"><thead><tr><th>Producto</th><th>Ciudades</th><th class="num">Días</th><th class="num">Precio web</th></tr></thead><tbody>${j.productos.map(fila).join('')}</tbody></table></div></div>` : ''}
+    <h2>Servicios del tarifario unidos a un tour de la web</h2>
+    <p class="nota">Si un tour tiene tarifa propia, el armado usa esa tarifa en vez del precio publicado. Se unen solos por nombre al leer la web; acá se corrigen.</p>
+    <div class="card"><div class="scroll"><table class="t-resp"><thead><tr><th>Servicio del tarifario</th><th>Ciudad</th><th>Tour de la web</th></tr></thead><tbody>${j.servicios.filter((s) => s.activo).map((s) => `<tr><td data-t="Servicio"><b>${esc(s.nombre)}</b></td><td data-t="Ciudad">${esc(s.ciudad)}</td>
+      <td data-t="Tour"><select data-serv-web="${s.id}"><option value="">— sin unir —</option>${toursWeb.map((t) => `<option value="${esc(t.id)}" ${t.id === s.web_id ? 'selected' : ''}>${esc(t.nombre)}</option>`).join('')}</select></td></tr>`).join('') || '<tr><td colspan="3" class="nota">No hay servicios activos.</td></tr>'}</tbody></table></div></div>`;
+  $('#ct-web-act').addEventListener('click', actualizarWeb);
+  RAIZ().querySelectorAll('[data-serv-web]').forEach((s) => s.addEventListener('change', async () => {
+    if (!usuario()) { elegirSoy(); pintarItinerarios(); return; }
+    try { await api('web/servicio', { method: 'PUT', body: { servicio_id: Number(s.dataset.servWeb), web_id: s.value || null } }); toast('Guardado'); } catch (x) { alert(x.message); pintarItinerarios(); }
+  }));
+}
+
+// Lee la web en tandas, muestra qué cambió y recién ahí aplica.
+async function actualizarWeb() {
+  if (!usuario()) { elegirSoy(); return; }
+  const prog = $('#ct-web-prog'), btn = $('#ct-web-act');
+  btn.disabled = true;
+  const todos = [], errores = [];
+  let ids = [], desde = 0;
+  try {
+    while (desde !== null) {
+      prog.innerHTML = `<p class="nota">Leyendo la web… ${todos.length} fichas${ids.length ? ' de ' + ids.length : ''}.</p>`;
+      const r = await api('web/tanda', { method: 'POST', body: { desde } });
+      todos.push(...r.productos); errores.push(...r.errores); ids = r.ids; desde = r.siguiente;
+    }
+    const d = await api('web/diferencias', { method: 'POST', body: { productos: todos, ids } });
+    prog.innerHTML = '';
+    const lista = (xs, f) => xs.length ? `<ul style="margin:4px 0 10px;padding-left:18px">${xs.slice(0, 40).map(f).join('')}${xs.length > 40 ? `<li>… y ${xs.length - 40} más</li>` : ''}</ul>` : '<p class="nota" style="margin:2px 0 10px">Ninguno.</p>';
+    const nada = !d.altas.length && !d.cambios.length && !d.bajas.length;
+    abrirDialogo(`<h3>Lo que cambió en la web</h3>
+      <p class="nota" style="margin:0">${todos.length} fichas leídas, ${d.sin_cambio} sin cambios.${errores.length ? ` <span class="err">${errores.length} no se pudieron leer: ${esc(errores.map((e) => e.id).join(', '))}.</span>` : ''}</p>
+      <div class="scroll" style="max-height:50vh"><b>Nuevos (${d.altas.length})</b>${lista(d.altas, (x) => `<li>${esc(x.nombre)}</li>`)}
+      <b>Cambiados (${d.cambios.length})</b>${lista(d.cambios, (x) => `<li>${esc(x.nombre)}${x.antes.precio_web_cent !== x.ahora.precio_web_cent ? ` · precio ${x.antes.precio_web_cent != null ? usd(x.antes.precio_web_cent) : '—'} → ${x.ahora.precio_web_cent != null ? usd(x.ahora.precio_web_cent) : '—'}` : ''}${x.antes.dias !== x.ahora.dias ? ` · días ${x.antes.dias} → ${x.ahora.dias}` : ''}</li>`)}
+      <b>Ya no están en la web (${d.bajas.length})</b>${lista(d.bajas, (x) => `<li>${esc(x.nombre)}</li>`)}</div>
+      <p class="nota" style="margin:0">Las cotizaciones ya armadas no cambian.</p>
+      <div class="pie"><button value="cancel" formnovalidate>Cancelar</button><button class="prim" value="ok">${nada ? 'Registrar la lectura' : 'Aplicar'}</button></div>`,
+      async () => {
+        const cambiar = todos.filter((p) => d.altas.some((x) => x.id === p.id) || d.cambios.some((x) => x.id === p.id));
+        for (let i = 0; i < cambiar.length; i += 10) await api('web/aplicar', { method: 'POST', body: { productos: cambiar.slice(i, i + 10) } });
+        const r = await api('web/cerrar', { method: 'POST', body: { ids, altas: d.altas.length, cambios: d.cambios.length } });
+        toast(`Web actualizada${r.mapeados.length ? ` · ${r.mapeados.length} servicio(s) unidos a su tour` : ''}`);
+        pintarItinerarios();
+      });
+  } catch (e) { if (e.message !== '401') { prog.innerHTML = `<p class="err">${esc(e.message)}</p>`; } }
+  finally { btn.disabled = false; }
+}
+
+// ---------- reglas de viaje ----------
+async function pintarReglas() {
+  const j = await api('reglas');
+  const NOMBRE = { ciudad: 'Altura', conexion: 'Traslado', aclimatacion: 'Aclimatación' };
+  const resumen = (r) => { let d = {}; try { d = JSON.parse(r.datos); } catch {} return r.tipo === 'ciudad' ? `${d.altura_m} m` : r.tipo === 'conexion' ? `${d.horas} h${d.dia_completo ? ' · lleva el día' : ''}` : `avisa desde ${d.altura_aviso_m} m o saltos de ${d.salto_aviso_m} m`; };
+  $('#ct-reglas-caja').innerHTML = `<p class="nota">Avisan en la cotización, no bloquean. Las propuso el sistema: siguen "de prueba" hasta que alguien las valide.</p>
+    <div class="card"><div class="scroll"><table class="t-resp"><thead><tr><th>Tipo</th><th>Clave</th><th>Dato</th><th></th></tr></thead><tbody>${j.reglas.map((r) => `<tr><td data-t="Tipo">${NOMBRE[r.tipo]}</td><td data-t="Clave"><b>${esc(r.clave)}</b></td>
+      <td data-t="Dato">${esc(resumen(r))} ${r.es_prueba ? '<span class="prueba">PRUEBA</span>' : `<span class="chip">validada por ${esc(r.actualizado_por || '—')}</span>`}</td>
+      <td class="num"><button type="button" class="link" data-ed-regla="${r.id}">Editar</button></td></tr>`).join('')}</tbody></table></div></div>`;
+  RAIZ().querySelectorAll('[data-ed-regla]').forEach((b) => b.addEventListener('click', () => {
+    if (!usuario()) { elegirSoy(); return; }
+    const r = j.reglas.find((x) => x.id == b.dataset.edRegla);
+    abrirDialogo(`<h3>${esc(NOMBRE[r.tipo])}: ${esc(r.clave)}</h3>
+      <label>Datos (JSON)<textarea name="datos" rows="3">${esc(r.datos)}</textarea></label>
+      <label class="check"><input type="checkbox" name="validada" ${r.es_prueba ? '' : 'checked'}> Validada (ya no es de prueba)</label>
+      <div class="pie"><button value="cancel" formnovalidate>Cancelar</button><button class="prim" value="ok">Guardar</button></div>`,
+      async (f) => { await api(`reglas/${r.id}`, { method: 'PUT', body: { datos: f.datos.value, validada: f.validada.checked } }); toast('Regla guardada'); pintarReglas(); });
+  }));
+}
+
 async function pintarConfig() {
   const j = await api('config');
   const c = j.config;
@@ -18145,7 +18275,9 @@ async function pintarConfig() {
         <small class="nota" style="margin:0">${x.actualizado_por ? `Lo confirmó ${esc(x.actualizado_por)} el ${peru(x.actualizado_en)}` : x.es_prueba ? 'Sin confirmar' : 'Valor inicial'}</small></label>`).join('')}</div></div>
     <div class="panel"><h2>Temporadas</h2><p class="nota">Rangos que se repiten todos los años (pueden cruzar el año, ej. 20/12 al 05/01). Los días fuera de una temporada alta son temporada baja. ${j.temporadas.some((t) => t.es_prueba) ? '<span class="prueba">PRUEBA</span> Las fechas actuales son de prueba.' : ''}</p>
       <div id="ct-temps"></div><button type="button" id="ct-mas-temp" class="chico">+ Rango</button></div>
-    <div class="barra"><button class="prim">Guardar y confirmar</button><span class="msg" id="ct-cmsg"></span></div></form>`;
+    <div class="barra"><button class="prim">Guardar y confirmar</button><span class="msg" id="ct-cmsg"></span></div></form>
+    <h2>Reglas de viaje</h2><div id="ct-reglas-caja"></div>`;
+  pintarReglas();
   const md2 = (md) => md ? `${md.slice(3)}/${md.slice(0, 2)}` : '';
   const filaTemp = (t = { temporada: 'alta', desde_md: '', hasta_md: '', nota: '' }) => {
     const d = document.createElement('div'); d.className = 'barra temp';

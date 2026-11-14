@@ -58,7 +58,7 @@ export function habitaciones(pax) {
   return r;
 }
 
-const diasDe = (duracion) => { const m = String(duracion || '').match(/(\d+)\s*D/i); return m ? Math.max(1, +m[1]) : 1; };
+export const diasDe = (duracion) => { const m = String(duracion || '').match(/(\d+)\s*D/i); return m ? Math.max(1, +m[1]) : 1; };
 const etiquetaHab = { SGL: 'simple', DBL: 'doble', TPL: 'triple' };
 
 // Precio de una línea. Devuelve una copia con neto_cent, venta_cent, margen_pct, problema, etc. actualizados.
@@ -73,6 +73,7 @@ export function precioLinea(l, { catalogo, config, pax }) {
   if (x.tipo === 'manual') {
     esVenta = x.precio_es_venta ? 1 : 0;
     netoCalc = x.neto_cent ?? 0;
+    ilus = x.es_ilustrativa ? 1 : 0;   // las ilustraciones del armado (destino que la web no tiene) siguen marcadas hasta que alguien las corrija
   } else if (x.tipo === 'hotel') {
     const h = (catalogo.hoteles || []).find((y) => y.id === x.hotel_id);
     if (!h) x.problema = 'Falta elegir el hotel';
@@ -122,20 +123,28 @@ export function precioLinea(l, { catalogo, config, pax }) {
   return x;
 }
 
-export function totales(lineas, { pax, config }) {
+export function totales(lineas, { pax, config, modo = 'componentes', paquete_web_cent = null }) {
   const neto = lineas.reduce((s, l) => s + (l.neto_cent || 0), 0);
-  const venta = lineas.reduce((s, l) => s + (l.venta_cent || 0), 0);
+  const ventaComponentes = lineas.reduce((s, l) => s + (l.venta_cent || 0), 0);
+  // Paquete publicado: el precio web es de venta y no trae neto, así que no hay ganancia que calcular.
+  const porPaquete = modo === 'paquete_web' && paquete_web_cent != null;
+  const venta = porPaquete ? paquete_web_cent : ventaComponentes;
   const n = Math.max(1, Number(pax) || 1);
   return {
+    modo: porPaquete ? 'paquete_web' : 'componentes',
+    componentes_venta_cent: ventaComponentes,
+    paquete_web_cent,
     neto_cent: neto,
     venta_cent: venta,
-    ganancia_cent: venta - neto,
-    margen_efectivo_pct: neto ? Math.round(((venta - neto) / neto) * 1000) / 10 : null,
+    ganancia_cent: porPaquete ? null : venta - neto,
+    margen_efectivo_pct: !porPaquete && neto ? Math.round(((venta - neto) / neto) * 1000) / 10 : null,
     venta_por_persona_cent: Math.round(venta / n),
     con_factura_cent: Math.round(venta * (1 + (Number(config.igv_pct) || 0) / 100)),
     con_tarjeta_cent: Math.round(venta * (1 + (Number(config.recargo_tarjeta_pct) || 0) / 100)),
     problemas: lineas.filter((l) => l.problema).length,
     usa_ilustrativas: lineas.some((l) => l.es_ilustrativa) ? 1 : 0,
+    ilustrativas: lineas.filter((l) => l.es_ilustrativa && l.origen_precio === 'ilustrativa').length,
+    sin_confirmar: lineas.filter((l) => l.sin_confirmar).length,
   };
 }
 
