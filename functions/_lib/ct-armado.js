@@ -59,10 +59,11 @@ export function recortar(destinos, dias) {
 
 // ---------- catálogo de candidatos ----------
 // Cada candidato es un servicio del tarifario (precio real) o un tour de la web sin tarifa (precio publicado, sin confirmar).
-export function candidatosDe({ catalogo, web }) {
+// incluirSinTarifa: servicios cargados pero sin precio todavía; solo para lo que el cliente pidió por nombre (la línea sale marcada sin tarifa).
+export function candidatosDe({ catalogo, web, incluirSinTarifa = false }) {
   const out = [];
   const usados = new Set();
-  for (const s of (catalogo.servicios || []).filter((x) => x.activo && (x.tarifas || []).length)) {
+  for (const s of (catalogo.servicios || []).filter((x) => x.activo && (incluirSinTarifa || (x.tarifas || []).length))) {
     if (!['tour', 'paquete', 'entrada'].includes(s.tipo)) continue;
     const w = s.web_id ? web.find((p) => p.id === s.web_id) : null;
     if (w) usados.add(w.id);
@@ -243,7 +244,7 @@ async function armarMedida({ pedido, destinos, catalogo, web, reglas, elegir, ti
     });
   }
   const ocupados = new Set();
-  const exc = resolverExcursiones(pedido.excursiones, candidatos);
+  const exc = resolverExcursiones(pedido.excursiones, candidatosDe({ catalogo, web, incluirSinTarifa: true }));
   const { elegidas, avisoIA, avisosForzadas } = await llenarHuecos({ tramos: reales, candidatos, ocupados, pedido, elegir, forzadas: exc.forzadas });
   for (const { c, slot } of elegidas) lineas.push({ ...lineaDeCandidato(c, { dia: slot.dia, fecha: fechaDia(slot.dia), pax, orden: orden++ }) });
   const avNoches = descontarNochesIncluidas(lineas, catalogo, reales);

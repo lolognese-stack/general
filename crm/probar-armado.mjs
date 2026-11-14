@@ -181,4 +181,12 @@ await test('resolverExcursiones: "Lago Titicaca" encuentra el tour por el resume
   assert.equal(r.forzadas.length, 1); assert.equal(r.forzadas[0].nombre, 'Puno 2D/1N');
   assert.equal(r.avisos.length, 1);
 });
+await test('excursiones: un servicio cargado sin tarifa se ubica igual (la línea queda sin precio) pero no entra solo', async () => {
+  const cat = { hoteles: [hotel(9, 'Arequipa')], servicios: [servicio(30, 'Cañón del Colca (full day)', 'Arequipa', { duracion: '1D', tarifas: [] })] };
+  const ped = { pasajeros: 2, dias: 4, fecha_inicio: '2027-02-10', categoria_hotel: 'confort', servicios: [], destinos: [{ ciudad: 'Arequipa', noches: 3 }] };
+  const con = await armarItinerario({ pedido: { ...ped, excursiones: ['Cañón del Colca'] }, catalogo: cat, web: [tour('x', 'Otro', 'Arequipa')], reglas, elegir: async () => ({}) });
+  assert.ok(con.variantes[0].lineas.some((l) => l.servicio_id === 30), JSON.stringify(con.variantes[0].lineas.map((l) => l.descripcion)));
+  const sin = await armarItinerario({ pedido: ped, catalogo: cat, web: [tour('x', 'Otro', 'Arequipa')], reglas, elegir: async () => ({}) });
+  assert.ok(!sin.variantes[0].lineas.some((l) => l.servicio_id === 30));
+});
 console.log(`${n} tests ok`);

@@ -17817,7 +17817,7 @@ function dibujarCotizacion() {
         ${l.origen_precio === 'ilustrativa' ? '<span class="prueba" title="La web no publica este destino: hay que armarlo y ponerle precio">ILUSTRACIÓN</span>' : l.es_ilustrativa ? '<span class="prueba">PRUEBA</span>' : ''}${l.sin_confirmar ? ' <span class="chip pisado" title="Precio publicado en la web, sin tarifa propia: confirmalo o corregilo antes de aprobar">precio web sin confirmar</span>' : l.origen_precio === 'web' && l.web_dia ? ' <span class="chip">de la web</span>' : ''}${l.pisado_neto || l.pisado_venta ? ' <span class="chip pisado" title="Precio cambiado a mano">a mano</span>' : ''}${l.precio_es_venta ? ' <span class="chip" title="Tarifa ya es precio de venta">propio</span>' : ''}
         ${l.problema ? `<div class="err">${esc(l.problema)}</div>` : ''}${l.nota ? `<div class="nota" style="margin:0">${esc(l.nota)}</div>` : ''}</td>
       <td data-t="Pax">${l.tipo === 'hotel' ? `${l.unidades} ${l.habitacion} × ${l.cantidad} n` : l.pasajeros}</td>
-      <td data-t="Neto" class="num">${usd(l.neto_cent)}${l.moneda === 'PEN' && l.neto_unit_cent != null ? `<small class="nota" style="display:block;margin:0">S/ ${(l.neto_unit_cent / 100).toFixed(2)} c/u</small>` : ''}</td>
+      <td data-t="Neto" class="num">${usd(l.neto_cent)}${l.tipo === 'hotel' && l.cantidad && l.unidades ? `<small class="nota" style="display:block;margin:0">${usd(Math.round(l.neto_cent / (l.cantidad * l.unidades)))} / hab. noche</small>` : ''}${l.moneda === 'PEN' && l.neto_unit_cent != null ? `<small class="nota" style="display:block;margin:0">S/ ${(l.neto_unit_cent / 100).toFixed(2)} c/u</small>` : ''}</td>
       <td data-t="Margen" class="num">${l.margen_pct != null ? l.margen_pct + '%' : '—'}</td>
       <td data-t="Venta" class="num"><b>${usd(l.venta_cent)}</b></td>
       <td class="num">${ed && l.sin_confirmar ? `<button type="button" class="link" data-conf-lin="${l.id}">Confirmar</button>` : ''}${ed ? `<button type="button" class="link" data-ed-lin="${l.id}">Editar</button>` : ''}</td></tr>`;
@@ -18065,6 +18065,8 @@ function editarLineaDlg(l) {
       <div class="fila"><label>Habitación<select name="habitacion">${['SGL', 'DBL', 'TPL'].map((h) => `<option ${h === l.habitacion ? 'selected' : ''}>${h}</option>`).join('')}</select></label>
       <label>Habitaciones<input name="unidades" type="number" min="1" value="${l.unidades}"></label></div>` : ''}
     ${l.tipo === 'manual' ? `<label>Descripción<input name="descripcion" maxlength="200" value="${esc(l.descripcion)}"></label>` : ''}
+    ${hotel ? `<div class="fila"><label>Neto por habitación y noche (USD)<input name="neto_noche" inputmode="decimal" value="${(l.neto_cent / 100 / Math.max(1, l.cantidad * l.unidades)).toFixed(2)}"></label>
+      <p class="nota" style="margin:0;align-self:end">Se calcula solo: precio × noches × habitaciones = neto total. Si cambiás uno, se recalcula el otro.</p></div>` : ''}
     <div class="fila"><label>Neto total (USD)${l.pisado_neto ? ' · a mano' : ''}<input name="neto" inputmode="decimal" value="${(l.neto_cent / 100).toFixed(2)}"></label>
       <label>Venta total (USD)${l.pisado_venta ? ' · a mano' : ''}<input name="venta" inputmode="decimal" value="${(l.venta_cent / 100).toFixed(2)}"></label></div>
     ${l.precio_es_venta ? '<p class="nota" style="margin:0">Tarifa propia: ya es precio de venta, no lleva margen.</p>' : `<label>Margen % (vacío = el de la configuración, ${c.config.margen_pct}%)<input name="margen" inputmode="decimal" value="${l.margen_fijo ?? ''}"></label>`}
@@ -18085,6 +18087,19 @@ function editarLineaDlg(l) {
       if (f.margen && f.margen.value !== String(l.margen_fijo ?? '')) body.margen = f.margen.value;
       cot = await api(`cotizaciones/${c.id}/lineas/${l.id}`, { method: 'PUT', body }); dibujarCotizacion(); toast('Línea guardada');
     });
+  if (hotel) {
+    const ff = $('#ct-dlg-f');
+    const num = (s) => { const n = Number(String(s).replace(',', '.')); return Number.isFinite(n) ? n : null; };
+    const mult = () => Math.max(1, (Number(ff.noches.value) || 1) * (Number(ff.unidades.value) || 1));
+    let tocado = null;   // 'noche' o 'neto': lo último que escribió la persona; los demás se calculan
+    ff.neto_noche.addEventListener('input', () => { tocado = 'noche'; const n = num(ff.neto_noche.value); if (n !== null) ff.neto.value = (n * mult()).toFixed(2); });
+    ff.neto.addEventListener('input', () => { tocado = 'neto'; const n = num(ff.neto.value); if (n !== null) ff.neto_noche.value = (n / mult()).toFixed(2); });
+    const alCambiarCantidad = () => {
+      if (tocado === 'noche') { const n = num(ff.neto_noche.value); if (n !== null) ff.neto.value = (n * mult()).toFixed(2); }
+      else if (tocado === 'neto') { const n = num(ff.neto.value); if (n !== null) ff.neto_noche.value = (n / mult()).toFixed(2); }
+    };
+    ff.noches.addEventListener('input', alCambiarCantidad); ff.unidades.addEventListener('input', alCambiarCantidad);
+  }
   $('#ct-borrar-lin').addEventListener('click', async () => {
     if (!confirm('¿Borrar esta línea?')) return;
     try { cot = await api(`cotizaciones/${c.id}/lineas/${l.id}`, { method: 'DELETE' }); $('#ct-dlg').close(); dibujarCotizacion(); toast('Línea borrada'); } catch (x) { $('#ct-dlg-msg').textContent = x.message; }
