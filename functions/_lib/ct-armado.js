@@ -10,7 +10,7 @@
 //   - días que no alcanzan: dos borradores (A respeta los días y recorta, B arma lo que se pidió y explica por qué no entra);
 //   - destino que la web no tiene: línea ILUSTRATIVA, sin precio, marcada.
 // Todo precio que no viene del tarifario sale "sin confirmar" y bloquea la aprobación hasta que Álvaro lo confirme.
-import { armarBorrador, sumarDias, diasDe } from './cotizar.js';
+import { armarBorrador, sumarDias, diasDe, descontarNochesIncluidas } from './cotizar.js';
 
 const sinAcentos = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '');
 export const normCiudad = (s) => sinAcentos(s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
@@ -223,9 +223,11 @@ async function armarMedida({ pedido, destinos, catalogo, web, reglas, elegir, ti
   const ocupados = new Set();
   const { elegidas, avisoIA } = await llenarHuecos({ tramos: reales, candidatos, ocupados, pedido, elegir });
   for (const { c, slot } of elegidas) lineas.push({ ...lineaDeCandidato(c, { dia: slot.dia, fecha: fechaDia(slot.dia), pax, orden: orden++ }) });
+  const avNoches = descontarNochesIncluidas(lineas, catalogo, reales);
   lineas.sort((a, b) => (a.dia - b.dia) || (a.orden - b.orden));
   const av = [
     ...avisosExtra,
+    ...avNoches,
     ...(avisoIA ? [avisoIA] : []),
     ...ilustrativas.map((t) => `${t.ciudad} no está en la web ni en el tarifario: quedó como ilustración, sin precio.`),
     ...avisos.filter((a) => !/fechas dan/.test(a)),

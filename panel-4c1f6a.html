@@ -18100,7 +18100,8 @@ function editarServicio(s) {
     <div class="fila"><label>Ciudad<input name="ciudad" required maxlength="60" value="${esc(v.ciudad)}" list="ct-ciudades"></label>
       <label>Tipo<select name="tipo">${Object.entries(TIPOS).map(([k, n]) => `<option value="${k}" ${k === v.tipo ? 'selected' : ''}>${n}</option>`).join('')}</select></label></div>
     <div class="fila"><label>Duración<input name="duracion" maxlength="80" value="${esc(v.duracion)}" placeholder="Medio día, 2D/1N…"></label>
-      <label>Mínimo de pasajeros<input name="pax_min" type="number" min="1" step="1" value="${esc(v.pax_min)}"></label></div>
+      <label>Mínimo de pasajeros<input name="pax_min" type="number" min="1" step="1" value="${esc(v.pax_min)}"></label>
+      <label>Noches de alojamiento incluidas<input name="noches_incluidas" type="number" min="0" max="30" step="1" value="${esc(v.noches_incluidas || 0)}" title="Ej. Colca 2D/1N = 1: esa noche se descuenta del hotel de la ciudad base"></label></div>
     <label>Qué incluye<textarea name="incluye">${esc(v.incluye)}</textarea></label>
     <label>Qué no incluye<textarea name="no_incluye">${esc(v.no_incluye)}</textarea></label>
     <label class="check"><input type="checkbox" name="precio_es_venta" ${v.precio_es_venta ? 'checked' : ''}> Lo opera Luna Llena: la tarifa ya es precio de venta (sin margen)</label>
@@ -18108,7 +18109,7 @@ function editarServicio(s) {
     <datalist id="ct-ciudades">${[...new Set([...datos.servicios, ...datos.hoteles].map((x) => x.ciudad))].map((c) => `<option>${esc(c)}</option>`).join('')}</datalist>
     <div class="pie"><button value="cancel" formnovalidate>Cancelar</button><button class="prim" value="ok">Guardar</button></div>`,
     async (f) => {
-      await api(s ? `servicios/${s.id}` : 'servicios', { method: s ? 'PUT' : 'POST', body: { nombre: f.nombre.value, ciudad: f.ciudad.value, tipo: f.tipo.value, duracion: f.duracion.value, pax_min: Number(f.pax_min.value || 1), incluye: f.incluye.value, no_incluye: f.no_incluye.value, precio_es_venta: f.precio_es_venta.checked, activo: s ? f.activo.checked : true } });
+      await api(s ? `servicios/${s.id}` : 'servicios', { method: s ? 'PUT' : 'POST', body: { nombre: f.nombre.value, ciudad: f.ciudad.value, tipo: f.tipo.value, duracion: f.duracion.value, pax_min: Number(f.pax_min.value || 1), noches_incluidas: Number(f.noches_incluidas.value || 0), incluye: f.incluye.value, no_incluye: f.no_incluye.value, precio_es_venta: f.precio_es_venta.checked, activo: s ? f.activo.checked : true } });
       await cargarTarifario(); pintar(); toast('Servicio guardado');
     });
 }

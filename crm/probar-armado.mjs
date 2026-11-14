@@ -1,5 +1,6 @@
 // Pruebas del armado automático (ct-armado.js). Uso: node crm/probar-armado.mjs
 import assert from 'node:assert/strict';
+import { armarBorrador, descontarNochesIncluidas } from '../functions/_lib/cotizar.js';
 import { armarItinerario, indexarReglas, recortar, paqueteExacto, validarItinerario, tramosDe, candidatosDe, destinosDePaquete } from '../functions/_lib/ct-armado.js';
 
 let n = 0;
@@ -143,5 +144,23 @@ await test('candidatosDe: multi-día, el servicio unido a la web trae su ficha y
 await test('destinosDePaquete: noches por ciudad según los días de la ficha', () => {
   const d = destinosDePaquete(web.find((p) => p.id === '6d5n-ruta-del-sol'));
   assert.equal(d.reduce((s, x) => s + x.noches, 0), 5);
+});
+await test('noches_incluidas: Colca 2D/1N descuenta 1 noche del hotel de Arequipa; el full day no descuenta', () => {
+  const cat = { hoteles: [hotel(9, 'Arequipa')], servicios: [servicio(20, 'Cañón del Colca 2D/1N', 'Arequipa', { duracion: '2D/1N', noches_incluidas: 1 }), servicio(21, 'Colca full day', 'Arequipa', { duracion: '1D' })] };
+  const ped = { pasajeros: 2, fecha_inicio: '2027-02-10', categoria_hotel: 'confort', destinos: [{ ciudad: 'Arequipa', noches: 3 }] };
+  const noches = (r) => r.lineas.filter((l) => l.tipo === 'hotel' && l.habitacion === 'DBL').reduce((s, l) => s + l.cantidad, 0);
+  const sin = armarBorrador({ ...ped, servicios: [21] }, cat);
+  assert.equal(noches(sin), 3);
+  const con = armarBorrador({ ...ped, servicios: [20] }, cat);
+  assert.equal(noches(con), 2);
+  assert.ok(con.lineas.filter((l) => l.tipo === 'hotel').every((l) => /× 2 noches/.test(l.descripcion)), JSON.stringify(con.lineas.map((l) => l.descripcion)));
+  assert.ok(con.avisos.some((a) => /se descontó del hotel de Arequipa/.test(a)), con.avisos.join('|'));
+  assert.ok(!con.avisos.some((a) => /revisá que no se cobre doble/.test(a)));
+});
+await test('noches_incluidas: no baja de 0 y quita las líneas de hotel vacías', () => {
+  const cat = { servicios: [servicio(20, 'Colca', 'Arequipa', { noches_incluidas: 3 })] };
+  const lineas = [{ tipo: 'hotel', dia: 1, cantidad: 1, descripcion: 'H · 1 hab. × 1 noche' }, { tipo: 'tour', dia: 2, servicio_id: 20 }];
+  descontarNochesIncluidas(lineas, cat, [{ ciudad: 'Arequipa', noches: 1, desde: 1, hasta: 2 }]);
+  assert.equal(lineas.filter((l) => l.tipo === 'hotel').length, 0);
 });
 console.log(`${n} tests ok`);

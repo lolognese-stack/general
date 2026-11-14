@@ -158,6 +158,30 @@ export function usaPrueba(lineas, config) {
   return false;
 }
 
+// Servicios con noches_incluidas (ej. Colca 2D/1N, duerme en Chivay): esas noches ya van en el precio del servicio,
+// así que se restan de las noches de hotel del tramo de la ciudad. Modifica `lineas` y devuelve los avisos.
+export function descontarNochesIncluidas(lineas, catalogo, tramos) {
+  const avisos = [];
+  for (const l of [...lineas]) {
+    if (l.tipo === 'hotel' || !l.servicio_id) continue;
+    const s = (catalogo.servicios || []).find((x) => x.id === l.servicio_id);
+    let falta = Math.max(0, Math.floor(Number(s && s.noches_incluidas) || 0));
+    if (!falta) continue;
+    const t = tramos.find((x) => normalizar(x.ciudad) === normalizar(s.ciudad) && x.noches > 0 && l.dia >= x.desde && l.dia <= x.hasta)
+      || tramos.find((x) => normalizar(x.ciudad) === normalizar(s.ciudad) && x.noches > 0);
+    const hoteles = t ? lineas.filter((h) => h.tipo === 'hotel' && h.dia === t.desde && h.cantidad > 0) : [];
+    if (!hoteles.length) continue;
+    const quita = Math.min(falta, hoteles[0].cantidad);
+    for (const h of hoteles) {
+      h.cantidad -= quita;
+      if (h.cantidad > 0) h.descripcion = String(h.descripcion).replace(/× \d+ noches?/, `× ${h.cantidad} noche${h.cantidad > 1 ? 's' : ''}`);
+    }
+    for (let i = lineas.length - 1; i >= 0; i--) if (lineas[i].tipo === 'hotel' && lineas[i].cantidad <= 0) lineas.splice(i, 1);
+    avisos.push(`${s.nombre} incluye ${quita} noche${quita === 1 ? '' : 's'} de alojamiento: se descontó${quita === 1 ? '' : 'ron'} del hotel de ${t.ciudad}.`);
+  }
+  return avisos;
+}
+
 // Borrador automático a partir del pedido.
 // pedido = { fecha_inicio, fecha_fin, pasajeros, destinos: [{ciudad, noches}], categoria_hotel, servicios: [id] }
 // Devuelve { lineas, avisos }: líneas sin precio (pasan después por precioLinea).
@@ -228,9 +252,10 @@ export function armarBorrador(pedido, catalogo) {
     }
     for (let i = 0; i < largo; i++) ocupado.set(d + i, true);
     const noches = (String(s.duracion || '').match(/(\d+)\s*N/i) || [])[1];
-    if (noches && cat && cat !== 'sin_hotel') avisos.push(`${s.nombre} incluye ${noches} noche${noches === '1' ? '' : 's'} de alojamiento: revisá que no se cobre doble hotel`);
+    if (noches && !s.noches_incluidas && cat && cat !== 'sin_hotel') avisos.push(`${s.nombre} incluye ${noches} noche${noches === '1' ? '' : 's'} de alojamiento: revisá que no se cobre doble hotel`);
     lineas.push({ dia: d, orden: orden++, tipo: s.tipo, servicio_id: s.id, pasajeros: pax, cantidad: 1, unidades: 1, fecha: fechaDia(d), descripcion: s.nombre });
   }
+  avisos.push(...descontarNochesIncluidas(lineas, catalogo, tramos));
   lineas.sort((a, b) => (a.dia - b.dia) || ((a.tipo === 'hotel') - (b.tipo === 'hotel')) || (a.orden - b.orden));
   lineas.forEach((l, i) => { l.orden = i; });
   return { lineas, avisos, dias: totalDias };

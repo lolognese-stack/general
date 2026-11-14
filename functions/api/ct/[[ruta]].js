@@ -98,7 +98,9 @@ function validarServicio(b) {
   if (!TIPOS_SERVICIO.includes(tipo)) errores.push('tipo no válido');
   const pax_min = b.pax_min === undefined || b.pax_min === '' || b.pax_min === null ? 1 : Number(b.pax_min);
   if (!Number.isInteger(pax_min) || pax_min < 1) errores.push('el mínimo de pasajeros tiene que ser un entero desde 1');
-  return { errores, d: { nombre, ciudad, tipo, pax_min, duracion: texto(b.duracion, 80), incluye: texto(b.incluye), no_incluye: texto(b.no_incluye), precio_es_venta: b.precio_es_venta ? 1 : 0, activo: b.activo === undefined ? 1 : (b.activo ? 1 : 0) } };
+  const noches_incluidas = b.noches_incluidas === undefined || b.noches_incluidas === '' || b.noches_incluidas === null ? 0 : Number(b.noches_incluidas);
+  if (!Number.isInteger(noches_incluidas) || noches_incluidas < 0 || noches_incluidas > 30) errores.push('las noches incluidas tienen que ser un entero de 0 a 30');
+  return { errores, d: { nombre, ciudad, tipo, pax_min, noches_incluidas, duracion: texto(b.duracion, 80), incluye: texto(b.incluye), no_incluye: texto(b.no_incluye), precio_es_venta: b.precio_es_venta ? 1 : 0, activo: b.activo === undefined ? 1 : (b.activo ? 1 : 0) } };
 }
 
 async function guardarServicio(env, id, body) {
@@ -107,13 +109,13 @@ async function guardarServicio(env, id, body) {
   const clave = claveServicio(d.tipo, d.ciudad, d.nombre);
   const otro = await env.DB.prepare(`SELECT id FROM ct_servicios WHERE clave = ? AND id IS NOT ?`).bind(clave, id).first();
   if (otro) return json({ error: 'Ya existe un servicio con ese tipo, ciudad y nombre' }, 409);
-  const vals = [clave, d.nombre, d.ciudad, d.tipo, d.duracion, d.incluye, d.no_incluye, d.pax_min, d.precio_es_venta, d.activo];
+  const vals = [clave, d.nombre, d.ciudad, d.tipo, d.duracion, d.incluye, d.no_incluye, d.pax_min, d.noches_incluidas, d.precio_es_venta, d.activo];
   if (id) {
-    const r = await env.DB.prepare(`UPDATE ct_servicios SET clave=?, nombre=?, ciudad=?, tipo=?, duracion=?, incluye=?, no_incluye=?, pax_min=?, precio_es_venta=?, activo=?, actualizado_en=${ahora} WHERE id=?`).bind(...vals, id).run();
+    const r = await env.DB.prepare(`UPDATE ct_servicios SET clave=?, nombre=?, ciudad=?, tipo=?, duracion=?, incluye=?, no_incluye=?, pax_min=?, noches_incluidas=?, precio_es_venta=?, activo=?, actualizado_en=${ahora} WHERE id=?`).bind(...vals, id).run();
     if (!r.meta.changes) return json({ error: 'No existe' }, 404);
     return json({ ok: true, id });
   }
-  const r = await env.DB.prepare(`INSERT INTO ct_servicios (clave, nombre, ciudad, tipo, duracion, incluye, no_incluye, pax_min, precio_es_venta, activo) VALUES (?,?,?,?,?,?,?,?,?,?)`).bind(...vals).run();
+  const r = await env.DB.prepare(`INSERT INTO ct_servicios (clave, nombre, ciudad, tipo, duracion, incluye, no_incluye, pax_min, noches_incluidas, precio_es_venta, activo) VALUES (?,?,?,?,?,?,?,?,?,?,?)`).bind(...vals).run();
   return json({ ok: true, id: r.meta.last_row_id });
 }
 
