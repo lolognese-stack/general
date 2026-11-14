@@ -13598,6 +13598,13 @@ async function cotizadorInit(){
   catch(e){ czActivo = false; }   // CRM sin cotizador (otros clientes): la pestaña no aparece
   el('nav-cotizador').hidden = !czActivo;
   if(!czActivo){ if(seccion === 'cotizador') irA('leads'); return; }
+  // Viene de Cotizaciones (cotización aprobada, "Abrir en el armador"): abre Propuesta con el texto ya cargado.
+  // Sin auto: la lectura con IA (API paga) la dispara la persona con el botón.
+  try{
+    const h = JSON.parse(localStorage.getItem('ct_para_armador') || 'null');
+    localStorage.removeItem('ct_para_armador');
+    if(h && h.texto && czArActivo){ czAr = { ...CZ_AR_VACIO(), texto: String(h.texto).slice(0, 40000) }; czModo = 'propuesta'; localStorage.setItem('cz_modo', czModo); }
+  }catch(e){}
   el('ld-cz-nueva').addEventListener('click', () => { const l = leads.find(x => x.id === Number(el('f-id').value)); if(l) czIrConLead(l); });
   if(seccion === 'cotizador') irA('cotizador');
 }

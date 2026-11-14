@@ -15,6 +15,7 @@
 //   POST   /api/ct/cotizaciones/:id/lineas     agregar línea   PUT|DELETE /api/ct/cotizaciones/:id/lineas/:lid
 //   POST   /api/ct/cotizaciones/:id/nueva-version          GET /api/ct/cotizaciones/:id/cambios
 //   POST   /api/ct/cotizaciones/:id/revision   { revisor, nuevo_link } -> { token } (el token solo se ve esta vez)
+//   GET    /api/ct/cotizaciones/:id/propuesta  { slug, propuesta_json, texto_armador } para la propuesta web (solo aprobadas)
 // Quién: header x-crm-usuario (lo elige cada dispositivo en la página: "Soy Lorenzo / Soy Álvaro").
 import { rolDe, json } from '../../_lib/auth.js';
 import {
@@ -26,6 +27,8 @@ import {
   vistaCotizacion, editarCotizacion, agregarLinea, editarLinea, borrarLinea, cambiosCotizacion,
 } from '../../_lib/ct-cotizaciones.js';
 import { mandarARevision } from '../../_lib/ct-revision.js';
+import { paraPropuesta } from '../../_lib/ct-propuesta.js';
+import { cargarCatalogo } from '../../_lib/ct-cotizaciones.js';
 
 const CONFIG = {
   margen_pct: { min: 0, max: 300, nombre: 'Margen por defecto (%)' },
@@ -329,6 +332,14 @@ export async function onRequest({ request, env, params }) {
       if (sub === 'nueva-version' && m === 'POST') return nuevaVersion(env, id, por);
       if (sub === 'cambios' && m === 'GET') return cambiosCotizacion(env, id);
       if (sub === 'revision' && m === 'POST') return mandarARevision(env, id, body, por);
+      if (sub === 'propuesta' && m === 'GET') {
+        const v = await vistaCotizacion(env, id);
+        if (!v) return json({ error: 'No existe' }, 404);
+        const hoy = new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10);
+        const azar = [...crypto.getRandomValues(new Uint8Array(3))].map((b) => b.toString(16).padStart(2, '0')).join('');
+        const r = paraPropuesta(v, { servicios: (await cargarCatalogo(env)).servicios, hoy, azar });
+        return r.errores ? json({ error: r.errores.join('; '), errores: r.errores }, 409) : json(r);
+      }
     }
     if (recurso === 'servicios' && ((m === 'POST' && !id) || (m === 'PUT' && id))) return guardarServicio(env, id, body);
     if (recurso === 'hoteles' && ((m === 'POST' && !id) || (m === 'PUT' && id))) return guardarHotel(env, id, body);

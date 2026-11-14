@@ -426,7 +426,8 @@ function dibujarCotizacion() {
       ${ed && c.id === versiones[0].id ? '<button type="button" class="chico prim" id="a-revision">Mandar a revisión</button>' : ''}
       ${c.estado === 'en_revision' && linkGuardado(c.id) ? '<button type="button" class="chico" id="copiar-wa">Copiar mensaje para WhatsApp</button>' : ''}
       ${ed ? '<button type="button" class="chico" id="rearmar">Volver a armar</button>' : ''}
-      ${!ed && c.id === versiones[0].id ? '<button type="button" class="chico prim" id="nueva-v">Crear versión nueva</button>' : ''}
+      ${c.estado === 'aprobada' ? '<button type="button" class="chico prim" id="a-propuesta">Preparar propuesta web</button>' : ''}
+      ${!ed && c.id === versiones[0].id ? '<button type="button" class="chico" id="nueva-v">Crear versión nueva</button>' : ''}
       <button type="button" class="chico" id="cambios-cot">Cambios de precio</button></div>
     ${c.estado === 'en_revision' ? `<p class="aviso">En revisión de ${esc(c.revisor || '—')}. Lo que cambie desde el link queda en "Cambios de precio".</p>` : ''}
     ${c.estado === 'cambios_pedidos' ? `<div class="avisos-cot"><b>${esc(c.revisor || 'Álvaro')} pidió cambios:</b> ${esc(c.pedido_cambios || '')}</div>` : ''}
@@ -449,6 +450,7 @@ function dibujarCotizacion() {
   $('#ver').addEventListener('change', (e) => { cotElegida = Number(e.target.value); pintarPedido(ped.pedido.id); });
   if ($('#rearmar')) $('#rearmar').addEventListener('click', rearmarCot);
   if ($('#a-revision')) $('#a-revision').addEventListener('click', mandarRevisionDlg);
+  if ($('#a-propuesta')) $('#a-propuesta').addEventListener('click', prepararPropuestaDlg);
   if ($('#copiar-wa')) $('#copiar-wa').addEventListener('click', () => dialogoLink(linkGuardado(c.id)));
   if ($('#nueva-v')) $('#nueva-v').addEventListener('click', async () => {
     if (!usuario()) { elegirSoy(); return; }
@@ -513,6 +515,41 @@ function mandarRevisionDlg() {
       if (tok) setTimeout(() => dialogoLink(tok), 50);
       else toast('En revisión. El link anterior sigue andando.');
     });
+}
+
+// ---------- propuesta web (fase 4) ----------
+async function prepararPropuestaDlg() {
+  const c = cot.cotizacion;
+  let r;
+  try { r = await api(`cotizaciones/${c.id}/propuesta`); }
+  catch (x) {
+    const errs = x.datos?.errores || [x.message];
+    abrirDialogo(`<h3>Todavía no se puede armar la propuesta</h3><ul>${errs.map((e) => `<li>${esc(e)}</li>`).join('')}</ul><div class="pie"><button value="cancel" formnovalidate>Cerrar</button></div>`, () => {});
+    return;
+  }
+  const paquete = { slug: r.slug, propuesta_json: r.propuesta_json, texto_armador: r.texto_armador };
+  abrirDialogo(`<h3>Propuesta web</h3>
+    <p class="nota" style="margin:0">Sin netos ni márgenes: solo lo que ve el cliente. Total ${usd(Math.round(r.propuesta_json.precio.totalPP * 100))} por persona · vence el ${fecha(r.propuesta_json.validUntil)} · carpeta <b>${esc(r.slug)}</b></p>
+    <ol class="nota" style="margin:0;padding-left:18px">
+      <li><b>Armar la página:</b> "Abrir en el armador" lleva este texto a Cotizador › Propuesta. Ahí se revisa y se descarga el HTML.</li>
+      <li><b>Datos de venta:</b> "Descargar paquete" baja el .json con el propuesta.json listo.</li>
+      <li><b>Publicar:</b> en luna-llena-propuestas, <code>node scripts/desde-cotizacion.mjs paquete.json pagina.html</code>, después <code>npm run validar</code> y el deploy de siempre.</li>
+    </ol>
+    <label>Texto para el armador<textarea name="m" rows="9" readonly>${esc(r.texto_armador)}</textarea></label>
+    <div class="pie">
+      <button type="button" class="chico" id="pp-bajar" style="margin-right:auto">Descargar paquete</button>
+      <button type="button" class="chico" id="pp-copiar">Copiar texto</button>
+      <button value="cancel" formnovalidate>Cerrar</button><button class="prim" value="ok">Abrir en el armador</button></div>`,
+    async () => {
+      try { localStorage.setItem('ct_para_armador', JSON.stringify({ texto: r.texto_armador, slug: r.slug, cotizacion_id: c.id })); localStorage.setItem('cz_modo', 'propuesta'); } catch {}
+      location.href = '/panel-4c1f6a#/cotizador';
+    });
+  $('#pp-bajar').addEventListener('click', () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(paquete, null, 2)], { type: 'application/json' }));
+    a.download = `propuesta-${r.slug}.json`; a.click();
+  });
+  $('#pp-copiar').addEventListener('click', async () => { const ok = await copiar(r.texto_armador, $('#dlg-f').m); toast(ok ? 'Texto copiado' : 'No se pudo copiar'); });
 }
 
 async function rearmarCot() {

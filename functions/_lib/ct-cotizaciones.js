@@ -13,7 +13,7 @@ const parse = (s, def) => { try { return s ? JSON.parse(s) : def; } catch { retu
 // ---------- lectura ----------
 export async function cargarCatalogo(env) {
   const [s, t, h, ht] = await env.DB.batch([
-    env.DB.prepare(`SELECT id, nombre, ciudad, tipo, duracion, pax_min, precio_es_venta, activo FROM ct_servicios`),
+    env.DB.prepare(`SELECT id, nombre, ciudad, tipo, duracion, incluye, no_incluye, pax_min, precio_es_venta, activo FROM ct_servicios`),
     env.DB.prepare(`SELECT * FROM ct_tarifas`),
     env.DB.prepare(`SELECT id, nombre, ciudad, categoria, precio_es_venta, es_ilustrativo, activo FROM ct_hoteles`),
     env.DB.prepare(`SELECT * FROM ct_hotel_tarifas`),
