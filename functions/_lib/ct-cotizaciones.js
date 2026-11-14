@@ -40,7 +40,7 @@ export async function configActual(env) {
   return cfg;
 }
 
-const pedidoDe = (p) => p && ({ ...p, destinos: parse(p.destinos, []), servicios: parse(p.servicios, []) });
+const pedidoDe = (p) => p && ({ ...p, destinos: parse(p.destinos, []), servicios: parse(p.servicios, []), excursiones: parse(p.excursiones, []) });
 
 // ---------- validación del pedido ----------
 function leerPedido(b) {
@@ -65,6 +65,7 @@ function leerPedido(b) {
   const cat = b.categoria_hotel || null;
   if (cat && ![...CATEGORIAS, 'sin_hotel'].includes(cat)) errores.push('categoría de hotel no válida');
   const servicios = (Array.isArray(b.servicios) ? b.servicios : []).map(Number).filter((n) => Number.isInteger(n) && n > 0).slice(0, 40);
+  const excursiones = (Array.isArray(b.excursiones) ? b.excursiones : String(b.excursiones || '').split(/[,\n;]+/)).map((x) => texto(x, 80)).filter(Boolean).slice(0, 20);
   const lead = b.lead_id === undefined || b.lead_id === null || b.lead_id === '' ? null : Number(b.lead_id);
   if (lead !== null && !Number.isInteger(lead)) errores.push('lead no válido');
   const entero = (v) => (v === undefined || v === null || v === '' ? null : Number(v));
@@ -82,7 +83,7 @@ function leerPedido(b) {
   if (tentativa && !fi) errores.push('la fecha tentativa necesita un día elegido');
   // Sin fecha de fin, sale de la de inicio y los días.
   const fin = ff || (fi && dias ? new Date(Date.parse(fi + 'T12:00:00Z') + (dias - 1) * 86400e3).toISOString().slice(0, 10) : null);
-  return { errores, d: { nombre, pais: texto(b.pais, 60), fecha_inicio: fi, fecha_fin: fin, pasajeros, destinos, categoria_hotel: cat, servicios, pedidos_especiales: texto(b.pedidos_especiales, 2000), lead_id: lead, dias, fecha_tentativa: tentativa, conversacion_id: conversacion, origen } };
+  return { errores, d: { nombre, pais: texto(b.pais, 60), fecha_inicio: fi, fecha_fin: fin, pasajeros, destinos, categoria_hotel: cat, servicios, excursiones, pedidos_especiales: texto(b.pedidos_especiales, 2000), lead_id: lead, dias, fecha_tentativa: tentativa, conversacion_id: conversacion, origen } };
 }
 
 // Lo que impide aprobar: ilustraciones, precios web sin confirmar y el precio del paquete sin confirmar.
@@ -231,8 +232,8 @@ export async function pedidosDe(env, leadId, convId) {
 }
 
 async function insertarPedido(env, d, por) {
-  const r = await env.DB.prepare(`INSERT INTO ct_pedidos (lead_id, nombre, pais, fecha_inicio, fecha_fin, pasajeros, destinos, servicios, categoria_hotel, pedidos_especiales, creado_por, dias, fecha_tentativa, conversacion_id, origen)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(d.lead_id, d.nombre, d.pais, d.fecha_inicio, d.fecha_fin, d.pasajeros, JSON.stringify(d.destinos), JSON.stringify(d.servicios), d.categoria_hotel, d.pedidos_especiales, por, d.dias, d.fecha_tentativa, d.conversacion_id, d.origen).run();
+  const r = await env.DB.prepare(`INSERT INTO ct_pedidos (lead_id, nombre, pais, fecha_inicio, fecha_fin, pasajeros, destinos, servicios, categoria_hotel, pedidos_especiales, creado_por, dias, fecha_tentativa, conversacion_id, origen, excursiones)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(d.lead_id, d.nombre, d.pais, d.fecha_inicio, d.fecha_fin, d.pasajeros, JSON.stringify(d.destinos), JSON.stringify(d.servicios), d.categoria_hotel, d.pedidos_especiales, por, d.dias, d.fecha_tentativa, d.conversacion_id, d.origen, JSON.stringify(d.excursiones)).run();
   const id = r.meta.last_row_id;
   await env.DB.prepare(`INSERT INTO ct_pedido_estados (pedido_id, estado, por) VALUES (?, 'nuevo', ?)`).bind(id, por).run();
   return id;
@@ -288,8 +289,8 @@ export async function editarPedido(env, id, body, por) {
   // Lo que el formulario no manda (conversación, origen, días, fecha tentativa) se conserva.
   const { errores, d } = leerPedido({ conversacion_id: actual.conversacion_id, origen: actual.origen, dias: actual.dias, fecha_tentativa: actual.fecha_tentativa, ...body });
   if (errores.length) return json({ error: errores.join('; ') }, 400);
-  await env.DB.prepare(`UPDATE ct_pedidos SET lead_id = ?, nombre = ?, pais = ?, fecha_inicio = ?, fecha_fin = ?, pasajeros = ?, destinos = ?, servicios = ?, categoria_hotel = ?, pedidos_especiales = ?, dias = ?, fecha_tentativa = ?, conversacion_id = ?, origen = ?, actualizado_en = ${ahora} WHERE id = ?`)
-    .bind(d.lead_id, d.nombre, d.pais, d.fecha_inicio, d.fecha_fin, d.pasajeros, JSON.stringify(d.destinos), JSON.stringify(d.servicios), d.categoria_hotel, d.pedidos_especiales, d.dias, d.fecha_tentativa, d.conversacion_id, d.origen, id).run();
+  await env.DB.prepare(`UPDATE ct_pedidos SET lead_id = ?, nombre = ?, pais = ?, fecha_inicio = ?, fecha_fin = ?, pasajeros = ?, destinos = ?, servicios = ?, categoria_hotel = ?, pedidos_especiales = ?, dias = ?, fecha_tentativa = ?, conversacion_id = ?, origen = ?, excursiones = ?, actualizado_en = ${ahora} WHERE id = ?`)
+    .bind(d.lead_id, d.nombre, d.pais, d.fecha_inicio, d.fecha_fin, d.pasajeros, JSON.stringify(d.destinos), JSON.stringify(d.servicios), d.categoria_hotel, d.pedidos_especiales, d.dias, d.fecha_tentativa, d.conversacion_id, d.origen, JSON.stringify(d.excursiones), id).run();
   // Si cambió la fecha de inicio, las fechas de las líneas de la cotización editable se corren con ella.
   const cot = await ultimaCotizacion(env, id);
   if (cot && EDITABLES.includes(cot.estado) && d.fecha_inicio && d.fecha_inicio !== actual.fecha_inicio) {

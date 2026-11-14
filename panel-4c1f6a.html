@@ -16333,6 +16333,7 @@ function ibPintarPedidoForm(v){
     <label class="ib-np-check"><input type="checkbox" name="fecha_tentativa" ${v.fecha_tentativa ? 'checked' : ''}> Fecha tentativa: el cliente no dio una y se elige un día para poder cotizar</label>
     <div class="field" data-np="destinos"><label>Destinos, en orden *</label><div id="ib-np-dests"></div>
       <div><button type="button" class="btn btn-ghost btn-sm" id="ib-np-mas">+ Destino</button> <span class="hint" id="ib-np-noches"></span></div></div>
+    <div class="field"><label>Excursiones que pidió (no suman noches; van en un día libre de su ciudad)</label><input name="excursiones" maxlength="400" placeholder="Cañón del Colca, Lago Titicaca" value="${esc((v.excursiones || []).join(', '))}"></div>
     <div class="ib-np-fila">
       <div class="field"><label>País</label><input name="pais" maxlength="60" value="${esc(v.pais)}"></div>
       <div class="field"><label>Hotel</label><select name="categoria_hotel">${[['economico','Económico'],['confort','Confort'],['premium','Premium'],['sin_hotel','Sin hotel']].map(([k, n]) => `<option value="${k}" ${k === v.categoria_hotel ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
@@ -16367,7 +16368,7 @@ function ibNpLeer(){
   return {
     nombre: g('nombre').value.trim(), pais: g('pais').value.trim(), pasajeros: Number(g('pasajeros').value) || 0, dias: Number(g('dias').value) || 0,
     fecha_inicio: g('fecha_inicio').value, fecha_tentativa: g('fecha_tentativa').checked, categoria_hotel: g('categoria_hotel').value,
-    destinos, pedidos_especiales: g('pedidos_especiales').value.trim(),
+    destinos, excursiones: g('excursiones').value.split(/[,;\n]+/).map(x => x.trim()).filter(Boolean), pedidos_especiales: g('pedidos_especiales').value.trim(),
   };
 }
 function ibNpValidar(){
@@ -17686,6 +17687,8 @@ async function pintarFormPedido(p, pre = null) {
       <h2>Destinos, en orden</h2><div id="ct-dests"></div>
       <div class="barra"><button type="button" class="chico" id="ct-mas-dest">+ Destino</button><span class="nota" id="ct-cuenta-noches" style="margin:0"></span></div>
       <datalist id="ct-ciudades-ped">${ciudades.map((c) => `<option>${esc(c)}</option>`).join('')}</datalist>
+      <h2>Excursiones que pidió</h2><p class="nota">Cañón del Colca, Lago Titicaca… No suman noches: se ubican en un día libre de su ciudad (Arequipa, Puno…). Separadas por coma.</p>
+      <input name="excursiones" maxlength="400" placeholder="Cañón del Colca, Lago Titicaca" value="${esc((v.excursiones || []).join(', '))}">
       <h2>Qué quiere hacer</h2><p class="nota">El borrador ubica cada servicio en un día libre de su ciudad.</p>
       <div id="ct-servs" class="servs"></div>
       <h2>Pedidos especiales</h2><textarea name="pedidos_especiales" maxlength="2000">${esc(v.pedidos_especiales)}</textarea>
@@ -17729,7 +17732,7 @@ async function pintarFormPedido(p, pre = null) {
     RAIZ().querySelectorAll('#ct-servs input:checked').forEach((c) => elegidos.add(Number(c.value)));
     RAIZ().querySelectorAll('#ct-servs input:not(:checked)').forEach((c) => elegidos.delete(Number(c.value)));
     const body = { nombre: f.nombre.value, pais: f.pais.value, pasajeros: Number(f.pasajeros.value), fecha_inicio: f.fecha_inicio.value || null, fecha_fin: f.fecha_fin.value || null, dias: f.dias.value || null, fecha_tentativa: f.fecha_tentativa.checked,
-      categoria_hotel: f.categoria_hotel.value, destinos: destinos(), servicios: [...elegidos], pedidos_especiales: f.pedidos_especiales.value, lead_id: v.lead_id ?? null, ...(pre ? { origen: 'chat' } : {}) };
+      categoria_hotel: f.categoria_hotel.value, destinos: destinos(), servicios: [...elegidos], excursiones: f.excursiones.value.split(/[,;\n]+/).map((x) => x.trim()).filter(Boolean), pedidos_especiales: f.pedidos_especiales.value, lead_id: v.lead_id ?? null, ...(pre ? { origen: 'chat' } : {}) };
     const btn = f.querySelector('button.prim'); btn.disabled = true;
     try {
       if (p) { await api(`pedidos/${p.id}`, { method: 'PUT', body }); toast('Pedido guardado'); irA('pedido/' + p.id); }

@@ -103,21 +103,43 @@ function huecos(tramo, esUltimo, ocupados) {
   return dias.filter((d) => !ocupados.has(d));
 }
 
+// Excursiones que pidió el cliente por nombre ("Cañón del Colca"): cada una se busca entre los candidatos (nombre y resumen).
+// Devuelve { forzadas: [candidato], avisos }. Palabras sueltas como "lago" o "del" no cuentan: todas las demás tienen que aparecer.
+const PALABRAS_VACIAS = new Set(['de', 'del', 'la', 'el', 'las', 'los', 'y', 'en', 'a', 'al', 'lago', 'valle', 'tour', 'excursion', 'visita']);
+export function resolverExcursiones(excursiones, candidatos) {
+  const forzadas = [], avisos = [];
+  for (const nombre of excursiones || []) {
+    const palabras = normCiudad(nombre).split(' ').filter((w) => w && !PALABRAS_VACIAS.has(w));
+    if (!palabras.length) continue;
+    const hay = (c) => { const t = ` ${normCiudad(`${c.nombre} ${c.producto?.resumen || ''}`)} `; return palabras.every((w) => t.includes(` ${w}`)); };
+    const hits = candidatos.filter((c) => hay(c) && !forzadas.includes(c));
+    const c = ordenBase(hits)[0];
+    if (c) forzadas.push(c); else avisos.push(`No encontré "${nombre}" en el tarifario ni en la web: armalo a mano.`);
+  }
+  return { forzadas, avisos };
+}
+
 // Elige qué va en cada hueco. `elegir` (opcional, puede ser async) = la IA: recibe los huecos y los candidatos por ciudad
 // y devuelve { "<ciudad>|<dia>": clave }. Lo que devuelva se valida acá: clave inexistente, repetida o que no entra se descarta.
-export async function llenarHuecos({ tramos, candidatos, ocupados, pedido, elegir = null }) {
+export async function llenarHuecos({ tramos, candidatos, ocupados, pedido, elegir = null, forzadas = [] }) {
   const slots = [];
   tramos.forEach((t, i) => { for (const d of huecos(t, i === tramos.length - 1, ocupados)) slots.push({ id: `${t.ciudad}|${d}`, ciudad: t.ciudad, dia: d, hasta: t.hasta }); });
   const porCiudad = (ciudad) => candidatos.filter((c) => mismaCiudad(c.ciudad, ciudad));
   let propuesta = {}, avisoIA = null;
-  if (elegir && slots.length) {
-    try { propuesta = (await elegir({ slots, candidatos: candidatos.map((c) => ({ clave: c.clave, ciudad: c.ciudad, nombre: c.nombre, dias: c.dias, duracion: c.duracion, resumen: c.producto?.resumen || '' })), pedido })) || {}; }
-    catch (e) { avisoIA = `La IA no pudo elegir (${String(e.message || e).slice(0, 80)}): se usó el armado automático.`; }
-  }
+  const avisosForzadas = [];
   const usadas = new Set(), elegidas = [];
   const ocup = new Set(ocupados);
   const cabe = (c, slot) => { for (let k = 0; k < c.dias; k++) if (slot.dia + k > slot.hasta || (k > 0 && ocup.has(slot.dia + k))) return false; return !ocup.has(slot.dia); };
   const poner = (c, slot) => { for (let k = 0; k < c.dias; k++) ocup.add(slot.dia + k); usadas.add(c.clave); elegidas.push({ c, slot }); };
+  // 0) lo que el cliente pidió por nombre va primero, en un día libre de su ciudad
+  for (const c of forzadas) {
+    const slot = slots.find((s) => mismaCiudad(s.ciudad, c.ciudad) && cabe(c, s));
+    if (slot) poner(c, slot); else avisosForzadas.push(`${c.nombre} (lo pidió el cliente) no entra: ${c.ciudad} no tiene ${c.dias} día${c.dias > 1 ? 's' : ''} libre${c.dias > 1 ? 's' : ''} seguido${c.dias > 1 ? 's' : ''}. Sumá noches ahí o sacá otra actividad.`);
+  }
+  if (elegir && slots.some((s) => !ocup.has(s.dia))) {
+    try { propuesta = (await elegir({ slots: slots.filter((s) => !ocup.has(s.dia)), candidatos: candidatos.filter((c) => !usadas.has(c.clave)).map((c) => ({ clave: c.clave, ciudad: c.ciudad, nombre: c.nombre, dias: c.dias, duracion: c.duracion, resumen: c.producto?.resumen || '' })), pedido })) || {}; }
+    catch (e) { avisoIA = `La IA no pudo elegir (${String(e.message || e).slice(0, 80)}): se usó el armado automático.`; }
+  }
   // 1) lo que propuso la IA, validado
   for (const slot of slots) {
     const c = porCiudad(slot.ciudad).find((x) => x.clave === propuesta[slot.id]);
@@ -129,7 +151,7 @@ export async function llenarHuecos({ tramos, candidatos, ocupados, pedido, elegi
     const c = ordenBase(porCiudad(slot.ciudad)).find((x) => !usadas.has(x.clave) && cabe(x, slot));
     if (c) poner(c, slot);
   }
-  return { elegidas, ocupados: ocup, avisoIA };
+  return { elegidas, ocupados: ocup, avisoIA, avisosForzadas };
 }
 
 // Avisos de viaje (no bloquean). `lineas` ya tienen dia y descripcion; `tramos` son los de la variante.
@@ -221,7 +243,8 @@ async function armarMedida({ pedido, destinos, catalogo, web, reglas, elegir, ti
     });
   }
   const ocupados = new Set();
-  const { elegidas, avisoIA } = await llenarHuecos({ tramos: reales, candidatos, ocupados, pedido, elegir });
+  const exc = resolverExcursiones(pedido.excursiones, candidatos);
+  const { elegidas, avisoIA, avisosForzadas } = await llenarHuecos({ tramos: reales, candidatos, ocupados, pedido, elegir, forzadas: exc.forzadas });
   for (const { c, slot } of elegidas) lineas.push({ ...lineaDeCandidato(c, { dia: slot.dia, fecha: fechaDia(slot.dia), pax, orden: orden++ }) });
   const avNoches = descontarNochesIncluidas(lineas, catalogo, reales);
   lineas.sort((a, b) => (a.dia - b.dia) || (a.orden - b.orden));
@@ -229,6 +252,7 @@ async function armarMedida({ pedido, destinos, catalogo, web, reglas, elegir, ti
     ...avisosExtra,
     ...avNoches,
     ...(avisoIA ? [avisoIA] : []),
+    ...exc.avisos, ...avisosForzadas,
     ...ilustrativas.map((t) => `${t.ciudad} no está en la web ni en el tarifario: quedó como ilustración, sin precio.`),
     ...avisos.filter((a) => !/fechas dan/.test(a)),
     ...validarItinerario({ tramos, lineas, reglas, diasPedidos: pedido.dias || null }),

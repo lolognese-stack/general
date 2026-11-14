@@ -1,7 +1,7 @@
 // Pruebas del armado automático (ct-armado.js). Uso: node crm/probar-armado.mjs
 import assert from 'node:assert/strict';
 import { armarBorrador, descontarNochesIncluidas } from '../functions/_lib/cotizar.js';
-import { armarItinerario, indexarReglas, recortar, paqueteExacto, validarItinerario, tramosDe, candidatosDe, destinosDePaquete } from '../functions/_lib/ct-armado.js';
+import { armarItinerario, indexarReglas, recortar, paqueteExacto, validarItinerario, tramosDe, candidatosDe, resolverExcursiones, destinosDePaquete } from '../functions/_lib/ct-armado.js';
 
 let n = 0;
 const test = async (nombre, fn) => { try { await fn(); n++; } catch (e) { console.error(`FALLA: ${nombre}\n`, e); process.exit(1); } };
@@ -162,5 +162,23 @@ await test('noches_incluidas: no baja de 0 y quita las líneas de hotel vacías'
   const lineas = [{ tipo: 'hotel', dia: 1, cantidad: 1, descripcion: 'H · 1 hab. × 1 noche' }, { tipo: 'tour', dia: 2, servicio_id: 20 }];
   descontarNochesIncluidas(lineas, cat, [{ ciudad: 'Arequipa', noches: 1, desde: 1, hasta: 2 }]);
   assert.equal(lineas.filter((l) => l.tipo === 'hotel').length, 0);
+});
+await test('excursiones: Colca va en un día libre de Arequipa aunque no sea destino con noches; la que no existe avisa', async () => {
+  const cat = { hoteles: [hotel(9, 'Arequipa'), hotel(1, 'Cusco')], servicios: [] };
+  const w = [tour('canon-del-colca', 'Cañón del Colca', 'Arequipa', { dias: 2, noches: 1 }), tour('city-arequipa', 'City Tour Arequipa', 'Arequipa'), tour('x', 'Otro', 'Cusco')];
+  const ped = { pasajeros: 2, dias: 5, fecha_inicio: '2027-02-10', categoria_hotel: 'confort', servicios: [], destinos: [{ ciudad: 'Cusco', noches: 1 }, { ciudad: 'Arequipa', noches: 3 }], excursiones: ['Cañón del Colca', 'Cueva de Cristal'] };
+  const r = await armarItinerario({ pedido: ped, catalogo: cat, web: w, reglas, elegir: async () => ({}) });
+  const v = r.variantes[0];
+  const colca = v.lineas.find((l) => /Colca/.test(l.descripcion));
+  assert.ok(colca, JSON.stringify(v.lineas.map((l) => l.descripcion)));
+  assert.ok(v.avisos.some((a) => /Cueva de Cristal/.test(a)), v.avisos.join('|'));
+  const c = await armarItinerario({ pedido: { ...ped, excursiones: [] }, catalogo: cat, web: w, reglas, elegir: async () => ({}) });
+  assert.ok(!c.variantes[0].avisos.some((a) => /Cueva/.test(a)));
+});
+await test('resolverExcursiones: "Lago Titicaca" encuentra el tour por el resumen y no confunde ciudades', () => {
+  const cands = candidatosDe({ catalogo: { hoteles: [], servicios: [] }, web: [tour('puno-2d', 'Puno 2D/1N', 'Puno', { dias: 2, noches: 1, resumen: 'Uros y Taquile en el Lago Titicaca' }), tour('city', 'City Tour Cusco', 'Cusco')] });
+  const r = resolverExcursiones(['Lago Titicaca', 'Machu Picchu'], cands);
+  assert.equal(r.forzadas.length, 1); assert.equal(r.forzadas[0].nombre, 'Puno 2D/1N');
+  assert.equal(r.avisos.length, 1);
 });
 console.log(`${n} tests ok`);
