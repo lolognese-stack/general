@@ -3965,7 +3965,8 @@ function irA(nuevaSeccion){
     if(ibActivo){
       renderInbox();
       ibCargarLista();
-      if(ibSel){ el('ib-root').dataset.abierto = '1'; ibCargarHilo(ibSel); }
+      if(ibNumeroPend) ibResolverNumero();
+      else if(ibSel){ el('ib-root').dataset.abierto = '1'; ibCargarHilo(ibSel); }
     }else if(!el('ib-root')) el('view-inbox').innerHTML = `<div class="ag-empty">Cargando…</div>`;
   }
   if(seccion === 'conversacion' && !convCargado) cargarMetricas();
@@ -4082,6 +4083,8 @@ function parseHash(){
   }
   if(seccion === 'leads') ldSemana = q.get('semana') || '';
   if(seccion === 'inbox') ibSel = /^\d+$/.test(q.get('c') || '') ? Number(q.get('c')) : null;
+  // #/inbox?numero=<n>: lo usa la app de escritorio (WhatsApp Web al lado) para saltar al chat del número abierto.
+  if(seccion === 'inbox' && q.has('numero')){ ibNumeroPend = String(q.get('numero') || '').replace(/\D/g, '').slice(0, 20) || null; if(ibNumeroPend) ibSel = null; }
   if(seccion === 'historias' && q.has('semana')){
     const v = q.get('semana');
     hsFiltro.semana = v === 'todas' ? '' : v;
@@ -13782,6 +13785,7 @@ let ibLista = [];
 let ibUltimo = null;         // actualizado_en más nuevo que vio el panel
 let ibListaDe = null;        // ibUltimo con el que se pidió la lista
 let ibSel = null;            // id del chat abierto
+let ibNumeroPend = null;     // número pedido por #/inbox?numero= (app de escritorio), sin resolver todavía
 let ibHilo = null;           // { conversacion, lead, mensajes, analisis }
 let ibUrgentes = null;       // Set de ids; null = todavía no hubo pulso (no suena al cargar)
 let ibFiltros = { ...IB_FILTROS_VACIOS };
@@ -15637,6 +15641,33 @@ async function ibCargarHilo(id, { silencioso = false } = {}){
     api(`/api/setter/conversaciones/${id}`, { method:'PATCH', body: JSON.stringify({ accion:'leer' }) })
       .then(() => { const c = ibLista.find(x => x.id === id); if(c){ c.no_leidos = 0; ibPintarLista(); } })
       .catch(() => {});
+  }
+}
+
+// Mismo criterio que el tracker: México 521 y Argentina 549 se comparan sin el 1/9 del celular.
+function ibCanonico(v){
+  const d = String(v || '').replace(/\D/g, '');
+  if(d.length === 13 && d.startsWith('521')) return '52' + d.slice(3);
+  if(d.length === 13 && d.startsWith('549')) return '54' + d.slice(3);
+  return d;
+}
+// Abre el chat del número pedido; si el CRM no lo tiene, abre "+ Contacto" con el número cargado.
+async function ibResolverNumero(){
+  const n = ibNumeroPend;
+  ibNumeroPend = null;
+  if(!n) return;
+  try{
+    const lista = await api(`/api/setter/conversaciones?q=${encodeURIComponent(n.slice(-8))}`);
+    const c = (Array.isArray(lista) ? lista : []).find(x => ibCanonico(x.wa_id) === ibCanonico(n));
+    if(c){ ibAbrir(c.id); return; }
+  }catch(e){ /* sin búsqueda: igual se ofrece agregarlo */ }
+  ibSel = null; sincronizarHash();
+  const f = el('ib-nuevo-form');
+  if(f){
+    f.hidden = false; el('ib-nuevo').setAttribute('aria-expanded', 'true');
+    el('ib-nuevo-wa').value = '+' + n;
+    el('ib-nuevo-res').textContent = 'Este número no tiene chat en el CRM. Ponele nombre y agregalo.';
+    el('ib-nuevo-nombre').focus();
   }
 }
 
