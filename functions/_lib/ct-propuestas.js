@@ -240,7 +240,7 @@ export async function enviarPropuesta(env, id, body, por) {
   if (texto && !texto.includes(link)) texto += `\n\n${link}`;
   const textoFinal = texto || `Hola ${nombre}! Ya está lista la propuesta de tu viaje 🌕\n\n${link}\n\nCualquier duda o cambio, me escribes por aquí.`;
   // Pasadas las 24 h: por el puente WhatsApp Web como mensaje normal. Sin puente, la plantilla aprobada.
-  if (!ventana && puenteActivo(env)) {
+  if (!ventana && (await puenteActivo(env))) {
     try { await enviarPorPuente(env, conv.wa_id, textoFinal); }
     catch (e) { return json({ error: 'WhatsApp Web (puente): ' + e.message }, 502); }
     if (conv.ia_activa) await env.DB.prepare(`UPDATE wa_conversaciones SET ia_activa = 0, ia_pausa_motivo = 'asesora_respondio' WHERE id = ?`).bind(conv.id).run();

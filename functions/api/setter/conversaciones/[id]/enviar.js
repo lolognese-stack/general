@@ -31,7 +31,7 @@ export async function onRequestPost({ request, env, params }) {
   // (como escrito a mano desde el celular). El mensaje aparece en el chat cuando llega el eco de Kapso.
   const ventana = !!(conv.ventana_hasta && conv.ventana_hasta > new Date().toISOString());
   let via = 'api', data = {};
-  if (!plantilla && (!ventana || b.via === 'puente') && puenteActivo(env)) {
+  if (!plantilla && (!ventana || b.via === 'puente') && (await puenteActivo(env))) {
     try { data = await enviarPorPuente(env, conv.wa_id, texto); via = 'puente'; }
     catch (e) { return json({ error: 'WhatsApp Web (puente): ' + e.message }, e.status === 404 ? 404 : 502); }
     await evento(env.DB, conv, 'envio_puente', texto.slice(0, 200));
