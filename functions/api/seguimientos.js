@@ -1,4 +1,4 @@
-import { checkToken, rolDe, json } from '../_lib/auth.js';
+import { checkInbox, rolDe, json } from '../_lib/auth.js';
 import { setterActivo, alWorker, evento } from '../_lib/setter.js';
 import { propuestaVerificada, datosPublicados, SLUG } from '../_lib/propuestas.js';
 import { secuencia, proximoToque, textoDe, retomarDesde, caliente, hoyLima } from '../_lib/seguimientos.js';
@@ -114,7 +114,7 @@ const SELECT_SEG = `SELECT s.*, p.numero, p.cliente, c.wa_id, c.ultimo_in_en, c.
   LEFT JOIN leads l ON l.id = coalesce(s.lead_id, c.lead_id)`;
 
 export async function onRequestGet({ request, env }) {
-  if (!checkToken(request, env)) return json({ error: 'unauthorized' }, 401);
+  if (!checkInbox(request, env)) return json({ error: 'unauthorized' }, 401);
   const q = new URL(request.url).searchParams;
   const hoy = /^\d{4}-\d{2}-\d{2}$/.test(q.get('hoy') || '') && rolDe(request, env) === 'admin' ? q.get('hoy') : hoyLima();
   const sec = await secuenciaDe(env);
@@ -168,7 +168,7 @@ async function omitirFollowupIA(env, conversacionId, leadId) {
 }
 
 export async function onRequestPost({ request, env }) {
-  if (!checkToken(request, env)) return json({ error: 'unauthorized' }, 401);
+  if (!checkInbox(request, env)) return json({ error: 'unauthorized' }, 401);
   let b;
   try { b = await request.json(); } catch { return json({ error: 'body no es json' }, 400); }
   const slug = typeof b.slug === 'string' ? b.slug.trim() : '';

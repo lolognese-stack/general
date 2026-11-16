@@ -1,11 +1,11 @@
-import { checkToken, json } from '../../../../_lib/auth.js';
+import { checkInbox, json } from '../../../../_lib/auth.js';
 import { setterActivo, alWorker, evento } from '../../../../_lib/setter.js';
 // Responder desde el Inbox. El envío lo hace el Worker (ventana de 24 h,
 // Graph API, guardado). Escribir a mano es tomar el control: la IA se pausa
 // en ese chat, para que no contesten las dos a la vez (salvo "Responde siempre").
 
 export async function onRequestPost({ request, env, params }) {
-  if (!checkToken(request, env)) return json({ error: 'unauthorized' }, 401);
+  if (!checkInbox(request, env)) return json({ error: 'unauthorized' }, 401);
   if (!setterActivo(env)) return json({ error: 'el setter no está activo en este CRM' }, 404);
   let b;
   try { b = await request.json(); } catch { return json({ error: 'body no es json' }, 400); }

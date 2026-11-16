@@ -34,7 +34,7 @@ import { cargarCatalogo, esVigente, elegirVariante } from '../../_lib/ct-cotizac
 import { leerTanda, vistaDiferencias, aplicarTanda, cerrarLectura, listaWeb } from '../../_lib/ct-web.js';
 import { leerTexto } from '../../_lib/ct-importar.js';
 import { comoTarifa, comoHotelTarifa, registro, precioTxt, guardarTarifa } from '../../_lib/ct-tarifas.js';
-import { propuestaDePedido, generarPropuesta, verPropuesta, listarPropuestas, vistaPropuesta, editarPropuesta, publicarPropuesta, retirarPropuesta } from '../../_lib/ct-propuestas.js';
+import { propuestaDePedido, generarPropuesta, verPropuesta, listarPropuestas, vistaPropuesta, editarPropuesta, publicarPropuesta, retirarPropuesta, enviarPropuesta } from '../../_lib/ct-propuestas.js';
 
 const CONFIG = {
   margen_pct: { min: 0, max: 300, nombre: 'Margen por defecto (%)' },
@@ -319,17 +319,18 @@ export async function onRequest({ request, env, params }) {
       if (id && sub === 'rearmar' && m === 'POST') return rearmar(env, id, por);
       // Chat del cliente, solo lectura (también para el cotizador).
       if (id && sub === 'chat' && m === 'GET') return chatDePedido(env, id);
-      // Propuesta para el cliente: la genera, revisa y publica el equipo de Luna Llena; Álvaro (cotizador) la puede ver.
+      // Propuesta para el cliente: la generan, revisan, publican y mandan el equipo o Álvaro (cotizador).
       if (id && sub === 'propuesta' && m === 'GET') return propuestaDePedido(env, id);
-      if (id && sub === 'propuesta' && m === 'POST') return soloEquipo(rol) || generarPropuesta(env, id, por, { conIA: body.con_ia !== false });
+      if (id && sub === 'propuesta' && m === 'POST') return generarPropuesta(env, id, por, { conIA: body.con_ia !== false });
     }
     if (recurso === 'propuestas') {
       if (!id && m === 'GET') return listarPropuestas(env);
       if (id && !sub && m === 'GET') return verPropuesta(env, id);
       if (id && sub === 'vista' && m === 'GET') return vistaPropuesta(env, id, new URL(request.url).origin);
-      if (id && !sub && m === 'PUT') return soloEquipo(rol) || editarPropuesta(env, id, body);
-      if (id && sub === 'publicar' && m === 'POST') return soloEquipo(rol) || publicarPropuesta(env, id, body, por);
-      if (id && sub === 'retirar' && m === 'POST') return soloEquipo(rol) || retirarPropuesta(env, id, por);
+      if (id && !sub && m === 'PUT') return editarPropuesta(env, id, body);
+      if (id && sub === 'publicar' && m === 'POST') return publicarPropuesta(env, id, body, por);
+      if (id && sub === 'retirar' && m === 'POST') return retirarPropuesta(env, id, por);
+      if (id && sub === 'enviar' && m === 'POST') return enviarPropuesta(env, id, body, por);
     }
     if (recurso === 'cotizaciones' && id) {
       if (!sub && m === 'GET') { const v = await vistaCotizacion(env, id); return v ? json(v) : json({ error: 'No existe' }, 404); }

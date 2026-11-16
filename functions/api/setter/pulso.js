@@ -1,4 +1,4 @@
-import { checkToken, json } from '../../_lib/auth.js';
+import { checkInbox, json } from '../../_lib/auth.js';
 import { setterActivo } from '../../_lib/setter.js';
 // Lo que el panel consulta cada pocos segundos, en cualquier sección: cuándo
 // cambió algo del Inbox y qué chats esperan a una persona (para el aviso
@@ -7,7 +7,7 @@ import { setterActivo } from '../../_lib/setter.js';
 // solo cuando `ultimo` cambia.
 
 export async function onRequestGet({ request, env }) {
-  if (!checkToken(request, env)) return json({ error: 'unauthorized' }, 401);
+  if (!checkInbox(request, env)) return json({ error: 'unauthorized' }, 401);
   if (!setterActivo(env)) return json({ activo: false });
   const ultimo = await env.DB.prepare('SELECT actualizado_en FROM wa_conversaciones ORDER BY actualizado_en DESC LIMIT 1').first();
   const { results } = await env.DB.prepare('SELECT id FROM wa_conversaciones WHERE espera_persona = 1').all();

@@ -45,6 +45,11 @@ export function checkToken(request, env) {
   return rolDe(request, env) !== null;
 }
 
+// Inbox: el equipo y también Álvaro (cotizador), que contesta y manda la propuesta desde ahí.
+export function checkInbox(request, env) {
+  return rolDeCotizaciones(request, env) !== null;
+}
+
 export function esAdmin(request, env) {
   return rolDe(request, env) === 'admin';
 }

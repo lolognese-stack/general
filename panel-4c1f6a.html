@@ -2157,6 +2157,8 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 .ib-plantilla{flex:none;height:42px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--ink-2);font:inherit;font-size:12px;font-weight:600;cursor:pointer}
 .ib-plantilla:hover{background:var(--surface-sunk);color:var(--ink)}
 .ib-plantilla:disabled{opacity:.5}
+.ib-mas-menu .ib-borrar{color:var(--danger)}
+.ib-pl-op{display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line);cursor:pointer}.ib-pl-op small{display:block;color:var(--ink-3);font-size:12px;margin-top:2px}
 .ib-comp-hint{padding:0 16px 8px;background:var(--surface-2)}
 .ib-asoc{display:grid;gap:8px;padding:10px 16px;background:var(--masomenos-bg);border-bottom:1px solid var(--line);font-size:12.5px;color:var(--ink-2)}
 .ib-asoc[hidden]{display:none}
@@ -3674,6 +3676,7 @@ async function api(path, opts = {}){
     ...opts,
     headers:{ 'content-type':'application/json', 'x-crm-token':getToken(), ...(opts.headers||{}) },
   });
+  if(res.status === 401 && window.crmRol === 'cotizador') throw new Error('esto lo ve solo el equipo');
   if(res.status === 401){
     localStorage.removeItem('crm_token');
     el('gate').style.display = 'flex';
@@ -3890,8 +3893,8 @@ function renderLeads(){
 /* ---------------- cambio de sección ---------------- */
 
 function irA(nuevaSeccion){
-  // El rol cotizador (Álvaro) solo ve Cotizaciones: el resto de la API le da 403.
-  if(window.crmRol === 'cotizador') nuevaSeccion = 'cotizaciones';
+  // El rol cotizador (Álvaro) ve Cotizaciones y el Inbox: el resto de la API no le responde.
+  if(window.crmRol === 'cotizador' && nuevaSeccion !== 'inbox') nuevaSeccion = 'cotizaciones';
   seccion = nuevaSeccion;
   arrastrando = false;   // por si se cambia de sección a mitad de un drag: sin esto render() queda congelado para siempre
   pzEditando = false;    // idem, si se navega con el foco todavía en una celda de la tabla
@@ -15336,7 +15339,7 @@ async function setterInit(){
   catch(e){ ibActivo = false; }   // CRM sin setter: el endpoint ni existe
   el('nav-inbox').hidden = !ibActivo;
   el('nav-setter').hidden = true;   // Setter IA es una pestaña dentro de Inbox
-  if(!ibActivo){ if(seccion === 'inbox' || seccion === 'setter') irA('leads'); return; }
+  if(!ibActivo){ if(seccion === 'inbox' || seccion === 'setter') irA(window.crmRol === 'cotizador' ? 'cotizaciones' : 'leads'); return; }
   ibPulso();
   setInterval(ibPulso, 6000);
   // El navegador no deja sonar sin un gesto previo del usuario.
@@ -16008,6 +16011,7 @@ function ibPintarAsoc(){
   });
   const nuevo = el('ib-asoc-nuevo');
   if(nuevo) nuevo.addEventListener('click', () => {
+    if(window.crmRol === 'cotizador') return alert('La ficha completa del lead la ve el equipo. Los datos del viaje están en el pedido.');
     if(!leads.find(x => x.id === l.id)) return alert('El lead todavía no está cargado en el panel. Probá en unos segundos.');
     abrirDrawer(l.id);
   });
@@ -16030,7 +16034,8 @@ function ibPintarHilo(){
     <button type="button" class="btn btn-ghost btn-sm" id="ib-anclar-btn">${c.anclada ? 'Desanclar el chat' : 'Anclar el chat'}</button>
     <button type="button" class="btn btn-ghost btn-sm" id="ib-rol-btn">${c.rol === 'cotizador' ? 'Ya no es el cotizador' : 'Es el cotizador'}</button>
     <button type="button" class="btn btn-ghost btn-sm" id="ib-asig-btn">${c.asignada_a && c.asignada_a === ibYo() ? 'Desasignarme' : 'Asignarme'}</button>
-    <button type="button" class="btn btn-ghost btn-sm" id="ib-aprender-btn" title="La IA lee este chat y propone qué aprender (queda en Setter IA › Para aprobar)">Aprender de este chat</button></div></details>
+    ${window.crmRol === 'cotizador' ? '' : `<button type="button" class="btn btn-ghost btn-sm" id="ib-aprender-btn" title="La IA lee este chat y propone qué aprender (queda en Setter IA › Para aprobar)">Aprender de este chat</button>`}
+    <button type="button" class="btn btn-ghost btn-sm ib-borrar" id="ib-borrar-btn" title="Borra este chat del Inbox">Eliminar contacto</button></div></details>
     <button type="button" class="ib-ficha-btn" id="ib-ficha-btn" aria-pressed="${ibFichaGet() === '1'}" aria-controls="ib-ficha" aria-label="Mostrar u ocultar la ficha del lead" title="Mostrar u ocultar la ficha del lead"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </div>`;
   el('ib-ficha-btn').addEventListener('click', ibFichaToggle);
@@ -16042,7 +16047,8 @@ function ibPintarHilo(){
     if(!confirm(`¿Cambiar la calificación de ${nombre} de "${ibCalifLbl(antes)}" a "${ibCalifLbl(calif.value)}"? La IA ya no la va a cambiar.`)){ calif.value = antes; return; }
     ibAccion({ accion:'calificacion', ia_calificacion: calif.value });
   });
-  el('ib-aprender-btn').addEventListener('click', () => {
+  el('ib-borrar-btn').addEventListener('click', () => ibBorrarContacto(c, nombre));
+  if(el('ib-aprender-btn')) el('ib-aprender-btn').addEventListener('click', () => {
     const f = el('ib-aprender');
     el('ib-apr-nota').value = ''; el('ib-apr-res').textContent = ''; f.hidden = false; el('ib-apr-nota').focus();
   });
@@ -16124,7 +16130,7 @@ function ibPintarPie(){
   pie.dataset.conv = String(c.id);
   pie.innerHTML = `
     <form class="ib-comp" id="ib-form">
-      ${c.rol ? '' : `<button type="button" class="ib-plantilla" id="ib-plantilla" title="Mandar la plantilla aprobada de primer contacto (sirve aunque el lead no haya escrito)">Plantilla</button>`}
+      ${c.rol ? '' : `<button type="button" class="ib-plantilla" id="ib-plantilla" title="Plantillas aprobadas: primer contacto o retomar después de 24 h">Plantilla</button>`}
       <textarea id="ib-texto" rows="1" placeholder="Escribe un mensaje" aria-label="Mensaje"></textarea>
       <button type="submit" class="ib-send" id="ib-enviar" aria-label="Enviar" title="Enviar (Ctrl+Enter)"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M3.4 20.4l17.45-7.48a1 1 0 000-1.84L3.4 3.6a.993.993 0 00-1.39.91L2 9.12c0 .5.37.93.87.99L17 12 2.87 13.88c-.5.07-.87.5-.87 1l.01 4.61c0 .71.73 1.2 1.39.91z" fill="currentColor"/></svg></button>
     </form>
@@ -16159,20 +16165,45 @@ async function ibCopiarSugerido(btn){
   setTimeout(() => { btn.textContent = txt; }, 2000);
 }
 
-// Plantilla de primer contacto aprobada por Meta: es lo único que WhatsApp deja mandar si el lead no escribió.
-const IB_PLANTILLA = { nombre: 'contacto_lead_viaje', idioma: 'es' };
+// Plantillas aprobadas por Meta: es lo único que WhatsApp deja mandar si el lead no escribió o pasaron más de 24 h.
+const IB_PLANTILLAS = [
+  { nombre: 'retomar_viaje', idioma: 'es', titulo: 'Retomar la conversación', texto: 'Hola ___! Te escribimos de Luna Llena Travel para seguir con tu consulta sobre el viaje a Perú. ¿Podemos continuar por aquí?' },
+  { nombre: 'contacto_lead_viaje', idioma: 'es', titulo: 'Primer contacto (confirmar datos)', texto: 'Hola ___! Te escribimos de Luna Llena Travel por la consulta que nos enviaste… ¿Puedes confirmarnos si los datos son correctos?' },
+];
+function ibElegirPlantilla(c, sug){
+  return new Promise((ok) => {
+    const d = document.createElement('dialog');
+    d.className = 'ib-pl-dlg';
+    d.style.cssText = 'max-width:440px;width:calc(100% - 32px);border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);padding:18px';
+    d.innerHTML = `<form method="dialog">
+      <h3 style="margin:0 0 4px">Plantilla a +${esc(c.wa_id)}</h3>
+      <p class="hint" style="margin:0 0 8px">Fuera de las 24 h WhatsApp solo deja mandar estas plantillas. Cuando el cliente conteste, escribes normal.</p>
+      ${IB_PLANTILLAS.map((p, i) => `<label class="ib-pl-op"><input type="radio" name="pl" value="${i}"${i ? '' : ' checked'}><span><b>${esc(p.titulo)}</b><small>${esc(p.texto)}</small></span></label>`).join('')}
+      <label style="display:block;margin:10px 0 4px;font-size:13px">Nombre para el saludo</label>
+      <input name="nombre" value="${esc(sug)}" style="width:100%;box-sizing:border-box" required>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button value="no" class="btn btn-ghost btn-sm" formnovalidate>Cancelar</button><button value="si" class="btn btn-sm">Enviar plantilla</button></div></form>`;
+    document.body.appendChild(d);
+    d.addEventListener('close', () => {
+      const f = d.querySelector('form');
+      const r = d.returnValue === 'si' ? { plantilla: IB_PLANTILLAS[Number(f.pl.value)], nombre: f.nombre.value.trim() } : null;
+      d.remove(); ok(r && r.nombre ? r : null);
+    });
+    d.showModal();
+  });
+}
 
 async function ibEnviarPlantilla(){
   if(ibEnviando || !ibSel || !ibHilo) return;
   const c = ibHilo.conversacion, l = ibHilo.lead;
   const sug = String((l && l.nombre) || c.nombre_perfil || '').trim().split(/\s+/)[0] || '';
-  const nombre = (prompt(`Plantilla de primer contacto a +${c.wa_id}.\n¿Cómo lo saludamos? («Hola ___! Te escribimos de Luna Llena Travel…»)`, sug) || '').trim();
-  if(!nombre) return;
+  const elegida = await ibElegirPlantilla(c, sug);
+  if(!elegida) return;
+  const { nombre } = elegida, pl = elegida.plantilla;
   ibEnviando = true;
   const btn = el('ib-plantilla');
   if(btn) btn.disabled = true;
   try{
-    await api(`/api/setter/conversaciones/${ibSel}/enviar`, { method:'POST', body: JSON.stringify({ plantilla: { ...IB_PLANTILLA, params: [nombre] } }) });
+    await api(`/api/setter/conversaciones/${ibSel}/enviar`, { method:'POST', body: JSON.stringify({ plantilla: { nombre: pl.nombre, idioma: pl.idioma, params: [nombre] } }) });
     el('ib-pie').dataset.conv = '';
     await ibCargarHilo(ibSel, { silencioso:true });
     ibCargarLista();
@@ -16201,6 +16232,20 @@ async function ibEnviar(){
     ibEnviando = false;
     if(el('ib-enviar')) el('ib-enviar').disabled = false;
   }
+}
+
+// Eliminar contacto: borra el chat y sus mensajes del Inbox (no se puede deshacer). Un lead con datos queda en Leads.
+async function ibBorrarContacto(c, nombre){
+  if(!confirm(`Eliminar a ${nombre} (+${c.wa_id}) del Inbox.\n\nSe borran el chat y todos sus mensajes en el CRM, y no se puede deshacer. En el WhatsApp del cliente no cambia nada; si vuelve a escribir, entra como chat nuevo.\n\n¿Eliminar?`)) return;
+  try{
+    const r = await api(`/api/setter/conversaciones/${c.id}`, { method:'DELETE' });
+    ibSel = null; ibHilo = null;
+    el('ib-root').dataset.abierto = '0';
+    sincronizarHash();
+    await ibCargarLista();
+    if(typeof toast === 'function') toast(r.lead_id ? 'Contacto eliminado del Inbox (el lead sigue en Leads)' : 'Contacto eliminado');
+    if(r.lead_borrado && window.crmRol !== 'cotizador') load();
+  }catch(e){ alert('No se pudo eliminar: ' + e.message); }
 }
 
 async function ibAccion(body){
@@ -16611,6 +16656,7 @@ function ibPintarFicha(){
   ibCargarPedidos();
   wrBloque(c.id, l.id, null, el('ib-wr'), c.ultimo_en || '');
   el('ib-abrir-lead').addEventListener('click', () => {
+    if(window.crmRol === 'cotizador') return alert('La ficha completa del lead la ve el equipo. Los datos del viaje están en el pedido.');
     if(!leads.find(x => x.id === l.id)) return alert('El lead todavía no está cargado en el panel. Prueba en unos segundos.');
     abrirDrawer(l.id);
   });
@@ -18143,7 +18189,7 @@ function listaParaPropuesta(c) {
   return `<div class="ct-lista"><h3>Lista para propuesta</h3>
     <p class="nota" style="margin:0 0 6px">Aprobada por ${esc(c.aprobada_por || '—')} el ${peru(c.aprobada_en)} · ${usd(cot.totales.venta_cent)}</p>
     ${c.notas_alvaro ? `<div class="ct-nota-pase" style="margin:0 0 8px"><b>Notas de ${REVISOR}:</b> ${esc(c.notas_alvaro)}</div>` : `<p class="nota" style="margin:0 0 8px">${REVISOR} no dejó notas.</p>`}
-    ${esCotizador() ? '' : '<button type="button" class="chico prim" id="ct-gen-prop">Generar propuesta</button>'}</div>`;
+    <button type="button" class="chico prim" id="ct-gen-prop">Generar propuesta</button></div>`;
 }
 
 // ---------- revisión (Álvaro entra al mismo editor con el rol cotizador; ya no hay link /r/) ----------
@@ -18723,7 +18769,7 @@ async function pintarPropuesta() {
   if (!caja || !ped) return;
   let prop;
   try { prop = await api(`pedidos/${ped.pedido.id}/propuesta`); } catch (x) { caja.innerHTML = ''; return; }
-  const equipo = window.crmRol !== 'cotizador';
+  const equipo = true;   // la arman y la mandan el equipo y Álvaro
   const p = prop.propuesta, bl = prop.bloqueos || [];
   const bloq = bl.length
     ? `<p class="nota" style="margin:8px 0 4px"><b>Todavía no se puede mandar al cliente:</b></p><ul class="ct-bloq">${bl.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>`
@@ -18746,10 +18792,12 @@ async function pintarPropuesta() {
       <button type="button" class="prim" id="ct-prop-ver">${equipo ? 'Ver y editar' : 'Ver'}</button>
       ${equipo ? `<button type="button" id="ct-prop-pub" ${bl.length ? 'disabled title="Resuelve lo de arriba para publicar"' : ''}>${pub ? 'Publicar nueva versión' : 'Publicar y marcar enviada'}</button>
         <button type="button" id="ct-prop-regen">Volver a armar</button>${pub ? '<button type="button" id="ct-prop-retirar">Retirar</button>' : ''}` : ''}
+      ${pub ? '<button type="button" class="prim" id="ct-prop-wa" title="Le manda el link al chat del cliente desde el WhatsApp de Luna Llena">Mandar por WhatsApp</button>' : ''}
     </div></div>`;
   caja.querySelector('#ct-prop-ver').addEventListener('click', () => abrirProp(p.id));
   const c = caja.querySelector('#ct-prop-copiar'); if (c) c.addEventListener('click', () => { navigator.clipboard.writeText(p.link).then(() => toast('Link copiado')); });
   const pb = caja.querySelector('#ct-prop-pub'); if (pb) pb.addEventListener('click', () => publicarProp(p));
+  const wa = caja.querySelector('#ct-prop-wa'); if (wa) wa.addEventListener('click', () => mandarPropWa(p, wa));
   const rg = caja.querySelector('#ct-prop-regen'); if (rg) rg.addEventListener('click', () => { if (confirm('Vuelve a armar la propuesta con la cotización de ahora y pisa los textos que editaste. ¿Seguir?')) generarProp(); });
   const rt = caja.querySelector('#ct-prop-retirar');
   if (rt) rt.addEventListener('click', async () => {
@@ -18770,6 +18818,19 @@ async function generarProp() {
   } catch (x) { alert(x.message); pintarPropuesta(); }
 }
 
+// Manda el link al chat del cliente por el WhatsApp de Luna Llena (Kapso). Con la ventana de 24 h abierta va como
+// mensaje; cerrada, como la plantilla aprobada propuesta_viaje_lista.
+async function mandarPropWa(p, btn) {
+  if (!usuario()) { elegirSoy(); return; }
+  if (!confirm('Le mando el link de la propuesta al cliente por WhatsApp (número de Luna Llena). Si pasaron más de 24 h desde su último mensaje, va como plantilla. ¿Seguir?')) return;
+  if (btn) { btn.disabled = true; btn.textContent = 'Mandando…'; }
+  try {
+    const r = await api(`propuestas/${p.id}/enviar`, { method: 'POST', body: {} });
+    toast(r.modo === 'plantilla' ? 'Mandada como plantilla (fuera de las 24 h)' : 'Mandada por WhatsApp');
+    if (btn) { btn.textContent = 'Mandada ✓'; }
+  } catch (x) { alert(x.message); if (btn) { btn.disabled = false; btn.textContent = 'Mandar por WhatsApp'; } }
+}
+
 async function publicarProp(p) {
   if (!usuario()) { elegirSoy(); return; }
   let changelog = '';
@@ -18781,7 +18842,11 @@ async function publicarProp(p) {
     abrirDialogo(`<h3>Propuesta publicada · versión ${r.version}</h3><p class="nota" style="margin:0">Link para el cliente:</p>
       <input readonly value="${esc(r.link)}" onclick="this.select()">
       ${r.etapa ? `<p class="nota" style="margin:0">Lead: ${esc(r.etapa.replace(/_/g, ' '))}.</p>` : ''}${r.seguimiento ? '<p class="nota" style="margin:0">Los seguimientos arrancan hoy (Inbox).</p>' : ''}
-      <div class="pie"><button class="prim" value="ok">Listo</button></div>`, () => {});
+      <div class="pie"><button value="cancel">Listo</button><button class="prim" value="ok">Mandar por WhatsApp</button></div>`, async () => {
+        const x = await api(`propuestas/${p.id}/enviar`, { method: 'POST', body: {} }).catch((e) => ({ error: e.message }));
+        if (x.error) return x.error;
+        toast(x.modo === 'plantilla' ? 'Mandada como plantilla (fuera de las 24 h)' : 'Mandada por WhatsApp');
+      });
   } catch (x) { alert(x.message); }
 }
 
@@ -18789,7 +18854,7 @@ async function publicarProp(p) {
 async function abrirProp(id) {
   let d, v;
   try { [d, v] = await Promise.all([api(`propuestas/${id}`), api(`propuestas/${id}/vista`)]); } catch (x) { alert(x.message); return; }
-  const equipo = window.crmRol !== 'cotizador';
+  const equipo = true;
   const dat = d.datos, dlg = $('#ct-pp'), f = $('#ct-pp-f'), ifr = $('#ct-pp-if');
   const campos = [];
   const campo = (ruta, rotulo, valor, tipo = 'text') => campos.push({ ruta, rotulo, valor: valor ?? '', tipo });
@@ -18946,9 +19011,12 @@ window.pp = { mostrar };
 /* ---- Rol de la sesión: 'cotizador' (Álvaro) solo entra a Cotizaciones ---- */
 window.crmRol = null;
 function modoCotizador(){
+  const destino = seccion === 'inbox' ? 'inbox' : 'cotizaciones';
   document.querySelectorAll('.nav button').forEach(b => { b.hidden = b.dataset.seccion !== 'cotizaciones'; });
+  const st = document.querySelector('#ib-tabs [data-ib="setter"]'); if(st) st.hidden = true;   // Setter IA: solo el equipo
   if(pollHandle){ clearInterval(pollHandle); pollHandle = null; }
-  irA('cotizaciones');
+  irA(destino);
+  setterInit();   // muestra Inbox si el WhatsApp del CRM está activo
 }
 // Carga todo lo del panel. Con el token de cotizador no se pide nada más que Cotizaciones.
 async function arrancarSesion(){

@@ -8,7 +8,7 @@
 //
 // Ver functions/_lib/wa-radar.js.
 
-import { rolDe, json } from '../../_lib/auth.js';
+import { rolDe, rolDeCotizaciones, json } from '../../_lib/auth.js';
 import { claudeJson } from '../../_lib/claude.js';
 import { enPeru } from '../../_lib/radar.js';
 import { ESQUEMA, promptSistema, mensajeUsuario, chatComoTexto, armarReporteWa } from '../../_lib/wa-radar.js';
@@ -27,7 +27,7 @@ function respuesta(fila, conv) {
 }
 
 export async function onRequestGet({ request, env, params }) {
-  if (!rolDe(request, env)) return json({ error: 'unauthorized' }, 401);
+  if (!rolDeCotizaciones(request, env)) return json({ error: 'unauthorized' }, 401);
   const id = Number(params.id);
   const conv = await env.DB.prepare('SELECT id, lead_id, ultimo_en FROM wa_conversaciones WHERE id = ?').bind(id).first();
   if (!conv) return json({ error: 'no existe el chat' }, 404);

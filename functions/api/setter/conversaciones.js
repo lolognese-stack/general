@@ -1,4 +1,4 @@
-import { checkToken, json } from '../../_lib/auth.js';
+import { checkInbox, json } from '../../_lib/auth.js';
 import { setterActivo } from '../../_lib/setter.js';
 // Lista del Inbox con los filtros de SetterApp (PLAN-setter-luna-llena.md, 2.5).
 //
@@ -26,7 +26,7 @@ const finDiaPeru = (ymd) => new Date(Date.parse(ymd + 'T00:00:00Z') + PERU_MS + 
 const inicioDiaPeru = (ymd) => new Date(Date.parse(ymd + 'T00:00:00Z') + PERU_MS).toISOString();
 
 export async function onRequestGet({ request, env }) {
-  if (!checkToken(request, env)) return json({ error: 'unauthorized' }, 401);
+  if (!checkInbox(request, env)) return json({ error: 'unauthorized' }, 401);
   if (!setterActivo(env)) return json({ error: 'el setter no está activo en este CRM' }, 404);
   const p = new URL(request.url).searchParams;
   const where = [], binds = [];

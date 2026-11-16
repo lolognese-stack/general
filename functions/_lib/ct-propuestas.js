@@ -12,6 +12,7 @@ import { vistaCotizacion, cargarCatalogo, cargarWeb, esVigente, cambiarEstado } 
 import { armarDatos, escribirTextos, bloqueosDe, bandaDe, aplicarCambios, slugDe } from './ct-propuesta-datos.js';
 import { renderPagina, configEfectivo, hoyLima, SLUG_OK } from './propuesta-pagina.js';
 import { PROPUESTAS_URL } from './propuestas.js';
+import { setterActivo, alWorker } from './setter.js';
 
 const parse = (v, d) => { try { return v ? JSON.parse(v) : d; } catch { return d; } };
 const ANTES_DE_ENVIADA = ['lead_nuevo', 'contactado', 'propuesta_pendiente'];
@@ -213,4 +214,44 @@ export async function servirPropuesta(env, slug, { reservar = false, origen } = 
   // La reserva online está apagada: /<slug>/reservar/ lleva a "Cómo reservar".
   if (reservar) return new Response(null, { status: 302, headers: { location: `/${slug}/#reserva`, 'cache-control': 'no-store' } });
   return new Response(renderPagina(parse(r.datos_json, {}), { slug, cfg: await configPlantilla(env), crm: origen }), { headers: CABECERAS });
+}
+
+// Manda el link de la propuesta publicada al chat del cliente por WhatsApp (la API de Kapso, el número de Luna Llena).
+// Con la ventana de 24 h abierta va como mensaje normal (texto editable); cerrada, va la plantilla aprobada
+// propuesta_viaje_lista ("Hola {nombre}! Ya está lista la propuesta… {link}"), que es lo único que WhatsApp deja.
+export const PLANTILLA_PROPUESTA = 'propuesta_viaje_lista';
+export async function enviarPropuesta(env, id, body, por) {
+  if (!setterActivo(env)) return json({ error: 'El WhatsApp del CRM no está activo' }, 409);
+  const r = await env.DB.prepare(`SELECT * FROM ct_propuestas WHERE id = ?`).bind(id).first();
+  if (!r) return json({ error: 'No existe' }, 404);
+  if (r.estado !== 'publicada') return json({ error: 'Primero publícala: sin publicar no hay link para el cliente' }, 409);
+  const link = `${PROPUESTAS_URL(env)}/${r.slug}/`;
+  const ped = await env.DB.prepare(`SELECT id, nombre, lead_id, conversacion_id FROM ct_pedidos WHERE id = ?`).bind(r.pedido_id).first();
+  let conv = ped && ped.conversacion_id ? await env.DB.prepare(`SELECT * FROM wa_conversaciones WHERE id = ?`).bind(ped.conversacion_id).first() : null;
+  const leadId = (ped && ped.lead_id) || r.lead_id;
+  if (!conv && leadId) conv = await env.DB.prepare(`SELECT * FROM wa_conversaciones WHERE lead_id = ? ORDER BY ultimo_en DESC LIMIT 1`).bind(leadId).first();
+  if (!conv) return json({ error: 'Este pedido no tiene chat de WhatsApp: ábrelo en el Inbox (o agrégalo como contacto) y vuelve a probar', sin_chat: true }, 409);
+  const lead = conv.lead_id ? await env.DB.prepare(`SELECT nombre FROM leads WHERE id = ?`).bind(conv.lead_id).first() : null;
+  const nombre = String(body.nombre || (lead && lead.nombre) || conv.alias || conv.nombre_perfil || '').trim().split(/\s+/)[0].replace(/^\+?\d+$/, '') || 'hola';
+  const ahora = new Date().toISOString();
+  const ventana = !!(conv.ventana_hasta && conv.ventana_hasta > ahora);
+  let texto = typeof body.texto === 'string' ? body.texto.trim().slice(0, 4000) : '';
+  if (texto && !texto.includes(link)) texto += `\n\n${link}`;
+  const pedido = ventana
+    ? { conversacion_id: conv.id, texto: texto || `Hola ${nombre}! Ya está lista la propuesta de tu viaje 🌕\n\n${link}\n\nCualquier duda o cambio, me escribes por aquí.`, autor: 'asesora_web' }
+    : { conversacion_id: conv.id, plantilla: { nombre: PLANTILLA_PROPUESTA, idioma: 'es', params: [nombre, link] }, autor: 'asesora_web' };
+  const w = await alWorker(env, 'interno/enviar', { method: 'POST', body: JSON.stringify(pedido) });
+  const d = await w.json().catch(() => ({ error: 'el WhatsApp no respondió bien' }));
+  if (!w.ok) {
+    const e = String(d.error || 'no se pudo enviar');
+    const msg = /13200[01]|template|plantilla/i.test(e) && !ventana
+      ? `La plantilla ${PLANTILLA_PROPUESTA} todavía no está aprobada por Meta (o la rechazó): copia el link y mándalo desde el Inbox cuando el cliente escriba. Detalle: ${e}`
+      : e;
+    return json({ error: msg }, w.status >= 500 ? 502 : w.status);
+  }
+  // Escribir a mano pausa la IA en ese chat (igual que responder desde el Inbox).
+  if (conv.ia_activa) await env.DB.prepare(`UPDATE wa_conversaciones SET ia_activa = 0, ia_pausa_motivo = 'asesora_respondio' WHERE id = ?`).bind(conv.id).run();
+  await env.DB.prepare('INSERT INTO setter_eventos (conversacion_id, lead_id, tipo, detalle, creado_en) VALUES (?, ?, ?, ?, ?)')
+    .bind(conv.id, conv.lead_id, 'propuesta_enviada', `${link} · ${ventana ? 'mensaje' : 'plantilla'} · ${por}`, ahora).run().catch(() => {});
+  return json({ ok: true, modo: ventana ? 'mensaje' : 'plantilla', conversacion_id: conv.id, link });
 }

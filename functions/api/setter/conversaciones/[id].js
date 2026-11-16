@@ -1,4 +1,4 @@
-import { checkToken, json } from '../../../_lib/auth.js';
+import { checkInbox, json } from '../../../_lib/auth.js';
 import { setterActivo, evento } from '../../../_lib/setter.js';
 // Un chat del Inbox: el hilo, la ficha resumida del lead y el análisis.
 // PATCH { accion }:
@@ -26,7 +26,7 @@ async function conversacion(env, id) {
 }
 
 export async function onRequestGet({ request, env, params }) {
-  if (!checkToken(request, env)) return json({ error: 'unauthorized' }, 401);
+  if (!checkInbox(request, env)) return json({ error: 'unauthorized' }, 401);
   if (!setterActivo(env)) return json({ error: 'el setter no está activo en este CRM' }, 404);
   const conv = await conversacion(env, params.id);
   if (!conv) return json({ error: 'no existe la conversación' }, 404);
@@ -43,8 +43,40 @@ export async function onRequestGet({ request, env, params }) {
   return json({ conversacion: conv, lead, mensajes, analisis });
 }
 
+// DELETE: borra el contacto del Inbox (el chat y todo lo que cuelga de él). El lead que se creó solo
+// al entrar el chat (nombre = el número, sin datos) se borra también; un lead con datos queda en Leads.
+// Si esa persona vuelve a escribir, entra como chat nuevo.
+export async function onRequestDelete({ request, env, params }) {
+  if (!checkInbox(request, env)) return json({ error: 'unauthorized' }, 401);
+  if (!setterActivo(env)) return json({ error: 'el setter no está activo en este CRM' }, 404);
+  const conv = await conversacion(env, params.id);
+  if (!conv) return json({ error: 'no existe la conversación' }, 404);
+  const id = conv.id, db = env.DB;
+  const sueltas = [
+    'DELETE FROM wa_mensajes WHERE conversacion_id = ?',
+    'DELETE FROM wa_analisis WHERE conversacion_id = ?',
+    'DELETE FROM wa_reportes WHERE conversacion_id = ?',
+    'DELETE FROM setter_eventos WHERE conversacion_id = ?',
+    'DELETE FROM setter_sugerencias WHERE conversacion_id = ?',
+    'UPDATE propuesta_seguimientos SET conversacion_id = NULL WHERE conversacion_id = ?',
+    'UPDATE ct_pedidos SET conversacion_id = NULL WHERE conversacion_id = ?',
+  ];
+  // Cada tabla por separado: una que no exista en este CRM no frena el borrado.
+  for (const sql of sueltas) { try { await db.prepare(sql).bind(id).run(); } catch { /* tabla ausente */ } }
+  await db.prepare('DELETE FROM wa_conversaciones WHERE id = ?').bind(id).run();
+  let leadBorrado = false;
+  if (conv.lead_id) {
+    try {
+      const r = await db.prepare(`DELETE FROM leads WHERE id = ? AND nombre GLOB '+[0-9]*' AND fuente = 'WhatsApp' AND ia_resumen IS NULL
+          AND NOT EXISTS (SELECT 1 FROM wa_conversaciones WHERE lead_id = ?)`).bind(conv.lead_id, conv.lead_id).run();
+      leadBorrado = (r.meta && r.meta.changes) > 0;
+    } catch { /* con datos colgando queda */ }
+  }
+  return json({ ok: true, lead_borrado: leadBorrado, lead_id: leadBorrado ? null : conv.lead_id });
+}
+
 export async function onRequestPatch({ request, env, params }) {
-  if (!checkToken(request, env)) return json({ error: 'unauthorized' }, 401);
+  if (!checkInbox(request, env)) return json({ error: 'unauthorized' }, 401);
   if (!setterActivo(env)) return json({ error: 'el setter no está activo en este CRM' }, 404);
   const conv = await conversacion(env, params.id);
   if (!conv) return json({ error: 'no existe la conversación' }, 404);
