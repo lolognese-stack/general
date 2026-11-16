@@ -18786,6 +18786,7 @@ async function pintarPropuesta() {
   const p = prop.propuesta, bl = prop.bloqueos || [];
   const bloq = bl.length
     ? `<p class="nota" style="margin:8px 0 4px"><b>Todavía no se puede mandar al cliente:</b></p><ul class="ct-bloq">${bl.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>`
+    : prop.prueba ? '<p class="nota" style="margin:8px 0 0"><b>Número de prueba:</b> se publica y se manda aunque tenga precios de prueba.</p>'
     : '<p class="nota" style="margin:8px 0 0">La cotización está lista: se puede publicar.</p>';
   if (!p) {
     caja.innerHTML = `<div class="panel"><h3 style="margin:0 0 6px">Propuesta para el cliente</h3>

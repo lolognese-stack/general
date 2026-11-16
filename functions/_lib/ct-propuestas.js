@@ -34,9 +34,22 @@ const resumenFila = (r) => ({
   textos: r.textos, creada_por: r.creada_por, creada_en: r.creada_en, actualizada_en: r.actualizada_en, publicada_por: r.publicada_por, publicada_en: r.publicada_en,
 });
 
+// Números de prueba (setter_config.numeros_prueba, separados por coma): un pedido unido a ese chat o lead
+// publica y se manda aunque tenga precios de prueba o le falte aprobar. Sirve para probar el circuito entero.
+const canonico = (n) => { let d = String(n || '').replace(/\D/g, ''); if (d.startsWith('549')) d = '54' + d.slice(3); if (d.startsWith('521')) d = '52' + d.slice(3); return d; };
+export async function esDePrueba(env, pedidoId) {
+  const cfg = await env.DB.prepare(`SELECT valor FROM setter_config WHERE clave = 'numeros_prueba'`).first().catch(() => null);
+  const lista = String((cfg && cfg.valor) || '').split(',').map(canonico).filter((x) => x.length >= 8);
+  if (!lista.length) return false;
+  const f = await env.DB.prepare(`SELECT c.wa_id, l.whatsapp FROM ct_pedidos p LEFT JOIN wa_conversaciones c ON c.id = p.conversacion_id
+      LEFT JOIN leads l ON l.id = coalesce(p.lead_id, c.lead_id) WHERE p.id = ?`).bind(pedidoId).first().catch(() => null);
+  return !!f && [f.wa_id, f.whatsapp].map(canonico).some((x) => x && lista.includes(x));
+}
+
 async function bloqueosDeFila(env, r) {
   const vista = await vistaCotizacion(env, r.cotizacion_id);
   if (!vista) return { vista: null, bloqueos: ['La cotización ya no existe'] };
+  if (await esDePrueba(env, r.pedido_id)) return { vista, bloqueos: [], prueba: true };
   const cot = await env.DB.prepare(`SELECT * FROM ct_cotizaciones WHERE id = ?`).bind(r.cotizacion_id).first();
   return { vista, bloqueos: bloqueosDe(vista, { vigente: await esVigente(env, cot) }) };
 }
@@ -48,8 +61,8 @@ export async function propuestaDePedido(env, pedidoId) {
     const vista = cot ? await vistaCotizacion(env, cot.id) : null;
     return json({ propuesta: null, bloqueos: vista ? bloqueosDe(vista) : ['Todavía no hay cotización'] });
   }
-  const { bloqueos } = await bloqueosDeFila(env, r);
-  return json({ propuesta: { ...resumenFila(r), link: r.estado === 'publicada' ? `${PROPUESTAS_URL(env)}/${r.slug}/` : null }, bloqueos });
+  const { bloqueos, prueba } = await bloqueosDeFila(env, r);
+  return json({ propuesta: { ...resumenFila(r), link: r.estado === 'publicada' ? `${PROPUESTAS_URL(env)}/${r.slug}/` : null }, bloqueos, prueba: !!prueba });
 }
 
 // Arma (o vuelve a armar) la propuesta del pedido. Los textos los escribe la IA una sola vez; quedan guardados y se editan en la vista previa.
