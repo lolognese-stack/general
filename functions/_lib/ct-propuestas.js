@@ -13,6 +13,7 @@ import { armarDatos, escribirTextos, bloqueosDe, bandaDe, aplicarCambios, slugDe
 import { renderPagina, configEfectivo, hoyLima, SLUG_OK } from './propuesta-pagina.js';
 import { PROPUESTAS_URL } from './propuestas.js';
 import { setterActivo, alWorker } from './setter.js';
+import { puenteActivo, enviarPorPuente } from './puente.js';
 
 const parse = (v, d) => { try { return v ? JSON.parse(v) : d; } catch { return d; } };
 const ANTES_DE_ENVIADA = ['lead_nuevo', 'contactado', 'propuesta_pendiente'];
@@ -237,8 +238,18 @@ export async function enviarPropuesta(env, id, body, por) {
   const ventana = !!(conv.ventana_hasta && conv.ventana_hasta > ahora);
   let texto = typeof body.texto === 'string' ? body.texto.trim().slice(0, 4000) : '';
   if (texto && !texto.includes(link)) texto += `\n\n${link}`;
+  const textoFinal = texto || `Hola ${nombre}! Ya está lista la propuesta de tu viaje 🌕\n\n${link}\n\nCualquier duda o cambio, me escribes por aquí.`;
+  // Pasadas las 24 h: por el puente WhatsApp Web como mensaje normal. Sin puente, la plantilla aprobada.
+  if (!ventana && puenteActivo(env)) {
+    try { await enviarPorPuente(env, conv.wa_id, textoFinal); }
+    catch (e) { return json({ error: 'WhatsApp Web (puente): ' + e.message }, 502); }
+    if (conv.ia_activa) await env.DB.prepare(`UPDATE wa_conversaciones SET ia_activa = 0, ia_pausa_motivo = 'asesora_respondio' WHERE id = ?`).bind(conv.id).run();
+    await env.DB.prepare('INSERT INTO setter_eventos (conversacion_id, lead_id, tipo, detalle, creado_en) VALUES (?, ?, ?, ?, ?)')
+      .bind(conv.id, conv.lead_id, 'propuesta_enviada', `${link} · whatsapp web · ${por}`, ahora).run().catch(() => {});
+    return json({ ok: true, modo: 'puente', conversacion_id: conv.id, link });
+  }
   const pedido = ventana
-    ? { conversacion_id: conv.id, texto: texto || `Hola ${nombre}! Ya está lista la propuesta de tu viaje 🌕\n\n${link}\n\nCualquier duda o cambio, me escribes por aquí.`, autor: 'asesora_web' }
+    ? { conversacion_id: conv.id, texto: textoFinal, autor: 'asesora_web' }
     : { conversacion_id: conv.id, plantilla: { nombre: PLANTILLA_PROPUESTA, idioma: 'es', params: [nombre, link] }, autor: 'asesora_web' };
   const w = await alWorker(env, 'interno/enviar', { method: 'POST', body: JSON.stringify(pedido) });
   const d = await w.json().catch(() => ({ error: 'el WhatsApp no respondió bien' }));

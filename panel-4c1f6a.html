@@ -16221,8 +16221,13 @@ async function ibEnviar(){
   ibEnviando = true;
   el('ib-enviar').disabled = true;
   try{
-    await api(`/api/setter/conversaciones/${ibSel}/enviar`, { method:'POST', body: JSON.stringify({ texto }) });
+    const r = await api(`/api/setter/conversaciones/${ibSel}/enviar`, { method:'POST', body: JSON.stringify({ texto }) });
     ta.value = ''; ta.style.height = '';
+    if(r.via === 'puente'){
+      // Salió por WhatsApp Web (más de 24 h): el mensaje aparece en el hilo cuando llega el eco de WhatsApp.
+      if(typeof toast === 'function') toast('Enviado por WhatsApp Web');
+      const conv = ibSel; setTimeout(() => { if(ibSel === conv) ibCargarHilo(conv, { silencioso:true }); }, 5000);
+    }
     el('ib-pie').dataset.conv = '';   // la IA quedó pausada: el aviso del pie cambia
     await ibCargarHilo(ibSel, { silencioso:true });
     ibCargarLista();
@@ -18826,7 +18831,7 @@ async function mandarPropWa(p, btn) {
   if (btn) { btn.disabled = true; btn.textContent = 'Mandando…'; }
   try {
     const r = await api(`propuestas/${p.id}/enviar`, { method: 'POST', body: {} });
-    toast(r.modo === 'plantilla' ? 'Mandada como plantilla (fuera de las 24 h)' : 'Mandada por WhatsApp');
+    toast(r.modo === 'plantilla' ? 'Mandada como plantilla (fuera de las 24 h)' : r.modo === 'puente' ? 'Mandada por WhatsApp Web' : 'Mandada por WhatsApp');
     if (btn) { btn.textContent = 'Mandada ✓'; }
   } catch (x) { alert(x.message); if (btn) { btn.disabled = false; btn.textContent = 'Mandar por WhatsApp'; } }
 }
@@ -18845,7 +18850,7 @@ async function publicarProp(p) {
       <div class="pie"><button value="cancel">Listo</button><button class="prim" value="ok">Mandar por WhatsApp</button></div>`, async () => {
         const x = await api(`propuestas/${p.id}/enviar`, { method: 'POST', body: {} }).catch((e) => ({ error: e.message }));
         if (x.error) return x.error;
-        toast(x.modo === 'plantilla' ? 'Mandada como plantilla (fuera de las 24 h)' : 'Mandada por WhatsApp');
+        toast(x.modo === 'plantilla' ? 'Mandada como plantilla (fuera de las 24 h)' : x.modo === 'puente' ? 'Mandada por WhatsApp Web' : 'Mandada por WhatsApp');
       });
   } catch (x) { alert(x.message); }
 }
