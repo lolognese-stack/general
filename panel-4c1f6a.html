@@ -2476,7 +2476,7 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 #view-cotizaciones .ct-falta li{margin:3px 0;font-size:.9rem}
 #view-cotizaciones .ct-falta li.aviso{color:var(--ink2);list-style:circle}
 #view-cotizaciones .ct-falta .link{font-size:.85rem}
-#view-cotizaciones tr.resaltada td{background:var(--warn-bg)}
+#view-cotizaciones tr.resaltada td,#view-cotizaciones .it-item.resaltada{background:var(--warn-bg)}
 #view-cotizaciones .ct-chat{margin:0 0 12px}
 #view-cotizaciones .ct-chat summary{cursor:pointer;padding:8px 0;font-weight:600}
 #view-cotizaciones .ct-chat .msjs{max-height:420px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:10px;background:var(--surface-sunk);border-radius:4px}
@@ -2485,6 +2485,29 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 #view-cotizaciones .ct-chat .m small{display:block;color:var(--muted);font-size:.72rem;margin-top:2px}
 #view-cotizaciones .ct-lista{border:1px solid var(--brand);border-radius:4px;padding:12px 14px;margin:0 0 12px;background:var(--paper)}
 #view-cotizaciones .ct-lista h3{margin:0 0 6px}
+#view-cotizaciones .ct-vistas{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+#view-cotizaciones #ct-raiz .ct-vistas button{border:0;border-radius:0;background:transparent;padding:5px 12px;font:inherit;font-size:.85rem;cursor:pointer;color:var(--ink2)}
+#view-cotizaciones #ct-raiz .ct-vistas button[aria-pressed="true"]{background:var(--ink);color:var(--paper);font-weight:600}
+#view-cotizaciones .it-resumen{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;margin:0 0 12px;padding:12px 14px;border:1px solid var(--line);border-radius:6px;background:var(--paper)}
+#view-cotizaciones .it-resumen b{font-size:1rem}
+#view-cotizaciones .it-ruta{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+#view-cotizaciones .it-dia{border:1px solid var(--line);border-radius:6px;margin:0 0 10px;background:var(--paper);overflow:hidden}
+#view-cotizaciones .it-cab{text-transform:none;letter-spacing:normal;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;padding:10px 14px;background:var(--surface-sunk);border-bottom:1px solid var(--line)}
+#view-cotizaciones .it-cab .it-n{font-size:1.05rem;font-weight:700}
+#view-cotizaciones .it-cab .it-duerme{color:var(--ink2);font-size:.85rem;font-weight:400}
+#view-cotizaciones .it-cab .link{margin-left:auto}
+#view-cotizaciones .it-item{display:grid;grid-template-columns:96px 1fr auto;gap:4px 14px;padding:10px 14px;border-top:1px solid var(--line)}
+#view-cotizaciones .it-item:first-of-type{border-top:0}
+#view-cotizaciones .it-hora{font-variant-numeric:tabular-nums;font-weight:600;color:var(--ink)}
+#view-cotizaciones .it-hora.vacia{color:var(--muted);font-weight:400}
+#view-cotizaciones .it-que b{font-size:.95rem}
+#view-cotizaciones .it-que .it-sub{display:block;color:var(--ink2);font-size:.82rem;margin-top:2px}
+#view-cotizaciones .it-que .it-inc{display:block;color:var(--muted);font-size:.8rem;margin-top:3px}
+#view-cotizaciones .it-acc{display:flex;gap:4px;align-items:flex-start;white-space:nowrap}
+#view-cotizaciones #ct-raiz .it-acc button{padding:2px 8px;font-size:.8rem}
+#view-cotizaciones .it-item.err{background:color-mix(in srgb,var(--danger) 7%,transparent)}
+#view-cotizaciones .it-libre{padding:10px 14px;color:var(--muted);font-size:.88rem}
+@media (max-width:640px){#view-cotizaciones .it-item{grid-template-columns:1fr}#view-cotizaciones .it-acc{justify-content:flex-start}}
 #view-cotizaciones .cab-ped{display:flex;gap:16px;justify-content:space-between;flex-wrap:wrap}
 #view-cotizaciones .cab-ped .meta{color:var(--ink2);font-size:.88rem}
 #view-cotizaciones .acc-ped{display:flex;flex-direction:column;gap:6px;align-items:flex-start;min-width:200px}
@@ -18036,6 +18059,57 @@ function destinoDelDia(destinos, d) {
   return { txt: t.ciudad, duerme: t.ciudad };
 }
 
+// Dos vistas de la cotización: "precios" (la tabla de siempre) e "itinerario" (día por día, sin precios,
+// para leer y corregir cómo quedó armado el viaje). Se recuerda por navegador.
+let vistaCot = (() => { try { return localStorage.getItem('ct_vista_cot') || 'precios'; } catch { return 'precios'; } })();
+const minutosDe = (h) => { const m = String(h || '').match(/(\d{1,2})\s*[:.h]\s*(\d{2})/); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
+const TIPO_IT = { tour: 'Tour', traslado: 'Traslado', tren: 'Tren', entrada: 'Entrada', paquete: 'Paquete', manual: 'Actividad', hotel: 'Hotel' };
+function itinerarioHtml(nDias, porDia, ed) {
+  const p = cot.pedido, lineas = cot.lineas;
+  const servicio = (id) => (datos && datos.servicios || []).find((x) => x.id === id);
+  const hoteles = lineas.filter((l) => l.tipo === 'hotel');
+  const fechaDe = (d) => p.fecha_inicio ? new Date(Date.parse(p.fecha_inicio + 'T12:00:00Z') + (d - 1) * 86400e3).toISOString().slice(0, 10) : null;
+  const mod = (m) => m === 'PRI' ? 'Privado' : m === 'GRU' ? 'Grupal' : '';
+  const ruta = p.destinos.filter((x) => x.noches).map((x) => `<span class="chip">${esc(x.ciudad)} · ${x.noches} ${x.noches === 1 ? 'noche' : 'noches'}</span>`).join('<span class="nota" style="margin:0">→</span>');
+  const item = (l, d) => {
+    const s = l.servicio_id ? servicio(l.servicio_id) : null;
+    const hotel = l.tipo === 'hotel';
+    const sub = hotel
+      ? `Check-in · ${l.unidades} ${esc(l.habitacion || '')} · ${l.cantidad} ${l.cantidad === 1 ? 'noche' : 'noches'} (hasta el día ${d + l.cantidad})`
+      : [TIPO_IT[l.tipo] || l.tipo, mod(l.modalidad), s && s.duracion ? s.duracion : '', `${l.pasajeros} pax`].filter(Boolean).map(esc).join(' · ');
+    const inc = !hotel && s && s.incluye ? `<span class="it-inc">Incluye: ${esc(s.incluye)}</span>` : '';
+    const marcas = `${l.origen_precio === 'ilustrativa' ? ' <span class="prueba">ILUSTRACIÓN</span>' : l.es_ilustrativa ? ' <span class="prueba">EJEMPLO</span>' : ''}${l.sin_confirmar ? ' <span class="chip pisado">precio web sin confirmar</span>' : ''}`;
+    return `<div class="it-item ${l.problema ? 'err' : ''}" id="ct-it-${l.id}">
+      <div class="it-hora ${l.horario ? '' : 'vacia'}">${l.horario ? esc(l.horario) : (hotel ? 'Noche' : 'Sin horario')}</div>
+      <div class="it-que"><b>${esc(l.descripcion)}</b>${marcas}<span class="it-sub">${sub}</span>${inc}
+        ${l.nota ? `<span class="it-sub">Nota: ${esc(l.nota)}</span>` : ''}${l.problema ? `<span class="it-sub err">${esc(l.problema)}</span>` : ''}</div>
+      <div class="it-acc">${ed ? `<button type="button" class="chico" data-mover="${l.id}" data-a="${d - 1}" ${d <= 1 ? 'disabled' : ''} title="Pasar al día anterior">↑ Día ${Math.max(1, d - 1)}</button>
+        <button type="button" class="chico" data-mover="${l.id}" data-a="${d + 1}" ${d >= nDias ? 'disabled' : ''} title="Pasar al día siguiente">↓ Día ${Math.min(nDias, d + 1)}</button>
+        <button type="button" class="chico" data-ed-lin="${l.id}">Cambiar</button>` : ''}</div></div>`;
+  };
+  let html = `<div class="it-resumen"><b>${esc(p.nombre)}</b><span>${p.pasajeros} pasajeros</span><span>${p.fecha_inicio ? `${fecha(p.fecha_inicio)} al ${fecha(p.fecha_fin)}` : 'sin fechas'}</span><span>${nDias} días</span><div class="it-ruta">${ruta}</div></div>
+    ${ed ? '<p class="nota" style="margin:0 0 10px">Movés una actividad de día con ↑ ↓; con <b>Cambiar</b> editás horario, modalidad, hotel, pasajeros o la quitás. <b>+ Agregar</b> suma algo a ese día. Los precios se recalculan solos (se ven en la vista Precios).</p>' : '<p class="nota" style="margin:0 0 10px">Esta versión no se edita: para cambiar algo, creá una versión nueva.</p>'}`;
+  for (let d = 1; d <= nDias; d++) {
+    const ls = (porDia.get(d) || []).slice().sort((a, b) => {
+      if ((a.tipo === 'hotel') !== (b.tipo === 'hotel')) return a.tipo === 'hotel' ? 1 : -1;   // el hotel, al final del día
+      const ma = minutosDe(a.horario), mb = minutosDe(b.horario);
+      if (ma === null && mb === null) return 0;
+      if (ma === null) return 1; if (mb === null) return -1;
+      return ma - mb;
+    });
+    const dd = destinoDelDia(p.destinos, d);
+    const duerme = hoteles.find((h) => d >= h.dia && d < h.dia + (h.cantidad || 1));
+    html += `<section class="it-dia"><div class="it-cab"><span class="it-n">Día ${d}</span><span class="nota" style="margin:0">${diaTxt(fechaDe(d))}</span>
+        ${dd ? `<span class="chip">${esc(dd.txt)}</span>` : ''}
+        <span class="it-duerme">${duerme ? 'Duerme en ' + esc(duerme.descripcion) : d === nDias ? 'Último día · salida' : dd && dd.duerme ? '<span class="err">Sin hotel cargado para esta noche</span>' : ''}</span>
+        ${ed ? `<button type="button" class="link" data-mas="${d}">+ Agregar</button>` : ''}</div>
+      ${ls.length ? ls.map((l) => item(l, d)).join('') : '<div class="it-libre">Día libre</div>'}</section>`;
+  }
+  const fuera = lineas.filter((l) => !l.dia || l.dia > nDias);
+  if (fuera.length) html += `<p class="err">Fuera de los días del viaje: ${fuera.map((l) => `${esc(l.descripcion)} (día ${l.dia}) ${ed ? `<button type="button" class="link" data-ed-lin="${l.id}">Cambiar</button>` : ''}`).join(', ')}</p>`;
+  return html;
+}
+
 function dibujarCotizacion() {
   const el = $('#ct-cot');
   if (!cot) { el.innerHTML = `<div class="vacio">Sin cotización. <button type="button" id="ct-armar">Armar borrador</button></div>`; $('#ct-armar').addEventListener('click', rearmarCot); return; }
@@ -18084,6 +18158,7 @@ function dibujarCotizacion() {
   el.innerHTML = `
     ${c.usa_prueba ? '<div class="banner grande">PRECIOS DE PRUEBA<small>Usa tarifas de prueba o valores de configuración sin confirmar: no se puede mandar al cliente.</small></div>' : ''}
     <div class="barra"><h2 style="margin:0">Cotización</h2>
+      <span class="ct-vistas" role="group" aria-label="Vista"><button type="button" data-vista-cot="itinerario" aria-pressed="${vistaCot === 'itinerario'}">Itinerario</button><button type="button" data-vista-cot="precios" aria-pressed="${vistaCot !== 'itinerario'}">Precios</button></span>
       <select id="ct-ver">${versiones.map((v) => `<option value="${v.id}" ${v.id === c.id ? 'selected' : ''}>Versión ${v.version}${v.variante ? ' · ' + v.variante : ''} · ${COT_ESTADO[v.estado] || v.estado}</option>`).join('')}</select>
       <span style="flex:1"></span>
       ${ed && vig && !hayPar && !esCotizador() && c.estado === 'en_revision' ? `<button type="button" class="chico" id="ct-a-revision" title="Cambiar la nota o la urgencia y volver a copiar el mensaje">Mensaje para ${REVISOR}</button>` : ''}
@@ -18101,7 +18176,7 @@ function dibujarCotizacion() {
     ${c.estado === 'aprobada' ? `<p class="ok">Aprobada por ${esc(c.aprobada_por || '—')} el ${peru(c.aprobada_en)}. No se edita: para cambiar algo, versión nueva.</p>` : ''}
     ${p.fecha_tentativa ? `<p class="aviso"><b>Fecha tentativa:</b> el cliente no dio fecha, se cotiza con el ${fecha(p.fecha_inicio)}. Hay que confirmarla antes de mandar la propuesta.</p>` : ''}
     ${!ed && c.avisos.length ? `<ul class="avisos-cot">${c.avisos.map((a) => `<li>${esc(a)}</li>`).join('')}</ul>` : ''}
-    <div class="card dias"><table class="t-resp lin lin-cab">${COLS}<thead><tr><th>Servicio</th><th>Horario</th><th class="c">Mod.</th><th>Pax</th><th class="num">Neto</th><th class="num">Margen</th><th class="num">Total</th><th class="num">Ganancia</th><th></th></tr></thead></table>${dias}</div>
+    ${vistaCot === 'itinerario' ? itinerarioHtml(nDias, porDia, ed) : `    <div class="card dias"><table class="t-resp lin lin-cab">${COLS}<thead><tr><th>Servicio</th><th>Horario</th><th class="c">Mod.</th><th>Pax</th><th class="num">Neto</th><th class="num">Margen</th><th class="num">Total</th><th class="num">Ganancia</th><th></th></tr></thead></table>${dias}</div>
     ${sinDia.length ? `<p class="err">Hay líneas fuera de los días del viaje: ${sinDia.map((l) => esc(l.descripcion) + ' (día ' + l.dia + ')').join(', ')}</p>` : ''}
     <div class="panel totales">
       <div><span>Neto total</span><b>${usd(t.neto_cent)}</b></div>
@@ -18118,7 +18193,7 @@ function dibujarCotizacion() {
         <label class="check"><input type="radio" name="ct-pmodo" value="componentes" ${t.modo !== 'paquete_web' ? 'checked' : ''}> Vale la suma por componentes</label>
         ${t.modo === 'paquete_web' ? (c.paquete_web_confirmado ? '<span class="ok">Precio del paquete confirmado</span>' : '<button type="button" class="chico prim" id="ct-conf-paq">Confirmar precio del paquete</button>') : ''}</div>` : `<p class="nota">Vale: ${t.modo === 'paquete_web' ? 'el precio del paquete' : 'la suma por componentes'}.</p>`}</div>` : ''}
     <p class="nota">Calculada con margen ${c.config.margen_pct}% y tipo de cambio S/ ${c.config.tc_pen_por_usd} por dólar${Object.keys(c.config.es_prueba || {}).length ? ' <span class="prueba">PRUEBA</span>' : ''}.
-      ${ed ? '<button type="button" class="link" id="ct-usar-config">Usar la configuración actual</button>' : ''}</p>
+      ${ed ? '<button type="button" class="link" id="ct-usar-config">Usar la configuración actual</button>' : ''}</p>`}
     <div class="panel"><h2>Notas de Álvaro</h2>${ed ? `<textarea id="ct-notas" maxlength="4000">${esc(c.notas_alvaro)}</textarea><div class="barra" style="margin-top:8px"><button type="button" class="chico" id="ct-guardar-notas">Guardar notas</button></div>` : `<p>${esc(c.notas_alvaro || '—')}</p>`}</div>`;
   RAIZ().querySelectorAll('[data-ver-var]').forEach((b) => b.addEventListener('click', () => { cotElegida = Number(b.dataset.verVar); pintarPedido(ped.pedido.id); }));
   RAIZ().querySelectorAll('[data-elegir-var]').forEach((b) => b.addEventListener('click', async () => {
@@ -18164,6 +18239,18 @@ function dibujarCotizacion() {
     cot = await api(`cotizaciones/${c.id}`, { method: 'PUT', body: { notas_alvaro: $('#ct-notas').value } }); toast('Notas guardadas'); dibujarCotizacion();
   });
   RAIZ().querySelectorAll('[data-mas]').forEach((b) => b.addEventListener('click', () => agregarLineaDlg(Number(b.dataset.mas))));
+  RAIZ().querySelectorAll('[data-vista-cot]').forEach((b) => b.addEventListener('click', () => {
+    vistaCot = b.dataset.vistaCot; try { localStorage.setItem('ct_vista_cot', vistaCot); } catch {}
+    dibujarCotizacion();
+  }));
+  // Itinerario: ↑ ↓ pasa la actividad al día anterior o siguiente (mismo PUT que Editar línea).
+  RAIZ().querySelectorAll('[data-mover]').forEach((b) => b.addEventListener('click', async () => {
+    if (!usuario()) { elegirSoy(); return; }
+    const id = b.dataset.mover, dia = Number(b.dataset.a);
+    b.disabled = true;
+    try { cot = await api(`cotizaciones/${c.id}/lineas/${id}`, { method: 'PUT', body: { dia } }); dibujarCotizacion(); const x = document.getElementById('ct-it-' + id); if (x) { x.scrollIntoView({ block: 'center' }); x.classList.add('resaltada'); setTimeout(() => x.classList.remove('resaltada'), 2500); } toast('Pasó al día ' + dia); }
+    catch (x) { alert(x.message); b.disabled = false; }
+  }));
   RAIZ().querySelectorAll('[data-ir-lin]').forEach((b) => b.addEventListener('click', () => irALinea(Number(b.dataset.irLin))));
   RAIZ().querySelectorAll('[data-ed-falta]').forEach((b) => b.addEventListener('click', () => editarLineaDlg(cot.lineas.find((l) => l.id == b.dataset.edFalta))));
   if ($('#ct-gen-prop')) $('#ct-gen-prop').addEventListener('click', async () => {
@@ -18189,9 +18276,9 @@ function bloqueTeFalta(pe, cc, c) {
     ${esCotizador() && bloq.length ? '<p class="nota" style="margin:6px 0 0">Si te falta un dato del cliente, decidí lo razonable y anotalo en "Notas de Álvaro".</p>' : ''}${extraChico}</div>`;
 }
 function irALinea(id) {
-  const tr = document.getElementById('ct-lin-' + id);
+  const tr = document.getElementById('ct-lin-' + id) || document.getElementById('ct-it-' + id);
   if (!tr) return;
-  RAIZ().querySelectorAll('tr.resaltada').forEach((x) => x.classList.remove('resaltada'));
+  RAIZ().querySelectorAll('.resaltada').forEach((x) => x.classList.remove('resaltada'));
   tr.classList.add('resaltada');
   tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
   setTimeout(() => tr.classList.remove('resaltada'), 4000);
