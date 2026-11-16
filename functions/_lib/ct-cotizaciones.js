@@ -4,6 +4,7 @@ import { aCentavos, aFecha, CATEGORIAS, HABITACIONES } from './tarifario.js';
 import { armarBorrador, precioLinea, totales, usaPrueba, sumarDias } from './cotizar.js';
 import { armarItinerario, indexarReglas } from './ct-armado.js';
 import { elegirConIA } from './ct-armado-ia.js';
+import { guardarTarifa } from './ct-tarifas.js';
 
 export const ESTADOS_PEDIDO = ['nuevo', 'borrador_listo', 'en_revision', 'aprobada', 'enviada', 'cerrada', 'perdida'];
 const EDITABLES = ['borrador', 'cambios_pedidos', 'en_revision'];
@@ -86,12 +87,40 @@ function leerPedido(b) {
   return { errores, d: { nombre, pais: texto(b.pais, 60), fecha_inicio: fi, fecha_fin: fin, pasajeros, destinos, categoria_hotel: cat, servicios, excursiones, pedidos_especiales: texto(b.pedidos_especiales, 2000), lead_id: lead, dias, fecha_tentativa: tentativa, conversacion_id: conversacion, origen } };
 }
 
-// Lo que impide aprobar: ilustraciones, precios web sin confirmar y el precio del paquete sin confirmar.
+// Lo que impide aprobar ("Te falta"): líneas sin precio, ilustraciones (destino que la web no tiene), hoteles y servicios
+// de ejemplo (tarifa de prueba), precios web sin confirmar y el precio del paquete sin confirmar.
+// Los avisos del armado van en la lista para revisar, pero no bloquean (no hay nada que "resolver" en ellos).
+// items: [{ tipo, linea_id, dia, texto, bloquea }] para el bloque "Te falta" del panel (cada ítem salta a su línea).
 export function pendientesDe(cot, lineas, tot) {
-  const ilustrativas = lineas.filter((l) => l.es_ilustrativa && l.origen_precio === 'ilustrativa').length;
-  const sinConfirmar = lineas.filter((l) => l.sin_confirmar).length;
-  const paquete = tot.modo === 'paquete_web' && !cot.paquete_web_confirmado ? 1 : 0;
-  return { ilustrativas, sin_confirmar: sinConfirmar, paquete_web: paquete, total: ilustrativas + sinConfirmar + paquete };
+  const items = [];
+  const it = (tipo, l, txt, bloquea = true) => items.push({ tipo, linea_id: l ? l.id : null, dia: l ? l.dia ?? null : null, texto: txt, bloquea });
+  for (const l of lineas) {
+    const nombre = l.descripcion || 'Línea';
+    if (l.problema) it('sin_precio', l, `${nombre}: ${l.problema}`);
+    else if (l.es_ilustrativa && l.origen_precio === 'ilustrativa') it('ilustrativa', l, `${nombre}: ilustración, la web no tiene este destino. Armalo y ponele precio.`);
+    else if (l.es_ilustrativa && !l.pisado_neto && !l.pisado_venta) it('ejemplo', l, `${nombre}: ${l.tipo === 'hotel' ? 'hotel' : 'tarifa'} de ejemplo. Elegí uno real o poné el precio.`);
+    if (l.sin_confirmar) it('sin_confirmar', l, `${nombre}: precio de la web sin confirmar.`);
+  }
+  if (tot.modo === 'paquete_web' && !cot.paquete_web_confirmado) it('paquete_web', null, 'El precio del paquete de la web, sin confirmar.');
+  for (const a of (Array.isArray(cot.avisos) ? cot.avisos : parse(cot.avisos, []))) it('aviso', null, String(a), false);
+  const n = (t) => items.filter((x) => x.tipo === t).length;
+  const total = items.filter((x) => x.bloquea).length;
+  return { ilustrativas: n('ilustrativa'), ejemplo: n('ejemplo'), sin_confirmar: n('sin_confirmar'), paquete_web: n('paquete_web'), sin_precio: n('sin_precio'), avisos: n('aviso'), total, items };
+}
+
+// "Cambio chico" (una versión nueva después de una aprobada): el equipo la aprueba sin pasar por Álvaro si no quedó
+// nada pendiente y no hay precios puestos a mano (o líneas manuales) que no estuvieran ya en la versión aprobada.
+const firmaLinea = (l) => [l.tipo, l.servicio_id ?? '', l.hotel_id ?? '', l.descripcion ?? '', l.habitacion ?? '', l.venta_cent].join('|');
+export function cambioChico(lineas, pendientes, aprobadas) {
+  if (!aprobadas) return { hay_aprobada: false, ok: false, motivos: [] };
+  const ya = new Set(aprobadas.map(firmaLinea));
+  const motivos = [];
+  if (pendientes.total) motivos.push(`${pendientes.total} pendiente${pendientes.total > 1 ? 's' : ''} en "Te falta"`);
+  for (const l of lineas) {
+    const aMano = l.tipo === 'manual' || l.pisado_neto || l.pisado_venta;
+    if (aMano && !ya.has(firmaLinea(l))) motivos.push(`${l.descripcion}: precio a mano sin tarifa`);
+  }
+  return { hay_aprobada: true, ok: !motivos.length, motivos };
 }
 
 // ---------- cotización: recalcular y ver ----------
@@ -128,10 +157,16 @@ export async function vistaCotizacion(env, cotId, { catalogo = null } = {}) {
   }
   if (stmts.length) await env.DB.batch(stmts);
   const { token_hash, ...publica } = cot;
+  const pendientes = pendientesDe(cot, lineas, tot);
+  let chico = { hay_aprobada: false, ok: false, motivos: [] };
+  if (editable) {
+    const ap = await env.DB.prepare(`SELECT id FROM ct_cotizaciones WHERE pedido_id = ? AND id != ? AND aprobada_en IS NOT NULL ORDER BY version DESC LIMIT 1`).bind(cot.pedido_id, cotId).first();
+    if (ap) chico = cambioChico(lineas, pendientes, (await env.DB.prepare(`SELECT * FROM ct_lineas WHERE cotizacion_id = ?`).bind(ap.id).all()).results);
+  }
   return {
     cotizacion: { ...publica, total_neto_cent: tot.neto_cent, total_venta_cent: tot.venta_cent, usa_prueba: prueba, problemas: tot.problemas, config: config, avisos: parse(cot.avisos, []), editable, tiene_link: !!token_hash },
     pedido, lineas, totales: tot,
-    pendientes: pendientesDe(cot, lineas, tot),
+    pendientes, cambio_chico: chico,
   };
 }
 
@@ -211,13 +246,31 @@ export async function hermana(env, cot) {
 }
 
 // ---------- endpoints ----------
+// De quién es la pelota: en revisión la tiene el cotizador (Álvaro); en cualquier otro estado, el equipo.
+export const duenoDe = (estado) => (estado === 'en_revision' ? 'cotizador' : 'equipo');
+
 export async function listarPedidos(env) {
   const r = await env.DB.prepare(`SELECT p.id, p.nombre, p.pais, p.fecha_inicio, p.fecha_fin, p.fecha_tentativa, p.dias, p.origen, p.pasajeros, p.destinos, p.estado, p.estado_desde, p.creado_en, p.creado_por,
-      c.id AS cotizacion_id, c.version, c.estado AS cot_estado, c.total_venta_cent, c.usa_prueba, c.problemas
+      p.urgente, p.nota_pase, p.pasado_en,
+      c.id AS cotizacion_id, c.version, c.estado AS cot_estado, c.total_venta_cent, c.usa_prueba, c.problemas, c.revisor, c.notas_alvaro,
+      (SELECT COUNT(*) FROM ct_lineas l WHERE l.cotizacion_id = c.id AND (l.problema IS NOT NULL OR l.sin_confirmar = 1 OR (l.es_ilustrativa = 1 AND l.pisado_neto = 0 AND l.pisado_venta = 0)))
+        + CASE WHEN c.precio_modo = 'paquete_web' AND c.paquete_web_confirmado = 0 THEN 1 ELSE 0 END AS pendientes
     FROM ct_pedidos p
     LEFT JOIN ct_cotizaciones c ON c.id = (SELECT id FROM ct_cotizaciones WHERE pedido_id = p.id ORDER BY version DESC LIMIT 1)
     ORDER BY p.estado_desde DESC LIMIT 300`).all();
-  return json({ pedidos: r.results.map((p) => ({ ...p, destinos: parse(p.destinos, []) })), ahora: new Date().toISOString() });
+  return json({ pedidos: r.results.map((p) => ({ ...p, destinos: parse(p.destinos, []), dueno: duenoDe(p.estado) })), ahora: new Date().toISOString() });
+}
+
+// Chat del cliente para el pedido (solo lectura; también lo ve el cotizador). Sin notas internas.
+export async function chatDePedido(env, id) {
+  const p = await env.DB.prepare(`SELECT conversacion_id, lead_id FROM ct_pedidos WHERE id = ?`).bind(id).first();
+  if (!p) return json({ error: 'No existe' }, 404);
+  let convId = p.conversacion_id;
+  if (!convId && p.lead_id) convId = (await env.DB.prepare(`SELECT id FROM wa_conversaciones WHERE lead_id = ? ORDER BY actualizado_en DESC LIMIT 1`).bind(p.lead_id).first())?.id || null;
+  if (!convId) return json({ mensajes: [], conversacion_id: null });
+  const r = await env.DB.prepare(`SELECT * FROM (SELECT id, direccion, autor, tipo, texto, transcripcion, creado_en FROM wa_mensajes
+      WHERE conversacion_id = ? AND tipo <> 'nota' ORDER BY creado_en DESC, id DESC LIMIT 80) ORDER BY creado_en, id`).bind(convId).all();
+  return json({ mensajes: r.results, conversacion_id: convId });
 }
 
 // Pedidos de un lead o de un chat del inbox (el chip de estado y el link del pase).
@@ -427,6 +480,40 @@ export async function agregarLinea(env, cotId, body, por) {
   return json(await vistaCotizacion(env, cotId));
 }
 
+// Guarda el precio de una línea como tarifa del servicio u hotel (en USD, por persona o por habitación y noche).
+// Si la línea venía de una tarifa real, la actualiza; si no (sin tarifa, de ejemplo o de la web), crea una vigente desde hoy.
+// precio_es_venta del servicio u hotel decide si se guarda el neto o el precio final; si no tiene tarifas reales y solo se
+// cargó el precio final, pasa a ser "precio final".
+async function tarifaDesdeLinea(env, l, { neto, venta }, por, motivo) {
+  const hotel = l.tipo === 'hotel';
+  const padre = await env.DB.prepare(`SELECT * FROM ${hotel ? 'ct_hoteles' : 'ct_servicios'} WHERE id = ?`).bind(hotel ? l.hotel_id : l.servicio_id).first();
+  if (!padre) return { error: hotel ? 'Falta elegir el hotel' : 'El servicio ya no está en el catálogo' };
+  if (hotel && padre.es_ilustrativo) return { error: `${padre.nombre} es un hotel de ejemplo: elegí un hotel real en la línea (o cargalo en Configuración › Hoteles) y guardá su tarifa` };
+  const tabla = hotel ? 'ct_hotel_tarifas' : 'ct_tarifas', col = hotel ? 'hotel_id' : 'servicio_id';
+  const reales = (await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${tabla} WHERE ${col} = ? AND es_ilustrativa = 0`).bind(padre.id).first()).n;
+  let esVenta = !!padre.precio_es_venta;
+  if (!esVenta && neto === null && venta !== null) {
+    if (reales) return { error: `${padre.nombre} tiene tarifas de costo (neto): para guardarlo en el tarifario cambiá el neto, no el precio final` };
+    esVenta = true;
+    await env.DB.prepare(`UPDATE ${hotel ? 'ct_hoteles' : 'ct_servicios'} SET precio_es_venta = 1, actualizado_en = ${ahora} WHERE id = ?`).bind(padre.id).run();
+  }
+  const total = esVenta ? (venta ?? neto) : neto;
+  if (total === null || total === undefined) return { error: 'Cambiá el precio para guardarlo en el tarifario' };
+  const divisor = hotel ? Math.max(1, (l.cantidad || 1) * (l.unidades || 1)) : Math.max(1, l.pasajeros || 1);
+  const unit = Math.round(total / divisor);
+  const actual = l.tarifa_id ? await env.DB.prepare(`SELECT * FROM ${tabla} WHERE id = ? AND ${col} = ?`).bind(l.tarifa_id, padre.id).first() : null;
+  const hoy = new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10);
+  const hasta = `${Number(hoy.slice(0, 4)) + 2}-12-31`;
+  const cuerpo = actual && !actual.es_ilustrativa
+    ? { ...actual, precio_neto: (unit / 100).toFixed(2), moneda: 'USD', es_ilustrativa: 0, motivo }
+    : { [col]: padre.id, habitacion: l.habitacion, pax_desde: 1, pax_hasta: null, temporada: 'todas', vigente_desde: hoy, vigente_hasta: hasta, precio_neto: (unit / 100).toFixed(2), moneda: 'USD', es_ilustrativa: 0, motivo };
+  const res = await guardarTarifa(env, hotel ? 'hotel' : 'servicio', actual && !actual.es_ilustrativa ? actual.id : null, cuerpo, por);
+  const j = await res.json();
+  if (!res.ok) return { error: `No se guardó en el tarifario: ${j.error}` };
+  const unidad = hotel ? `${l.habitacion} por noche` : 'por persona';
+  return { id: j.id, es_venta: esVenta, texto: `${padre.nombre} · ${esVenta ? 'precio final' : 'neto'} ${unidad}`, antes: actual ? `${actual.moneda} ${(actual.neto_cent / 100).toFixed(2)}` : null, precio: `USD ${(unit / 100).toFixed(2)}` };
+}
+
 export async function editarLinea(env, cotId, lid, body, por) {
   const { cot, err } = await cotEditable(env, cotId);
   if (err) return err;
@@ -471,11 +558,26 @@ export async function editarLinea(env, cotId, lid, body, por) {
     if (c !== l.venta_cent || !l.pisado_venta) { set('venta_cent', c); set('pisado_venta', 1); log.push(['venta', usd(l.venta_cent), usd(c)]); }
   }
   const cambiaPrecio = sets.some((s) => s.startsWith('neto_cent') || s.startsWith('venta_cent'));
-  if (l.sin_confirmar && (body.confirmar || cambiaPrecio)) {
+  // "Guardar también en el tarifario": el precio nuevo pasa a ser la tarifa del servicio u hotel y la línea vuelve a seguirla.
+  if (body.guardar_tarifario && cambiaPrecio) {
+    if (l.tipo === 'manual') return json({ error: 'Una línea manual no tiene servicio ni hotel: para el tarifario, cargala como servicio del catálogo' }, 400);
+    const valor = (k) => { const i = sets.findIndex((s) => s.startsWith(k + ' ')); return i === -1 ? null : vals[i]; };
+    const nueva = { ...l };
+    sets.forEach((s, i) => { nueva[s.split(' ')[0]] = vals[i]; });
+    const r = await tarifaDesdeLinea(env, nueva, { neto: valor('neto_cent'), venta: valor('venta_cent') }, por, motivo);
+    if (r.error) return json({ error: r.error }, 409);
+    const quitar = (k) => { let i; while ((i = sets.findIndex((s) => s.startsWith(k + ' '))) !== -1) { sets.splice(i, 1); vals.splice(i, 1); } };
+    const ventaAMano = !r.es_venta && valor('venta_cent') !== null ? valor('venta_cent') : null;
+    for (const k of ['neto_cent', 'venta_cent', 'pisado_neto', 'pisado_venta', 'sin_confirmar', 'es_ilustrativa', 'origen_precio']) quitar(k);
+    set('pisado_neto', 0); set('sin_confirmar', 0); set('origen_precio', 'tarifario');
+    if (ventaAMano !== null) { set('venta_cent', ventaAMano); set('pisado_venta', 1); } else set('pisado_venta', 0);
+    log.push([`tarifario: ${r.texto}`, r.antes, r.precio]);
+  }
+  if (l.sin_confirmar && (body.confirmar || cambiaPrecio) && !body.guardar_tarifario) {
     set('sin_confirmar', 0);
     log.push(['precio web confirmado', 'sin confirmar', usd(sets.some((s) => s.startsWith('venta_cent')) ? vals[sets.findIndex((s) => s.startsWith('venta_cent'))] : l.venta_cent)]);
   }
-  if (l.es_ilustrativa && (cambiaPrecio || body.ilustrativa === false)) {
+  if (l.es_ilustrativa && !body.guardar_tarifario && (cambiaPrecio || body.ilustrativa === false)) {
     set('es_ilustrativa', 0); set('origen_precio', 'manual'); log.push(['ilustración corregida', 'ilustrativa', 'con precio']);
   }
   if (body.restaurar) { set('pisado_neto', 0); set('pisado_venta', 0); set('margen_fijo', null); log.push(['restaurado', `${usd(l.neto_cent)} / ${usd(l.venta_cent)}`, 'según tarifario']); }

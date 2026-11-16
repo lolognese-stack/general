@@ -190,4 +190,64 @@ t('borrador: avisos de fechas, servicio fuera de destino y sin fecha', () => {
   assert.match(precioLinea(b.lineas[0], ctx(2)).problema, /Falta la fecha/);
 });
 
+// ---------- pipeline: "Te falta" como lista y "cambio chico" ----------
+const { pendientesDe, cambioChico, duenoDe } = await import('../functions/_lib/ct-cotizaciones.js');
+const { mensajePase, linkPedido } = await import('../functions/_lib/ct-revision.js');
+const lin = (id, extra = {}) => ({ id, dia: 1, tipo: 'tour', servicio_id: 1, descripcion: 'L' + id, venta_cent: 1000, neto_cent: 800, pisado_neto: 0, pisado_venta: 0, es_ilustrativa: 0, sin_confirmar: 0, origen_precio: 'tarifario', problema: null, ...extra });
+const TOT = { modo: 'componentes' };
+
+t('pendientes: lista con línea, día y tipo; los avisos no bloquean', () => {
+  const ls = [lin(1), lin(2, { problema: 'Sin tarifa para 2 pasajeros', dia: 2 }), lin(3, { es_ilustrativa: 1, origen_precio: 'ilustrativa', dia: 3 }),
+    lin(4, { tipo: 'hotel', es_ilustrativa: 1, dia: 1 }), lin(5, { sin_confirmar: 1, origen_precio: 'web', dia: 4 })];
+  const pe = pendientesDe({ avisos: JSON.stringify(['No entra el City Tour']), paquete_web_confirmado: 0 }, ls, TOT);
+  assert.equal(pe.total, 4);
+  assert.deepEqual(pe.items.filter((x) => x.bloquea).map((x) => [x.tipo, x.linea_id, x.dia]), [['sin_precio', 2, 2], ['ilustrativa', 3, 3], ['ejemplo', 4, 1], ['sin_confirmar', 5, 4]]);
+  assert.equal(pe.items.find((x) => x.tipo === 'aviso').bloquea, false);
+  assert.equal(pe.avisos, 1);
+  assert.match(pe.items.find((x) => x.tipo === 'ejemplo').texto, /hotel de ejemplo/);
+});
+
+t('pendientes: paquete web sin confirmar cuenta; ejemplo con precio a mano ya no', () => {
+  const pe = pendientesDe({ avisos: [], paquete_web_confirmado: 0 }, [lin(1, { es_ilustrativa: 1, pisado_neto: 1 })], { modo: 'paquete_web' });
+  assert.equal(pe.total, 1);
+  assert.equal(pe.items[0].tipo, 'paquete_web');
+  assert.equal(pendientesDe({ avisos: [], paquete_web_confirmado: 1 }, [], { modo: 'paquete_web' }).total, 0);
+});
+
+t('cambio chico: sin versión aprobada no aplica', () => {
+  assert.deepEqual(cambioChico([lin(1)], { total: 0 }, null), { hay_aprobada: false, ok: false, motivos: [] });
+});
+
+t('cambio chico: todo del tarifario lo aprueba el equipo', () => {
+  const r = cambioChico([lin(1), lin(2, { servicio_id: 9, descripcion: 'Otro tour' })], { total: 0 }, [lin(1)]);
+  assert.equal(r.ok, true);
+});
+
+t('cambio chico: precio a mano nuevo vuelve a Álvaro; el que ya estaba aprobado no', () => {
+  const aprobada = [lin(1, { pisado_venta: 1, venta_cent: 1500 })];
+  assert.equal(cambioChico([lin(1, { pisado_venta: 1, venta_cent: 1500 })], { total: 0 }, aprobada).ok, true);
+  const r = cambioChico([lin(1, { pisado_venta: 1, venta_cent: 1700 })], { total: 0 }, aprobada);
+  assert.equal(r.ok, false);
+  assert.match(r.motivos[0], /precio a mano/);
+  assert.equal(cambioChico([lin(7, { tipo: 'manual', descripcion: 'Traslado extra' })], { total: 0 }, aprobada).ok, false);
+  assert.equal(cambioChico([lin(1)], { total: 2 }, [lin(1)]).ok, false);
+});
+
+t('dueño del pedido según estado', () => {
+  assert.equal(duenoDe('en_revision'), 'cotizador');
+  for (const e of ['nuevo', 'borrador_listo', 'aprobada', 'enviada']) assert.equal(duenoDe(e), 'equipo');
+});
+
+t('mensaje del pase para WhatsApp', () => {
+  const link = linkPedido('https://crm.example', 3);
+  assert.equal(link, 'https://crm.example/panel-4c1f6a#/cotizaciones/pedido/3');
+  const m = mensajePase({ pedido: { nombre: 'Ana', pasajeros: 2, fecha_inicio: '2027-03-01', fecha_fin: '2027-03-08', destinos: [{ ciudad: 'Cusco' }, { ciudad: 'Lima' }] }, revisor: 'Álvaro', nota: 'quiere hotel con vista', urgente: 1, link, pendientes: 2 });
+  assert.match(m, /^🔴 URGENTE/);
+  assert.match(m, /\*Ana\* · 2 pax · 01\/03 al 08\/03 · Cusco, Lima/);
+  assert.match(m, /Te faltan 2 cosas/);
+  assert.match(m, /Nota: quiere hotel con vista/);
+  assert.ok(m.endsWith(link));
+  assert.doesNotMatch(mensajePase({ pedido: { nombre: 'B', pasajeros: 1, destinos: [] }, revisor: 'Álvaro', link, pendientes: 0 }), /URGENTE|Nota|Te faltan/);
+});
+
 console.log(`${ok} tests ok`);

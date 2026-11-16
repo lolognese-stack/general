@@ -2455,6 +2455,34 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 #view-cotizaciones .ped:hover{border-color:var(--ink2)}
 #view-cotizaciones .ped small{display:block;color:var(--ink2);font-size:.8rem}
 #view-cotizaciones .ped .hace{display:block;margin-top:6px;font-size:.75rem;color:var(--muted)}
+#view-cotizaciones .ped.urg{border-left:3px solid var(--danger)}
+#view-cotizaciones .ped .hace.tarde{color:var(--danger);font-weight:600}
+#view-cotizaciones .ped .nota-pase{display:block;margin-top:6px;font-size:.8rem;color:var(--ink);background:var(--surface-2);padding:4px 6px;border-radius:3px;white-space:pre-wrap}
+#view-cotizaciones .ped .pend{color:var(--danger)}
+#view-cotizaciones .chip.urg{border-color:var(--danger);color:var(--danger);font-weight:700}
+#view-cotizaciones .col.mia{background:var(--surface-2);outline:1px solid var(--line)}
+#view-cotizaciones .ct-dueno{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 14px;margin:0 0 12px;border:1px solid var(--line);border-radius:4px;background:var(--surface-2);font-size:.92rem}
+#view-cotizaciones .ct-dueno b{font-size:1rem}
+#view-cotizaciones .ct-dueno.de-alvaro{border-color:var(--brand)}
+#view-cotizaciones .ct-dueno .acc{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+#view-cotizaciones .ct-nota-pase{white-space:pre-wrap;margin:0 0 12px;padding:10px 14px;border-left:3px solid var(--brand);background:var(--paper);font-size:.92rem}
+#view-cotizaciones .ct-falta{border:1px solid var(--danger);background:var(--danger-bg);border-radius:4px;padding:10px 14px;margin:0 0 12px}
+#view-cotizaciones .ct-falta.ok{border-color:var(--line);background:var(--surface-2)}
+#view-cotizaciones .ct-falta h3{margin:0 0 6px;font-size:1rem;color:var(--danger)}
+#view-cotizaciones .ct-falta.ok h3{color:var(--ink)}
+#view-cotizaciones .ct-falta ol{margin:0;padding-left:20px}
+#view-cotizaciones .ct-falta li{margin:3px 0;font-size:.9rem}
+#view-cotizaciones .ct-falta li.aviso{color:var(--ink2);list-style:circle}
+#view-cotizaciones .ct-falta .link{font-size:.85rem}
+#view-cotizaciones tr.resaltada td{background:var(--warn-bg)}
+#view-cotizaciones .ct-chat{margin:0 0 12px}
+#view-cotizaciones .ct-chat summary{cursor:pointer;padding:8px 0;font-weight:600}
+#view-cotizaciones .ct-chat .msjs{max-height:420px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:10px;background:var(--surface-sunk);border-radius:4px}
+#view-cotizaciones .ct-chat .m{max-width:80%;padding:6px 10px;border-radius:6px;font-size:.88rem;white-space:pre-wrap;background:var(--paper);border:1px solid var(--line)}
+#view-cotizaciones .ct-chat .m.out{align-self:flex-end;background:var(--surface-2)}
+#view-cotizaciones .ct-chat .m small{display:block;color:var(--muted);font-size:.72rem;margin-top:2px}
+#view-cotizaciones .ct-lista{border:1px solid var(--brand);border-radius:4px;padding:12px 14px;margin:0 0 12px;background:var(--paper)}
+#view-cotizaciones .ct-lista h3{margin:0 0 6px}
 #view-cotizaciones .cab-ped{display:flex;gap:16px;justify-content:space-between;flex-wrap:wrap}
 #view-cotizaciones .cab-ped .meta{color:var(--ink2);font-size:.88rem}
 #view-cotizaciones .acc-ped{display:flex;flex-direction:column;gap:6px;align-items:flex-start;min-width:200px}
@@ -2591,7 +2619,7 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
       </button>
       <button data-seccion="cotizaciones" title="Tarifario, pedidos y cotizaciones internas">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.5 7h7M8.5 11h1M12 11h1M15.5 11h0M8.5 14.5h1M12 14.5h1M8.5 18h1M12 18h1M15.5 14.5v3.5"/></svg>
-        <span>Cotizaciones</span>
+        <span>Cotizaciones</span><span class="tally" id="nav-ct-tally" title="Pedidos que te esperan"></span>
       </button>
       <button data-seccion="propuestas" title="Propuestas publicadas: aperturas, avisos y seguimiento">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 12h7M9 16h7"/></svg>
@@ -17621,22 +17649,57 @@ function haceCuanto(t) {
   return `${Math.round(m / 1440)} días`;
 }
 let verCerrados = false;
+const esCotizador = () => window.crmRol === 'cotizador';
+const REVISOR = 'Álvaro';
+const horasDesde = (t) => (t ? (Date.now() - Date.parse(t.replace(' ', 'T') + 'Z')) / 3600e3 : 0);
+// Bandejas: de quién es la pelota en cada estado. El cotizador ve primero "Para cotizar".
+const BANDEJAS_EQUIPO = [
+  { k: 'por_pasar', n: 'Por pasar', estados: ['nuevo', 'borrador_listo'], mia: true },
+  { k: 'con_alvaro', n: `Con ${REVISOR}`, estados: ['en_revision'] },
+  { k: 'lista', n: 'Lista para propuesta', estados: ['aprobada'], mia: true },
+  { k: 'enviadas', n: 'Enviadas', estados: ['enviada'] },
+];
+const BANDEJAS_COTIZADOR = [
+  { k: 'para_cotizar', n: 'Para cotizar', estados: ['en_revision'], mia: true },
+  { k: 'con_equipo', n: 'Con el equipo', estados: ['nuevo', 'borrador_listo'] },
+  { k: 'aprobadas', n: 'Aprobadas', estados: ['aprobada', 'enviada'] },
+];
+const CERRADAS = { k: 'cerradas', n: 'Cerradas y perdidas', estados: ['cerrada', 'perdida'] };
+// En revisión: urgentes arriba, después el que hace más que espera. El resto: lo más reciente arriba.
+const ordenBandeja = (b, ps) => b.estados.includes('en_revision')
+  ? ps.sort((x, y) => (y.urgente || 0) - (x.urgente || 0) || String(x.pasado_en || x.estado_desde).localeCompare(String(y.pasado_en || y.estado_desde)))
+  : ps;
+function pintarContador(pedidos) {
+  const n = pedidos.filter((p) => esCotizador() ? p.estado === 'en_revision' : p.estado === 'aprobada').length;
+  const t = document.getElementById('nav-ct-tally');
+  if (t) { t.textContent = n ? String(n) : ''; t.title = esCotizador() ? 'Pedidos para cotizar' : 'Cotizaciones listas para propuesta'; }
+}
+async function contar() { try { pintarContador((await api('pedidos')).pedidos); } catch (e) {} }
 
 async function pintarPedidos() {
   const j = await api('pedidos');
-  const visibles = ESTADOS.filter(([k]) => verCerrados || !['cerrada', 'perdida'].includes(k));
-  const tarjeta = (p) => `<a class="ped" href="#/cotizaciones/pedido/${p.id}">
-      <b>${esc(p.nombre)}</b>${p.usa_prueba ? ' <span class="prueba">PRUEBA</span>' : ''}
+  pintarContador(j.pedidos);
+  const bandejas = [...(esCotizador() ? BANDEJAS_COTIZADOR : BANDEJAS_EQUIPO), ...(verCerrados ? [CERRADAS] : [])];
+  const tarjeta = (p) => {
+    const enRev = p.estado === 'en_revision';
+    const h = horasDesde(p.pasado_en || p.estado_desde);
+    return `<a class="ped ${enRev && p.urgente ? 'urg' : ''}" href="#/cotizaciones/pedido/${p.id}">
+      <b>${esc(p.nombre)}</b>${enRev && p.urgente ? ' <span class="chip urg">URGENTE</span>' : ''}${p.usa_prueba ? ' <span class="prueba">PRUEBA</span>' : ''}
       <small>${p.pasajeros} pax · ${p.fecha_inicio ? fecha(p.fecha_inicio) + (p.fecha_tentativa ? ' (tentativa)' : '') : 'sin fecha'}${p.pais ? ' · ' + esc(p.pais) : ''}</small>
       <small>${esc(p.destinos.map((d) => d.ciudad).join(' · '))}</small>
-      ${p.total_venta_cent ? `<small><b>${usd(Math.round(p.total_venta_cent / p.pasajeros))}</b> p/p · v${p.version}${p.problemas ? ` · <span class="err">${p.problemas} sin precio</span>` : ''}</small>` : ''}
-      <span class="hace" title="Tiempo en este estado">hace ${haceCuanto(p.estado_desde)}</span></a>`;
-  $('#ct-raiz').innerHTML = `<div class="barra"><button class="prim" type="button" id="ct-nuevo-ped">+ Pedido</button><button type="button" id="ct-pegar-chat" title="Pega la conversación con el cliente y la IA saca los datos del viaje">Pegar chat</button><button type="button" id="ct-pegar-excel" title="Sube o pega un presupuesto en Excel: entra como cotización con sus precios">Pegar / subir Excel</button><span style="flex:1"></span>
+      ${p.total_venta_cent ? `<small><b>${usd(Math.round(p.total_venta_cent / p.pasajeros))}</b> p/p · v${p.version}</small>` : ''}
+      ${p.pendientes && ['nuevo', 'borrador_listo', 'en_revision'].includes(p.estado) ? `<small class="pend">Falta${p.pendientes > 1 ? 'n' : ''} ${p.pendientes} cosa${p.pendientes > 1 ? 's' : ''}</small>` : ''}
+      ${enRev && p.nota_pase && esCotizador() ? `<span class="nota-pase">${esc(p.nota_pase.slice(0, 160))}</span>` : ''}
+      <span class="hace ${enRev && h >= 24 ? 'tarde' : ''}" title="${enRev ? 'Desde que se le pasó a ' + REVISOR : 'Tiempo en este estado'}">${enRev ? 'esperando hace ' : 'hace '}${haceCuanto(p.pasado_en && enRev ? p.pasado_en : p.estado_desde)}</span></a>`;
+  };
+  $('#ct-raiz').innerHTML = `<div class="barra">${esCotizador() ? '<p class="nota" style="margin:0">Lo tuyo está en <b>Para cotizar</b>: urgentes arriba, después el que espera hace más. En rojo, más de 24 h.</p>' : '<button class="prim" type="button" id="ct-nuevo-ped">+ Pedido</button><button type="button" id="ct-pegar-chat" title="Pega la conversación con el cliente y la IA saca los datos del viaje">Pegar chat</button><button type="button" id="ct-pegar-excel" title="Sube o pega un presupuesto en Excel: entra como cotización con sus precios">Pegar / subir Excel</button>'}<span style="flex:1"></span>
       <label class="check"><input type="checkbox" id="ct-ver-cerr" ${verCerrados ? 'checked' : ''}> Ver cerrados y perdidos</label></div>
-    <div class="tablero">${visibles.map(([k, n]) => { const ps = j.pedidos.filter((p) => p.estado === k); return `<section class="col"><h4>${n} <span>${ps.length}</span></h4>${ps.map(tarjeta).join('') || '<p class="nota">—</p>'}</section>`; }).join('')}</div>`;
-  $('#ct-nuevo-ped').addEventListener('click', () => irA('nuevo'));
-  $('#ct-pegar-chat').addEventListener('click', () => irA('pegar-chat'));
-  $('#ct-pegar-excel').addEventListener('click', () => irA('pegar-excel'));
+    <div class="tablero">${bandejas.map((b) => { const ps = ordenBandeja(b, j.pedidos.filter((p) => b.estados.includes(p.estado))); return `<section class="col ${b.mia ? 'mia' : ''}" data-bandeja="${b.k}"><h4>${b.n} <span>${ps.length}</span></h4>${ps.map(tarjeta).join('') || '<p class="nota">—</p>'}</section>`; }).join('')}</div>`;
+  if ($('#ct-nuevo-ped')) {
+    $('#ct-nuevo-ped').addEventListener('click', () => irA('nuevo'));
+    $('#ct-pegar-chat').addEventListener('click', () => irA('pegar-chat'));
+    $('#ct-pegar-excel').addEventListener('click', () => irA('pegar-excel'));
+  }
   $('#ct-ver-cerr').addEventListener('change', (e) => { verCerrados = e.target.checked; pintarPedidos(); });
 }
 
@@ -17824,8 +17887,13 @@ function dibujarPedido() {
         <button type="button" class="chico" id="ct-editar-ped">Editar datos</button>
       </div>
     </div>
+    ${barraDueno(p)}
+    ${p.nota_pase && p.estado === 'en_revision' ? `<div class="ct-nota-pase"><b>Nota del equipo:</b> ${esc(p.nota_pase)}</div>` : ''}
+    <details class="ct-chat" id="ct-chat"><summary>Chat del cliente (solo lectura)</summary><div class="msjs"><p class="nota">Cargando…</p></div></details>
     <div id="ct-cot"></div>
     <div id="ct-prop"></div>`;
+  $('#ct-chat').addEventListener('toggle', cargarChat, { once: true });
+  if ($('#ct-pasar')) $('#ct-pasar').addEventListener('click', pasarDlg);
   $('#ct-estado').addEventListener('change', async (e) => {
     if (!usuario()) { elegirSoy(); e.target.value = p.estado; return; }
     try { await api(`pedidos/${p.id}/estado`, { method: 'POST', body: { estado: e.target.value } }); toast('Estado: ' + NOMBRE_ESTADO[e.target.value]); pintarPedido(p.id); }
@@ -17835,6 +17903,34 @@ function dibujarPedido() {
   $('#ct-hist-est').addEventListener('click', () => abrirDialogo(`<h3>Estados</h3><table><tbody>${ped.estados.map((s) => `<tr><td>${esc(NOMBRE_ESTADO[s.estado] || s.estado)}</td><td>${peru(s.creado_en)}</td><td>${esc(s.por || '')}${s.nota ? ` · ${esc(s.nota)}` : ''}</td></tr>`).join('')}</tbody></table><div class="pie"><button value="cancel" formnovalidate>Cerrar</button></div>`, () => {}));
   dibujarCotizacion();
   pintarPropuesta();
+}
+
+// "La tiene: vos / Álvaro": quién tiene que mover el pedido ahora.
+function barraDueno(p) {
+  const deAlvaro = p.estado === 'en_revision';
+  const yo = esCotizador() ? deAlvaro : !deAlvaro;
+  const quien = deAlvaro ? REVISOR : 'el equipo';
+  const que = {
+    nuevo: 'armar el borrador y pasarlo', borrador_listo: `revisar el borrador y pasárselo a ${REVISOR}`,
+    en_revision: 'resolver lo que falta, revisar itinerario y precios, y aprobar', aprobada: 'generar la propuesta, revisarla y mandarla',
+    enviada: 'esperar la respuesta del cliente', cerrada: 'nada: cerrada', perdida: 'nada: perdida',
+  }[p.estado] || '';
+  const puedePasar = !esCotizador() && ['nuevo', 'borrador_listo'].includes(p.estado);
+  const tarde = deAlvaro && horasDesde(p.pasado_en || p.estado_desde) >= 24;
+  return `<div class="ct-dueno ${deAlvaro ? 'de-alvaro' : ''}"><span>La tiene:</span> <b>${yo ? 'vos' : esc(quien)}</b>
+    ${deAlvaro && p.urgente ? '<span class="chip urg">URGENTE</span>' : ''}
+    <span class="nota" style="margin:0">${esc(que)}${deAlvaro ? ` · ${tarde ? '<span class="err">' : ''}hace ${haceCuanto(p.pasado_en || p.estado_desde)}${tarde ? '</span>' : ''}` : ''}</span>
+    <span class="acc">${puedePasar ? `<button type="button" class="chico prim" id="ct-pasar">Pasar a ${REVISOR}</button>` : ''}</span></div>`;
+}
+
+async function cargarChat() {
+  const caja = $('#ct-chat .msjs');
+  try {
+    const j = await api(`pedidos/${ped.pedido.id}/chat`);
+    if (!j.mensajes.length) { caja.innerHTML = '<p class="nota" style="margin:0">Este pedido no está atado a un chat de WhatsApp.</p>'; return; }
+    caja.innerHTML = j.mensajes.map((m) => `<div class="m ${m.direccion === 'out' ? 'out' : ''}">${esc(m.texto || m.transcripcion || `[${m.tipo}]`)}<small>${esc({ lead: 'Cliente', ia: 'IA', asesora_app: 'Equipo (app)', asesora_web: 'Equipo', sistema: 'Sistema' }[m.autor] || m.autor)} · ${peru(m.creado_en)}</small></div>`).join('');
+    caja.scrollTop = caja.scrollHeight;
+  } catch (x) { caja.innerHTML = `<p class="err" style="margin:0">${esc(x.message)}</p>`; }
 }
 
 // Dónde está el viaje cada día según los destinos y sus noches: el día de cambio muestra "Origen → Destino".
@@ -17858,7 +17954,7 @@ function dibujarCotizacion() {
   const porDia = new Map();
   for (const l of cot.lineas) (porDia.get(l.dia) || porDia.set(l.dia, []).get(l.dia)).push(l);
   const COLS = '<colgroup><col><col style="width:140px"><col style="width:76px"><col style="width:92px"><col style="width:104px"><col style="width:64px"><col style="width:108px"><col style="width:104px"><col style="width:136px"></colgroup>';
-  const fila = (l) => `<tr class="${l.problema ? 'fila-err' : ''}">
+  const fila = (l) => `<tr id="ct-lin-${l.id}" class="${l.problema ? 'fila-err' : ''}">
       <td class="full"><b>${esc(l.descripcion)}</b> <span class="chip">${esc(l.tipo === 'hotel' ? 'hotel' : TIPOS[l.tipo] || l.tipo)}</span>
         ${l.origen_precio === 'ilustrativa' ? '<span class="prueba" title="La web no publica este destino: hay que armarlo y ponerle precio">ILUSTRACIÓN</span>' : l.es_ilustrativa ? '<span class="prueba">PRUEBA</span>' : ''}${l.sin_confirmar ? ' <span class="chip pisado" title="Precio publicado en la web, sin tarifa propia: confirmalo o corregilo antes de aprobar">precio web sin confirmar</span>' : l.origen_precio === 'web' && l.web_dia ? ' <span class="chip">de la web</span>' : ''}${l.pisado_neto || l.pisado_venta ? ' <span class="chip pisado" title="Precio cambiado a mano">a mano</span>' : ''}${l.precio_es_venta ? ' <span class="chip" title="Tarifa ya es precio de venta">propio</span>' : ''}
         ${l.problema ? `<div class="err">${esc(l.problema)}</div>` : ''}${l.nota ? `<div class="nota" style="margin:0">${esc(l.nota)}</div>` : ''}</td>
@@ -17893,25 +17989,28 @@ function dibujarCotizacion() {
     <p class="nota">Los días no alcanzan para lo que pidió el cliente: hay dos borradores. Elegí uno para seguir; el otro queda reemplazado.</p>` : '';
   const pendTxt = [pe.ilustrativas && `${pe.ilustrativas} línea${pe.ilustrativas > 1 ? 's' : ''} ilustrativa${pe.ilustrativas > 1 ? 's' : ''}`, pe.sin_confirmar && `${pe.sin_confirmar} precio${pe.sin_confirmar > 1 ? 's' : ''} de la web sin confirmar`, pe.paquete_web && 'el precio del paquete web'].filter(Boolean).join(', ');
   const modoPaq = t.paquete_web_cent != null;
+  const cc = cot.cambio_chico || {};
+  const chicoOk = ed && vig && !hayPar && !esCotizador() && c.estado === 'borrador' && cc.hay_aprobada && cc.ok;
   el.innerHTML = `
     ${c.usa_prueba ? '<div class="banner grande">PRECIOS DE PRUEBA<small>Usa tarifas de prueba o valores de configuración sin confirmar: no se puede mandar al cliente.</small></div>' : ''}
     <div class="barra"><h2 style="margin:0">Cotización</h2>
       <select id="ct-ver">${versiones.map((v) => `<option value="${v.id}" ${v.id === c.id ? 'selected' : ''}>Versión ${v.version}${v.variante ? ' · ' + v.variante : ''} · ${COT_ESTADO[v.estado] || v.estado}</option>`).join('')}</select>
       <span style="flex:1"></span>
-      ${ed && vig && !hayPar ? '<button type="button" class="chico prim" id="ct-a-revision">Mandar a revisión</button>' : ''}
-      ${['en_revision', 'cambios_pedidos'].includes(c.estado) && vig && !hayPar ? `<button type="button" class="chico" id="ct-pedir-cambios">Pedir cambios</button><button type="button" class="chico prim" id="ct-aprobar" ${pe.total ? `disabled title="Falta: ${esc(pendTxt)}"` : ''}>Aprobar</button>` : ''}
+      ${ed && vig && !hayPar && !esCotizador() && c.estado === 'en_revision' ? `<button type="button" class="chico" id="ct-a-revision" title="Cambiar la nota o la urgencia y volver a copiar el mensaje">Mensaje para ${REVISOR}</button>` : ''}
+      ${chicoOk ? '<button type="button" class="chico prim" id="ct-aprobar" title="Cambio chico: todo tiene precio confirmado en el tarifario">Aprobar (cambio chico)</button>' : ''}
+      ${['en_revision', 'cambios_pedidos'].includes(c.estado) && vig && !hayPar ? `<button type="button" class="chico" id="ct-pedir-cambios">Pedir cambios</button><button type="button" class="chico prim" id="ct-aprobar" ${pe.total ? `disabled title="Primero resolvé lo de &quot;Te falta&quot;"` : ''}>Aprobar</button>` : ''}
       ${ed ? '<button type="button" class="chico" id="ct-rearmar">Volver a armar</button>' : ''}
       ${c.estado === 'aprobada' ? '<button type="button" class="chico prim" id="ct-a-propuesta">Propuesta para el cliente ↓</button>' : ''}
       ${!ed && vig ? '<button type="button" class="chico" id="ct-nueva-v">Crear versión nueva</button>' : ''}
       <button type="button" class="chico" id="ct-cambios-cot">Cambios de precio</button></div>
     ${tarjetasVar}
-    ${ed && pe.total ? `<div class="avisos-cot ct-pend"><b>Para aprobar falta:</b> ${esc(pendTxt)}. ${pe.sin_confirmar ? 'Confirmá o corregí cada precio de la web (botón "Confirmar" de la línea). ' : ''}${pe.ilustrativas ? 'Las ilustraciones se corrigen cargándoles precio. ' : ''}</div>` : ''}
-    ${c.estado === 'en_revision' ? `<p class="aviso">En revisión de ${esc(c.revisor || '—')}. Los cambios de precio quedan en "Cambios de precio".</p>` : ''}
+    ${listaParaPropuesta(c)}
+    ${ed ? bloqueTeFalta(pe, cc, c) : ''}
+    ${c.estado === 'en_revision' && !esCotizador() ? `<p class="aviso">La tiene ${esc(c.revisor || REVISOR)}. Los cambios de precio quedan en "Cambios de precio".</p>` : ''}
     ${c.estado === 'cambios_pedidos' ? `<div class="avisos-cot"><b>${esc(c.revisor || 'Álvaro')} pidió cambios:</b> ${esc(c.pedido_cambios || '')}</div>` : ''}
     ${c.estado === 'aprobada' ? `<p class="ok">Aprobada por ${esc(c.aprobada_por || '—')} el ${peru(c.aprobada_en)}. No se edita: para cambiar algo, versión nueva.</p>` : ''}
     ${p.fecha_tentativa ? `<p class="aviso"><b>Fecha tentativa:</b> el cliente no dio fecha, se cotiza con el ${fecha(p.fecha_inicio)}. Hay que confirmarla antes de mandar la propuesta.</p>` : ''}
-    ${c.avisos.length ? `<ul class="avisos-cot">${c.avisos.map((a) => `<li>${esc(a)}</li>`).join('')}</ul>` : ''}
-    ${t.problemas ? `<p class="err"><b>${t.problemas} línea${t.problemas > 1 ? 's' : ''} sin precio.</b> Cargá la tarifa, cambiá el hotel o poné el precio a mano.</p>` : ''}
+    ${!ed && c.avisos.length ? `<ul class="avisos-cot">${c.avisos.map((a) => `<li>${esc(a)}</li>`).join('')}</ul>` : ''}
     <div class="card dias"><table class="t-resp lin lin-cab">${COLS}<thead><tr><th>Servicio</th><th>Horario</th><th class="c">Mod.</th><th>Pax</th><th class="num">Neto</th><th class="num">Margen</th><th class="num">Total</th><th class="num">Ganancia</th><th></th></tr></thead></table>${dias}</div>
     ${sinDia.length ? `<p class="err">Hay líneas fuera de los días del viaje: ${sinDia.map((l) => esc(l.descripcion) + ' (día ' + l.dia + ')').join(', ')}</p>` : ''}
     <div class="panel totales">
@@ -17975,7 +18074,45 @@ function dibujarCotizacion() {
     cot = await api(`cotizaciones/${c.id}`, { method: 'PUT', body: { notas_alvaro: $('#ct-notas').value } }); toast('Notas guardadas'); dibujarCotizacion();
   });
   RAIZ().querySelectorAll('[data-mas]').forEach((b) => b.addEventListener('click', () => agregarLineaDlg(Number(b.dataset.mas))));
+  RAIZ().querySelectorAll('[data-ir-lin]').forEach((b) => b.addEventListener('click', () => irALinea(Number(b.dataset.irLin))));
+  RAIZ().querySelectorAll('[data-ed-falta]').forEach((b) => b.addEventListener('click', () => editarLineaDlg(cot.lineas.find((l) => l.id == b.dataset.edFalta))));
+  if ($('#ct-gen-prop')) $('#ct-gen-prop').addEventListener('click', async () => {
+    const prop = $('#ct-prop');
+    if (prop && prop.querySelector('#ct-prop-ver')) { prop.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    await generarProp();
+  });
   RAIZ().querySelectorAll('[data-ed-lin]').forEach((b) => b.addEventListener('click', () => editarLineaDlg(cot.lineas.find((l) => l.id == b.dataset.edLin))));
+}
+
+// "Te falta": cada ítem salta a su línea. Aprobar se habilita con esto en cero (los avisos del armado no bloquean).
+function bloqueTeFalta(pe, cc, c) {
+  const items = pe.items || [];
+  const bloq = items.filter((x) => x.bloquea), avisos = items.filter((x) => !x.bloquea);
+  const li = (x) => `<li class="${x.bloquea ? '' : 'aviso'}">${x.dia ? `<b>Día ${x.dia}</b> · ` : ''}${esc(x.texto)}${x.linea_id ? ` <button type="button" class="link" data-ir-lin="${x.linea_id}">ir</button> <button type="button" class="link" data-ed-falta="${x.linea_id}">resolver</button>` : ''}</li>`;
+  const extraChico = cc.hay_aprobada && !cc.ok && !esCotizador() && c.estado === 'borrador' && cc.motivos.length
+    ? `<p class="nota" style="margin:6px 0 0">Para aprobarla vos (cambio chico) tendría que estar todo con precio confirmado en el tarifario. Falta: ${esc(cc.motivos.slice(0, 4).join('; '))}. Si no, pasala a ${REVISOR}.</p>` : '';
+  if (!bloq.length && !avisos.length) return extraChico ? `<div class="ct-falta ok">${extraChico}</div>` : '';
+  return `<div class="ct-falta ${bloq.length ? '' : 'ok'}" id="ct-falta">
+    <h3>${bloq.length ? `Te falta${bloq.length > 1 ? 'n' : ''} ${bloq.length} cosa${bloq.length > 1 ? 's' : ''} para aprobar` : 'No falta nada para aprobar'}</h3>
+    ${bloq.length ? `<ol>${bloq.map(li).join('')}</ol>` : ''}
+    ${avisos.length ? `<p class="nota" style="margin:8px 0 2px">Avisos del armado (revisalos, no bloquean):</p><ul style="margin:0;padding-left:20px">${avisos.map(li).join('')}</ul>` : ''}
+    ${esCotizador() && bloq.length ? '<p class="nota" style="margin:6px 0 0">Si te falta un dato del cliente, decidí lo razonable y anotalo en "Notas de Álvaro".</p>' : ''}${extraChico}</div>`;
+}
+function irALinea(id) {
+  const tr = document.getElementById('ct-lin-' + id);
+  if (!tr) return;
+  RAIZ().querySelectorAll('tr.resaltada').forEach((x) => x.classList.remove('resaltada'));
+  tr.classList.add('resaltada');
+  tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  setTimeout(() => tr.classList.remove('resaltada'), 4000);
+}
+// Aprobada: va a la bandeja "Lista para propuesta" del equipo, con las notas de Álvaro arriba.
+function listaParaPropuesta(c) {
+  if (c.estado !== 'aprobada' || ped.pedido.estado !== 'aprobada') return '';
+  return `<div class="ct-lista"><h3>Lista para propuesta</h3>
+    <p class="nota" style="margin:0 0 6px">Aprobada por ${esc(c.aprobada_por || '—')} el ${peru(c.aprobada_en)} · ${usd(cot.totales.venta_cent)}</p>
+    ${c.notas_alvaro ? `<div class="ct-nota-pase" style="margin:0 0 8px"><b>Notas de ${REVISOR}:</b> ${esc(c.notas_alvaro)}</div>` : `<p class="nota" style="margin:0 0 8px">${REVISOR} no dejó notas.</p>`}
+    ${esCotizador() ? '' : '<button type="button" class="chico prim" id="ct-gen-prop">Generar propuesta</button>'}</div>`;
 }
 
 // ---------- revisión (Álvaro entra al mismo editor con el rol cotizador; ya no hay link /r/) ----------
@@ -17984,28 +18121,42 @@ async function copiar(texto, ta) {
   try { await navigator.clipboard.writeText(texto); return true; }
   catch { try { ta.focus(); ta.select(); return document.execCommand('copy'); } catch { return false; } }
 }
-function mandarRevisionDlg() {
+// "Pasar a Álvaro": entra a su bandeja "Para cotizar" y queda el mensaje con el link para pegarle por WhatsApp.
+function pasarDlg() {
   if (!usuario()) { elegirSoy(); return; }
-  const c = cot.cotizacion;
-  abrirDialogo(`<h3>Mandar a revisión</h3>
+  if (!cot) { alert('Todavía no hay cotización: armá el borrador primero.'); return; }
+  const c = cot.cotizacion, p = ped.pedido;
+  const pe = cot.pendientes || { total: 0 };
+  abrirDialogo(`<h3>Pasar a ${REVISOR}</h3>
     ${c.usa_prueba ? '<p class="err" style="margin:0">Usa PRECIOS DE PRUEBA: se puede revisar y aprobar, pero no mandar al cliente.</p>' : ''}
-    ${cot.totales.problemas ? `<p class="err" style="margin:0">${cot.totales.problemas} líneas sin precio: no se va a poder aprobar hasta completarlas.</p>` : ''}
-    <label>Quién revisa<input name="revisor" maxlength="40" value="${esc(c.revisor || 'Álvaro')}"></label>
-    <p class="nota" style="margin:0">Álvaro la ve en Pedidos, en "En revisión", entrando al CRM con su acceso. Puede ajustar itinerario y precios, aprobarla o pedir cambios.</p>
-    <div class="pie"><button value="cancel" formnovalidate>Cancelar</button><button class="prim" value="ok">Mandar a revisión</button></div>`,
+    ${pe.total ? `<p class="nota" style="margin:0">Le van a aparecer ${pe.total} cosa${pe.total > 1 ? 's' : ''} en "Te falta" (las resuelve él).</p>` : ''}
+    <label>Nota para ${REVISOR} (opcional)<textarea name="nota" maxlength="1000" placeholder="Lo que tenga que saber: qué pidió el cliente, qué dudas hay…">${esc(p.estado === 'en_revision' ? p.nota_pase || '' : '')}</textarea></label>
+    <label class="check"><input type="checkbox" name="urgente" ${p.estado === 'en_revision' && p.urgente ? 'checked' : ''}> Urgente (va arriba de su bandeja)</label>
+    <p class="nota" style="margin:0">Se lo pasa a su bandeja y te copia un mensaje con el link para mandarle por WhatsApp.</p>
+    <div class="pie"><button value="cancel" formnovalidate>Cancelar</button><button class="prim" value="ok">Pasar y copiar mensaje</button></div>`,
     async (f) => {
-      await api(`cotizaciones/${c.id}/revision`, { method: 'POST', body: { revisor: f.revisor.value, sin_link: true } });
+      const r = await api(`cotizaciones/${c.id}/revision`, { method: 'POST', body: { revisor: REVISOR, nota: f.nota.value, urgente: f.urgente.checked } });
+      const ok = await navigator.clipboard.writeText(r.mensaje).then(() => true, () => false);
       await pintarPedido(ped.pedido.id);
-      toast('En revisión');
+      // Mostrar el mensaje igual, por si no se pudo copiar o lo quiere ver (después de que se cierre este diálogo).
+      setTimeout(() => {
+        abrirDialogo(`<h3>Pasado a ${REVISOR}</h3>
+          <p class="nota" style="margin:0">${ok ? 'Mensaje copiado: pegáselo por WhatsApp.' : 'No se pudo copiar solo: copialo de acá.'}</p>
+          <textarea name="m" rows="8" readonly>${esc(r.mensaje)}</textarea>
+          <div class="pie"><button type="button" class="chico" id="ct-pase-copiar">Copiar</button><button class="prim" value="ok">Listo</button></div>`, () => {});
+        $('#ct-pase-copiar').addEventListener('click', async () => { toast((await copiar(r.mensaje, $('#ct-dlg-f').m)) ? 'Copiado' : 'No se pudo copiar'); });
+      }, 0);
+      return null;
     });
 }
+const mandarRevisionDlg = pasarDlg;
 function aprobarDlg() {
   if (!usuario()) { elegirSoy(); return; }
   const c = cot.cotizacion;
-  abrirDialogo(`<h3>Aprobar la versión ${c.version}</h3>
+  abrirDialogo(`<h3>Aprobar la versión ${c.version}${c.estado === 'borrador' ? ' (cambio chico)' : ''}</h3>
     ${c.usa_prueba ? '<p class="err" style="margin:0">Usa PRECIOS DE PRUEBA: queda aprobada, pero no se puede mandar al cliente.</p>' : ''}
-    <p class="nota" style="margin:0">Aprobada no se edita: para cambiar algo hay que crear una versión nueva. Queda registrado: ${esc(usuario())}, ahora.</p>
-    <label>Nota (opcional)<textarea name="nota" maxlength="1000"></textarea></label>
+    <p class="nota" style="margin:0">Aprobada no se edita: para cambiar algo hay que crear una versión nueva. Queda registrado: ${esc(usuario())}, ahora. Al equipo le llega el aviso y pasa a "Lista para propuesta".</p>
+    <label>Nota para el equipo (opcional; se suma a las notas de ${REVISOR})<textarea name="nota" maxlength="1000"></textarea></label>
     <div class="pie"><button value="cancel" formnovalidate>Cancelar</button><button class="prim" value="ok">Aprobar</button></div>`,
     async (f) => {
       await api(`cotizaciones/${c.id}/aprobar`, { method: 'POST', body: { nota: f.nota.value } });
@@ -18121,6 +18272,7 @@ function editarLineaDlg(l) {
     <div class="fila"><label>Neto total (USD)${l.pisado_neto ? ' · a mano' : ''}<input name="neto" inputmode="decimal" value="${(l.neto_cent / 100).toFixed(2)}"></label>
       <label>Venta total (USD)${l.pisado_venta ? ' · a mano' : ''}<input name="venta" inputmode="decimal" value="${(l.venta_cent / 100).toFixed(2)}"></label></div>
     ${l.precio_es_venta ? '<p class="nota" style="margin:0">Tarifa propia: ya es precio de venta, no lleva margen.</p>' : `<label>Margen % (vacío = el de la configuración, ${c.config.margen_pct}%)<input name="margen" inputmode="decimal" value="${l.margen_fijo ?? ''}"></label>`}
+    ${l.tipo !== 'manual' ? `<label class="check"><input type="checkbox" name="guardar_tarifario"> Guardar también en el tarifario <small class="nota" style="margin:0">(${hotel ? 'precio por habitación y noche' : 'precio por persona'}${l.precio_es_venta ? ', precio final' : ', neto'}; la línea pasa a seguir la tarifa)</small></label>` : ''}
     <label>Nota interna<input name="nota" maxlength="500" value="${esc(l.nota)}"></label>
     <label>Motivo del cambio de precio (queda registrado)<input name="motivo" maxlength="200"></label>
     <div class="pie">
@@ -18136,7 +18288,11 @@ function editarLineaDlg(l) {
       if (f.neto.value !== (l.neto_cent / 100).toFixed(2)) body.neto = f.neto.value;
       if (f.venta.value !== (l.venta_cent / 100).toFixed(2)) body.venta = f.venta.value;
       if (f.margen && f.margen.value !== String(l.margen_fijo ?? '')) body.margen = f.margen.value;
-      cot = await api(`cotizaciones/${c.id}/lineas/${l.id}`, { method: 'PUT', body }); dibujarCotizacion(); toast('Línea guardada');
+      if (f.guardar_tarifario && f.guardar_tarifario.checked) {
+        if (body.neto === undefined && body.venta === undefined) return 'Para guardar en el tarifario, cambiá el precio';
+        body.guardar_tarifario = true;
+      }
+      cot = await api(`cotizaciones/${c.id}/lineas/${l.id}`, { method: 'PUT', body }); datos = null; await cargarTarifario(); dibujarCotizacion(); toast(body.guardar_tarifario ? 'Línea y tarifario guardados' : 'Línea guardada');
     });
   if (hotel) {
     const ff = $('#ct-dlg-f');
@@ -18660,7 +18816,7 @@ async function mostrar() {
   await pintar();
   if (!usuario() && !$('#ct-dlg').open) elegirSoy();
 }
-window.ct = { mostrar, tab: () => tab, setTab: (t) => { tab = t || 'pedidos'; } };
+window.ct = { mostrar, contar, tab: () => tab, setTab: (t) => { tab = t || 'pedidos'; } };
 })();
 
 /* ---- Propuestas: aperturas, avisos y seguimiento de lo publicado (antes propuestas-4c1f6a) ---- */
@@ -18769,6 +18925,7 @@ async function arrancarSesion(){
     const r = await fetch('/api/yo', { headers:{ 'x-crm-token': getToken() } });
     if(r.ok) window.crmRol = (await r.json()).rol;
   }catch(e){}
+  if(window.ct) window.ct.contar();
   if(window.crmRol === 'cotizador'){ modoCotizador(); return; }
   const p = load();
   cargarAngulos();

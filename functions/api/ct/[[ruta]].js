@@ -11,10 +11,11 @@
 //   GET    /api/ct/pedidos                     tablero        POST /api/ct/pedidos (alta + borrador automático)
 //   GET|PUT /api/ct/pedidos/:id               ver / editar datos del pedido
 //   POST   /api/ct/pedidos/:id/estado          { estado, nota }      POST /api/ct/pedidos/:id/rearmar
+//   GET    /api/ct/pedidos/:id/chat            chat del cliente (sin notas internas), solo lectura
 //   GET|PUT /api/ct/cotizaciones/:id          ver (recalcula) / { notas_alvaro, usar_config_actual }
 //   POST   /api/ct/cotizaciones/:id/lineas     agregar línea   PUT|DELETE /api/ct/cotizaciones/:id/lineas/:lid
 //   POST   /api/ct/cotizaciones/:id/nueva-version          GET /api/ct/cotizaciones/:id/cambios
-//   POST   /api/ct/cotizaciones/:id/revision   { revisor, nuevo_link } -> { token } (el token solo se ve esta vez)
+//   POST   /api/ct/cotizaciones/:id/revision   "Pasar a Álvaro": { revisor, nota, urgente } -> { link, mensaje para WhatsApp }
 //   GET    /api/ct/cotizaciones/:id/propuesta  { slug, propuesta_json, texto_armador } para la propuesta web (solo aprobadas)
 //   GET|POST /api/ct/pedidos/:id/propuesta     ver / generar la propuesta del cliente (IA)   GET /api/ct/propuestas[/:id[/vista]]   PUT|POST …/publicar|retirar
 // Quién: header x-crm-usuario (lo elige cada dispositivo en la página: "Soy Lorenzo / Soy Álvaro").
@@ -25,13 +26,14 @@ import {
 } from '../../_lib/tarifario.js';
 import {
   listarPedidos, pedidosDe, crearPedido, crearPedidoExcel, verPedido, editarPedido, estadoPedido, rearmar, nuevaVersion,
-  vistaCotizacion, editarCotizacion, agregarLinea, editarLinea, borrarLinea, cambiosCotizacion,
+  vistaCotizacion, editarCotizacion, agregarLinea, editarLinea, borrarLinea, cambiosCotizacion, chatDePedido,
 } from '../../_lib/ct-cotizaciones.js';
 import { mandarARevision, aprobar, pedirCambios } from '../../_lib/ct-revision.js';
 import { paraPropuesta } from '../../_lib/ct-propuesta.js';
 import { cargarCatalogo, esVigente, elegirVariante } from '../../_lib/ct-cotizaciones.js';
 import { leerTanda, vistaDiferencias, aplicarTanda, cerrarLectura, listaWeb } from '../../_lib/ct-web.js';
 import { leerTexto } from '../../_lib/ct-importar.js';
+import { comoTarifa, comoHotelTarifa, registro, precioTxt, guardarTarifa } from '../../_lib/ct-tarifas.js';
 import { propuestaDePedido, generarPropuesta, verPropuesta, listarPropuestas, vistaPropuesta, editarPropuesta, publicarPropuesta, retirarPropuesta } from '../../_lib/ct-propuestas.js';
 
 const CONFIG = {
@@ -53,10 +55,6 @@ const leerJson = async (request) => { try { return await request.json(); } catch
 const ahora = "datetime('now')";
 const texto = (v, max = 2000) => { const s = String(v ?? '').replace(/\s+/g, ' ').trim(); return s ? s.slice(0, max) : null; };
 
-// Fila de la base -> formato de leerFila (para controlar solapamientos).
-const comoTarifa = (t) => ({ clase: 'servicio', clave: t.clave, nombre: t.nombre, temporada: t.temporada, pax_desde: t.pax_desde, pax_hasta: t.pax_hasta, vigente_desde: t.vigente_desde, vigente_hasta: t.vigente_hasta, es_ilustrativa: t.es_ilustrativa, id: t.id });
-const comoHotelTarifa = (t) => ({ clase: 'hotel', clave: t.clave, nombre: t.nombre, habitacion: t.habitacion, temporada: t.temporada, vigente_desde: t.vigente_desde, vigente_hasta: t.vigente_hasta, es_ilustrativa: t.es_ilustrativa, id: t.id });
-
 async function existentes(env) {
   const [a, b] = await env.DB.batch([
     env.DB.prepare(`SELECT t.*, s.clave, s.nombre FROM ct_tarifas t JOIN ct_servicios s ON s.id = t.servicio_id`),
@@ -64,12 +62,6 @@ async function existentes(env) {
   ]);
   return [...a.results.map(comoTarifa), ...b.results.map(comoHotelTarifa)];
 }
-
-const registro = (env, entidad, id, campo, antes, despues, por, motivo = null) =>
-  env.DB.prepare(`INSERT INTO ct_cambios_precio (entidad, entidad_id, campo, antes, despues, por, motivo) VALUES (?, ?, ?, ?, ?, ?, ?)`)
-    .bind(entidad, String(id), campo, antes === null || antes === undefined ? null : String(antes), despues === null || despues === undefined ? null : String(despues), por, motivo);
-
-const precioTxt = (cent, moneda) => cent === null || cent === undefined ? null : `${moneda} ${(cent / 100).toFixed(2)}`;
 
 // ---------- tarifario ----------
 async function getTarifario(env) {
@@ -142,49 +134,6 @@ async function guardarHotel(env, id, body) {
   }
   const r = await env.DB.prepare(`INSERT INTO ct_hoteles (clave, ciudad, categoria, nombre, es_ilustrativo, precio_es_venta, activo) VALUES (?,?,?,?,?,?,?)`).bind(...vals).run();
   return json({ ok: true, id: r.meta.last_row_id });
-}
-
-// Tarifa (de servicio o de hotel): se valida con la misma lectura que el importador.
-async function guardarTarifa(env, clase, id, body, por) {
-  const tabla = clase === 'hotel' ? 'ct_hotel_tarifas' : 'ct_tarifas';
-  const entidad = clase === 'hotel' ? 'hotel_tarifa' : 'tarifa';
-  let actual = null;
-  if (id) {
-    actual = await env.DB.prepare(`SELECT * FROM ${tabla} WHERE id = ?`).bind(id).first();
-    if (!actual) return json({ error: 'No existe' }, 404);
-  }
-  const padreId = clase === 'hotel' ? Number(body.hotel_id ?? actual?.hotel_id) : Number(body.servicio_id ?? actual?.servicio_id);
-  const padre = await env.DB.prepare(`SELECT * FROM ${clase === 'hotel' ? 'ct_hoteles' : 'ct_servicios'} WHERE id = ?`).bind(padreId).first();
-  if (!padre) return json({ error: clase === 'hotel' ? 'El hotel no existe' : 'El servicio no existe' }, 400);
-  const cruda = clase === 'hotel'
-    ? { tipo: 'hotel', nombre: padre.nombre, ciudad: padre.ciudad, categoria_hotel: padre.categoria, habitacion: body.habitacion }
-    : { tipo: padre.tipo, nombre: padre.nombre, ciudad: padre.ciudad, pax_desde: body.pax_desde, pax_hasta: body.pax_hasta };
-  Object.assign(cruda, { precio_neto: body.precio_neto, moneda: body.moneda, temporada: body.temporada, vigente_desde: body.vigente_desde, vigente_hasta: body.vigente_hasta, es_ilustrativa: body.es_ilustrativa ? 'si' : 'no' });
-  const { errores, d } = leerFila(cruda);
-  if (errores.length) return json({ error: errores.join('; ') }, 400);
-  d.clave = padre.clave;
-  // Solapamiento contra las otras tarifas del mismo servicio u hotel.
-  const hermanas = (await env.DB.prepare(`SELECT * FROM ${tabla} WHERE ${clase === 'hotel' ? 'hotel_id' : 'servicio_id'} = ? AND id IS NOT ?`).bind(padreId, id).all()).results
-    .map((t) => (clase === 'hotel' ? comoHotelTarifa : comoTarifa)({ ...t, clave: padre.clave, nombre: padre.nombre }));
-  const choca = hermanas.find((e) => e.es_ilustrativa === d.es_ilustrativa && solapan(d, e));
-  if (choca) return json({ error: `Se pisa con otra tarifa (${describirTramo(choca)}, ${choca.temporada}, del ${choca.vigente_desde} al ${choca.vigente_hasta}). Cerrá la vigencia de la otra primero.` }, 409);
-
-  const motivo = texto(body.motivo, 200);
-  const stmts = [];
-  if (clase === 'hotel') {
-    const vals = [padreId, d.habitacion, d.neto_cent, d.moneda, d.temporada, d.vigente_desde, d.vigente_hasta, d.es_ilustrativa];
-    if (id) stmts.push(env.DB.prepare(`UPDATE ct_hotel_tarifas SET hotel_id=?, habitacion=?, neto_cent=?, moneda=?, temporada=?, vigente_desde=?, vigente_hasta=?, es_ilustrativa=?, fuente=COALESCE(fuente, 'a mano'), actualizado_en=${ahora} WHERE id=?`).bind(...vals, id));
-    else stmts.push(env.DB.prepare(`INSERT INTO ct_hotel_tarifas (hotel_id, habitacion, neto_cent, moneda, temporada, vigente_desde, vigente_hasta, es_ilustrativa, fuente) VALUES (?,?,?,?,?,?,?,?, 'a mano')`).bind(...vals));
-  } else {
-    const vals = [padreId, d.neto_cent, d.moneda, d.pax_desde, d.pax_hasta, d.temporada, d.vigente_desde, d.vigente_hasta, d.es_ilustrativa];
-    if (id) stmts.push(env.DB.prepare(`UPDATE ct_tarifas SET servicio_id=?, neto_cent=?, moneda=?, pax_desde=?, pax_hasta=?, temporada=?, vigente_desde=?, vigente_hasta=?, es_ilustrativa=?, fuente=COALESCE(fuente, 'a mano'), actualizado_en=${ahora} WHERE id=?`).bind(...vals, id));
-    else stmts.push(env.DB.prepare(`INSERT INTO ct_tarifas (servicio_id, neto_cent, moneda, pax_desde, pax_hasta, temporada, vigente_desde, vigente_hasta, es_ilustrativa, fuente) VALUES (?,?,?,?,?,?,?,?,?, 'a mano')`).bind(...vals));
-  }
-  const res = await env.DB.batch(stmts);
-  const nuevoId = id || res[0].meta.last_row_id;
-  const antes = actual ? precioTxt(actual.neto_cent, actual.moneda) : null, despues = precioTxt(d.neto_cent, d.moneda);
-  if (antes !== despues) await registro(env, entidad, nuevoId, actual ? 'precio' : 'alta', antes, despues, por, motivo).run();
-  return json({ ok: true, id: nuevoId });
 }
 
 async function borrarTarifa(env, clase, id, por) {
@@ -368,6 +317,8 @@ export async function onRequest({ request, env, params }) {
       if (id && !sub && m === 'PUT') return editarPedido(env, id, body, por);
       if (id && sub === 'estado' && m === 'POST') return estadoPedido(env, id, body, por);
       if (id && sub === 'rearmar' && m === 'POST') return rearmar(env, id, por);
+      // Chat del cliente, solo lectura (también para el cotizador).
+      if (id && sub === 'chat' && m === 'GET') return chatDePedido(env, id);
       // Propuesta para el cliente: la genera, revisa y publica el equipo de Luna Llena; Álvaro (cotizador) la puede ver.
       if (id && sub === 'propuesta' && m === 'GET') return propuestaDePedido(env, id);
       if (id && sub === 'propuesta' && m === 'POST') return soloEquipo(rol) || generarPropuesta(env, id, por, { conIA: body.con_ia !== false });
@@ -388,7 +339,7 @@ export async function onRequest({ request, env, params }) {
       if (sub === 'lineas' && subId && m === 'DELETE') return borrarLinea(env, id, subId, por);
       if (sub === 'nueva-version' && m === 'POST') return nuevaVersion(env, id, por);
       if (sub === 'cambios' && m === 'GET') return cambiosCotizacion(env, id);
-      if (sub === 'revision' && m === 'POST') return mandarARevision(env, id, body, por);
+      if (sub === 'revision' && m === 'POST') return soloEquipo(rol) || mandarARevision(env, id, body, por, { origen: new URL(request.url).origin });
       if (sub === 'elegir-variante' && m === 'POST') return elegirVariante(env, id, por);
       // Álvaro aprueba o pide cambios desde el mismo editor (antes era desde el link /r/). Queda registrado quién fue.
       if ((sub === 'aprobar' || sub === 'pedir-cambios') && m === 'POST') {
@@ -396,7 +347,7 @@ export async function onRequest({ request, env, params }) {
         if (!cot) return json({ error: 'No existe' }, 404);
         if (!(await esVigente(env, cot))) return json({ error: 'Hay una versión más nueva' }, 409);
         const quienes = { ...cot, revisor: por };
-        return sub === 'aprobar' ? aprobar(env, quienes, body) : pedirCambios(env, quienes, body);
+        return sub === 'aprobar' ? aprobar(env, quienes, body, { rol, origen: new URL(request.url).origin }) : pedirCambios(env, quienes, body);
       }
       if (sub === 'propuesta' && m === 'GET') {
         const v = await vistaCotizacion(env, id);
