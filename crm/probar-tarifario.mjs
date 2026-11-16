@@ -118,4 +118,16 @@ t('revisar archivo: duplicados, existentes, de prueba y filas vacías', () => {
   assert.match(revisarArchivo(new Array(2001).fill(base)).error, /máximo/);
 });
 
+t('ganancia: se lee en centavos, no puede superar el precio y los hoteles la ignoran', () => {
+  const v = { ...base, pax_desde: 1, pax_hasta: '', precio_neto: '365', precio_es_venta: 'si', ganancia: 'US$ 60' };
+  const r = leerFila(v);
+  assert.deepEqual(r.errores, []);
+  assert.equal(r.d.ganancia_cent, 6000);
+  assert.equal(leerFila({ ...base, precio_es_venta: 'si' }).d.ganancia_cent, null);
+  assert.match(leerFila({ ...v, ganancia: '400' }).errores.join(), /mayor que el precio/);
+  assert.match(leerFila({ ...v, ganancia: 'mucha' }).errores.join(), /no es un número/);
+  assert.match(leerFila({ ...v, precio_es_venta: 'no' }).avisos.join(), /solo se usa si el precio es de venta/);
+  assert.equal(leerFila({ ...v, 'Ganancia neta': '60', ganancia: undefined }).d.ganancia_cent, 6000);
+});
+
 console.log(`${ok} tests ok`);

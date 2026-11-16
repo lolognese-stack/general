@@ -68,7 +68,7 @@ export function precioLinea(l, { catalogo, config, pax }) {
   const margenDefecto = Number(config.margen_pct);
   const tc = Number(config.tc_pen_por_usd);
   const temps = config.temporadas || [];
-  let netoCalc = null, esVenta = 0, ilus = 0;
+  let netoCalc = null, esVenta = 0, ilus = 0, gananciaCalc = null;
 
   if (x.tipo === 'manual') {
     esVenta = x.precio_es_venta ? 1 : 0;
@@ -109,6 +109,7 @@ export function precioLinea(l, { catalogo, config, pax }) {
         x.temporada_usada = t.temporada;
         x.tarifa_id = t.id; x.neto_unit_cent = t.neto_cent; x.moneda = t.moneda;
         netoCalc = aUsd(t.neto_cent, t.moneda, tc) * (x.pasajeros || 1);
+        if (esVenta && t.ganancia_cent != null) gananciaCalc = aUsd(t.ganancia_cent, t.moneda, tc) * (x.pasajeros || 1);
       }
       if (s.pax_min && grupo < s.pax_min) x.problema = `Sale desde ${s.pax_min} pasajeros`;
     }
@@ -116,10 +117,12 @@ export function precioLinea(l, { catalogo, config, pax }) {
 
   x.precio_es_venta = esVenta;
   x.es_ilustrativa = ilus;
-  if (!x.pisado_neto) x.neto_cent = netoCalc ?? 0;
+  // Servicio de venta con ganancia conocida: la tarifa es el precio de venta y el costo (neto) es precio menos ganancia.
+  const ventaTarifa = esVenta && gananciaCalc !== null && !x.pisado_neto ? (netoCalc ?? 0) : null;
+  if (!x.pisado_neto) x.neto_cent = ventaTarifa !== null ? Math.max(0, ventaTarifa - gananciaCalc) : (netoCalc ?? 0);
   if (x.pisado_neto && x.problema && x.tipo !== 'manual') x.problema = null;   // precio puesto a mano: ya no falta tarifa
   x.margen_pct = esVenta ? 0 : (x.margen_fijo ?? margenDefecto);
-  if (!x.pisado_venta) x.venta_cent = esVenta ? x.neto_cent : conMargen(x.neto_cent, x.margen_pct);
+  if (!x.pisado_venta) x.venta_cent = ventaTarifa !== null ? ventaTarifa : esVenta ? x.neto_cent : conMargen(x.neto_cent, x.margen_pct);
   return x;
 }
 

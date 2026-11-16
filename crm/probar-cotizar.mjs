@@ -250,4 +250,20 @@ t('mensaje del pase para WhatsApp', () => {
   assert.doesNotMatch(mensajePase({ pedido: { nombre: 'B', pasajeros: 1, destinos: [] }, revisor: 'Álvaro', link, pendientes: 0 }), /URGENTE|Nota|Te faltan/);
 });
 
+t('servicio de venta con ganancia: costo = precio - ganancia, venta = precio, sin margen', () => {
+  const conGan = { ...propio, id: 5, tarifas: [tar(51, 36500, 1, null, { ganancia_cent: 6000 })] };
+  const ctx5 = { catalogo: { servicios: [conGan], hoteles: [] }, config: CONFIG, pax: 2 };
+  const l = precioLinea({ tipo: 'paquete', servicio_id: 5, pasajeros: 2, fecha: '2027-03-10' }, ctx5);
+  assert.equal(l.venta_cent, 73000);
+  assert.equal(l.neto_cent, 61000);
+  assert.equal(l.margen_pct, 0);
+  assert.equal(totales([l], { pax: 2, config: CONFIG }).ganancia_cent, 12000);
+  // sin ganancia conocida queda como antes: neto = venta
+  const sinGan = precioLinea({ tipo: 'tour', servicio_id: 4, pasajeros: 2, fecha: '2027-03-10' }, { catalogo: CAT, config: CONFIG, pax: 2 });
+  assert.equal(sinGan.neto_cent, sinGan.venta_cent);
+  // precio pisado a mano: no se toca con la ganancia
+  const pis = precioLinea({ tipo: 'paquete', servicio_id: 5, pasajeros: 2, fecha: '2027-03-10', pisado_neto: 1, neto_cent: 50000 }, ctx5);
+  assert.equal(pis.neto_cent, 50000); assert.equal(pis.venta_cent, 50000);
+});
+
 console.log(`${ok} tests ok`);

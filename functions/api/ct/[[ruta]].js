@@ -240,9 +240,9 @@ async function importar(env, body, por) {
   }
   for (const { d } of rev.filas) {
     if (d.clase === 'servicio') {
-      stmts.push(env.DB.prepare(`INSERT INTO ct_tarifas (servicio_id, neto_cent, moneda, pax_desde, pax_hasta, temporada, vigente_desde, vigente_hasta, es_ilustrativa, fuente)
-        VALUES ((SELECT id FROM ct_servicios WHERE clave = ?), ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-        .bind(d.clave, d.neto_cent, d.moneda, d.pax_desde, d.pax_hasta, d.temporada, d.vigente_desde, d.vigente_hasta, d.es_ilustrativa, fuente));
+      stmts.push(env.DB.prepare(`INSERT INTO ct_tarifas (servicio_id, neto_cent, moneda, pax_desde, pax_hasta, temporada, vigente_desde, vigente_hasta, es_ilustrativa, fuente, ganancia_cent)
+        VALUES ((SELECT id FROM ct_servicios WHERE clave = ?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        .bind(d.clave, d.neto_cent, d.moneda, d.pax_desde, d.pax_hasta, d.temporada, d.vigente_desde, d.vigente_hasta, d.es_ilustrativa, fuente, d.ganancia_cent ?? null));
     } else {
       stmts.push(env.DB.prepare(`INSERT INTO ct_hotel_tarifas (hotel_id, habitacion, neto_cent, moneda, temporada, vigente_desde, vigente_hasta, es_ilustrativa, fuente)
         VALUES ((SELECT id FROM ct_hoteles WHERE clave = ?), ?, ?, ?, ?, ?, ?, ?, ?)`)

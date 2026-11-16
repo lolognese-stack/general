@@ -18500,12 +18500,14 @@ function pintarServicios() {
     (lista.length ? porCiudad(lista, (s) => `
     <div class="card ${s.activo ? '' : 'inactivo'}">
       <div class="cab"><div><h3>${esc(s.nombre)} ${s.activo ? '' : '<span class="chip">inactivo</span>'}</h3>
-        <div class="meta">${TIPOS[s.tipo]} · ${esc(s.duracion || 'sin duración')} · mínimo ${s.pax_min} pax ${s.precio_es_venta ? ' · <span class="chip" title="El precio cargado ya incluye la ganancia: no se le suma margen. El neto (costo) todavía no se conoce.">precio final · neto sin definir</span>' : ''}</div>
+        <div class="meta">${TIPOS[s.tipo]} · ${esc(s.duracion || 'sin duración')} · mínimo ${s.pax_min} pax ${s.precio_es_venta ? (s.tarifas.length && s.tarifas.every((t) => t.ganancia_cent != null)
+          ? ' · <span class="chip" title="El precio cargado ya incluye la ganancia: no se le suma margen. El costo es el precio menos la ganancia cargada.">precio final · con ganancia</span>'
+          : ' · <span class="chip" title="El precio cargado ya incluye la ganancia: no se le suma margen. Sin ganancia cargada el costo no se conoce.">precio final · neto sin definir</span>') : ''}</div>
         ${s.incluye ? `<div class="meta">Incluye: ${esc(s.incluye)}</div>` : ''}${s.no_incluye ? `<div class="meta">No incluye: ${esc(s.no_incluye)}</div>` : ''}</div>
         <div class="acc"><button class="chico" data-ed-serv="${s.id}" type="button">Editar</button><button class="chico" data-nueva-tar="${s.id}" type="button">+ Tarifa</button></div></div>
       ${s.tarifas.length ? `<table class="t-resp"><thead><tr><th>Pasajeros</th><th>Temporada</th><th class="num">${s.precio_es_venta ? 'Precio final por persona' : 'Neto por persona'}</th><th>Vigencia</th><th></th></tr></thead><tbody>
         ${s.tarifas.map((t) => `<tr><td data-t="Pasajeros">${tramo(t)} ${t.es_ilustrativa ? '<span class="prueba">PRUEBA</span>' : ''}</td><td data-t="Temporada">${TEMP[t.temporada]}</td>
-          <td data-t="Neto" class="num">${dinero(t.neto_cent, t.moneda)}</td><td data-t="Vigencia">${filaVigencia(t)}</td>
+          <td data-t="Neto" class="num">${dinero(t.neto_cent, t.moneda)}${t.ganancia_cent != null ? `<div class="nota" style="margin:0">ganancia ${dinero(t.ganancia_cent, t.moneda)}</div>` : ''}</td><td data-t="Vigencia">${filaVigencia(t)}</td>
           <td class="num"><button class="link" data-ed-tar="${t.id}" type="button">Editar</button><button class="link" data-hist="tarifa:${t.id}" type="button">Historial</button><button class="link" data-del-tar="${t.id}" type="button">Borrar</button></td></tr>`).join('')}
       </tbody></table>` : '<p class="nota" style="padding:10px 14px;margin:0">Sin tarifas: no se puede cotizar.</p>'}
     </div>`) : '<div class="vacio">No hay servicios con ese filtro.</div>');
@@ -18550,6 +18552,7 @@ function editarTarifa(clase, padre, t) {
          <label>Pasajeros hasta<input name="pax_hasta" type="number" min="1" step="1" value="${esc(v.pax_hasta ?? '')}" placeholder="vacío = y más"></label></div>`}
     <div class="fila"><label>${padre.precio_es_venta ? 'Precio final (con ganancia)' : 'Precio neto'} ${clase === 'hotel' ? 'por habitación y noche' : 'por persona'}<input name="precio_neto" inputmode="decimal" required value="${t ? (t.neto_cent / 100).toFixed(2) : ''}"></label>
       <label>Moneda<select name="moneda">${['USD', 'PEN'].map((m) => `<option ${m === v.moneda ? 'selected' : ''}>${m}</option>`).join('')}</select></label></div>
+    ${clase !== 'hotel' && padre.precio_es_venta ? `<label>Ganancia neta por persona dentro de ese precio (opcional)<input name="ganancia" inputmode="decimal" value="${t && t.ganancia_cent != null ? (t.ganancia_cent / 100).toFixed(2) : ''}"></label>` : ''}
     <label>Temporada<select name="temporada">${Object.entries(TEMP).map(([k, n]) => `<option value="${k}" ${k === v.temporada ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
     <div class="fila"><label>Vigente desde<input name="vigente_desde" type="date" required value="${esc(v.vigente_desde)}"></label>
       <label>Vigente hasta<input name="vigente_hasta" type="date" required value="${esc(v.vigente_hasta)}"></label></div>
@@ -18558,7 +18561,7 @@ function editarTarifa(clase, padre, t) {
     <p class="nota" style="margin:0">Queda registrado: ${esc(usuario())}, ahora.</p>
     <div class="pie"><button value="cancel" formnovalidate>Cancelar</button><button class="prim" value="ok">Guardar</button></div>`,
     async (f) => {
-      const body = { precio_neto: f.precio_neto.value, moneda: f.moneda.value, temporada: f.temporada.value, vigente_desde: f.vigente_desde.value, vigente_hasta: f.vigente_hasta.value, es_ilustrativa: f.es_ilustrativa.checked, motivo: f.motivo?.value };
+      const body = { precio_neto: f.precio_neto.value, moneda: f.moneda.value, temporada: f.temporada.value, vigente_desde: f.vigente_desde.value, vigente_hasta: f.vigente_hasta.value, es_ilustrativa: f.es_ilustrativa.checked, motivo: f.motivo?.value, ganancia: f.ganancia ? f.ganancia.value : '' };
       if (clase === 'hotel') Object.assign(body, { hotel_id: padre.id, habitacion: f.habitacion.value });
       else Object.assign(body, { servicio_id: padre.id, pax_desde: f.pax_desde.value, pax_hasta: f.pax_hasta.value });
       const ruta = clase === 'hotel' ? 'hotel-tarifas' : 'tarifas';
@@ -18624,7 +18627,7 @@ function editarHotel(h) {
 }
 
 // ---------- importar ----------
-const COLS = ['tipo', 'nombre', 'ciudad', 'categoria_hotel', 'habitacion', 'precio_neto', 'moneda', 'pax_desde', 'pax_hasta', 'temporada', 'vigente_desde', 'vigente_hasta', 'precio_es_venta', 'duracion', 'incluye', 'no_incluye', 'pax_min', 'es_ilustrativa'];
+const COLS = ['tipo', 'nombre', 'ciudad', 'categoria_hotel', 'habitacion', 'precio_neto', 'moneda', 'pax_desde', 'pax_hasta', 'temporada', 'vigente_desde', 'vigente_hasta', 'precio_es_venta', 'duracion', 'incluye', 'no_incluye', 'pax_min', 'es_ilustrativa', 'ganancia'];
 const AYUDA = {
   tipo: 'tour, traslado, tren, entrada, paquete u hotel', nombre: 'Nombre del servicio o del hotel', ciudad: 'Cusco, Lima, Puno, Aguas Calientes…',
   categoria_hotel: 'Solo hoteles: economico, confort o premium', habitacion: 'Solo hoteles: SGL, DBL o TPL (precio por habitación y por noche)',
@@ -18632,12 +18635,13 @@ const AYUDA = {
   pax_desde: 'Tramo de pasajeros: desde (vacío = 1)', pax_hasta: 'Tramo de pasajeros: hasta (vacío = y más, ej. 7+)', temporada: 'todas, alta o baja (vacío = todas)',
   vigente_desde: 'AAAA-MM-DD o DD/MM/AAAA', vigente_hasta: 'AAAA-MM-DD o DD/MM/AAAA', precio_es_venta: '"si" si el precio ya es de venta (lo opera o lo vende Luna Llena): no se le suma margen',
   duracion: 'Opcional: "Medio día", "2D/1N"', incluye: 'Opcional', no_incluye: 'Opcional', pax_min: 'Opcional: mínimo de pasajeros', es_ilustrativa: 'Opcional: "si" para tarifas de prueba',
+  ganancia: 'Opcional, solo servicios con precio de venta: ganancia neta por persona dentro de ese precio (el costo es precio menos ganancia)',
 };
 const EJEMPLOS = [
-  ['tour', 'City Tour Cusco', 'Cusco', '', '', '28', 'USD', 2, 3, 'todas', '2027-01-01', '2027-12-31', 'si', 'Medio día', 'Guía y transporte', 'Boleto turístico', 1, ''],
-  ['tour', 'City Tour Cusco', 'Cusco', '', '', '22', 'USD', 4, '', 'todas', '2027-01-01', '2027-12-31', 'si', '', '', '', '', ''],
-  ['entrada', 'Circuito Mágico del Agua', 'Lima', '', '', '15', 'PEN', 1, '', 'todas', '2027-01-01', '2027-12-31', '', '', '', '', '', ''],
-  ['hotel', 'Hotel Ejemplo', 'Cusco', 'confort', 'DBL', '95', 'USD', '', '', 'alta', '2027-06-01', '2027-08-31', '', '', '', '', '', ''],
+  ['tour', 'City Tour Cusco', 'Cusco', '', '', '28', 'USD', 2, 3, 'todas', '2027-01-01', '2027-12-31', 'si', 'Medio día', 'Guía y transporte', 'Boleto turístico', 1, '', 8],
+  ['tour', 'City Tour Cusco', 'Cusco', '', '', '22', 'USD', 4, '', 'todas', '2027-01-01', '2027-12-31', 'si', '', '', '', '', '', 6],
+  ['entrada', 'Circuito Mágico del Agua', 'Lima', '', '', '15', 'PEN', 1, '', 'todas', '2027-01-01', '2027-12-31', '', '', '', '', '', '', ''],
+  ['hotel', 'Hotel Ejemplo', 'Cusco', 'confort', 'DBL', '95', 'USD', '', '', 'alta', '2027-06-01', '2027-08-31', '', '', '', '', '', '', ''],
 ];
 
 let XLSXmod = null;

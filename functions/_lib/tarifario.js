@@ -28,6 +28,7 @@ export const COLUMNAS = [
   { col: 'no_incluye', ayuda: 'Opcional' },
   { col: 'pax_min', ayuda: 'Opcional: mínimo de pasajeros para que salga el servicio' },
   { col: 'es_ilustrativa', ayuda: 'Opcional: "si" para tarifas de prueba' },
+  { col: 'ganancia', ayuda: 'Opcional, solo servicios con precio de venta: la ganancia neta por persona que va dentro de ese precio (el costo es precio menos ganancia)' },
 ];
 
 // Otros nombres de columna que se aceptan (por si alguien cambia el encabezado).
@@ -35,7 +36,7 @@ const ALIAS = {
   servicio: 'nombre', hotel: 'nombre', categoria: 'categoria_hotel', precio: 'precio_neto', neto: 'precio_neto',
   tarifa: 'precio_neto', desde: 'vigente_desde', hasta: 'vigente_hasta', tramo: 'tramo_pax', pax: 'tramo_pax',
   tramo_pasajeros: 'tramo_pax', pasajeros: 'tramo_pax', habitacion_tipo: 'habitacion', minimo_pasajeros: 'pax_min',
-  ilustrativa: 'es_ilustrativa', propio: 'precio_es_venta',
+  ilustrativa: 'es_ilustrativa', propio: 'precio_es_venta', ganancia_neta: 'ganancia',
 };
 
 export function normalizar(s) {
@@ -136,6 +137,11 @@ export function leerFila(cruda) {
   else if (neto === null) errores.push(`el precio "${f.precio_neto}" no es un número`);
   else if (neto === 0) avisos.push('precio 0');
 
+  const hayGan = !(f.ganancia === undefined || f.ganancia === null || String(f.ganancia).trim() === '');
+  const gan = hayGan ? aCentavos(f.ganancia) : null;
+  if (hayGan && gan === null) errores.push(`la ganancia "${f.ganancia}" no es un número`);
+  else if (hayGan && neto !== null && gan > neto) errores.push('la ganancia no puede ser mayor que el precio');
+
   const moneda = String(f.moneda ?? '').trim().toUpperCase().replace('US$', 'USD').replace(/^S\/\.?$/, 'PEN').replace(/^SOLES?$/, 'PEN').replace(/^DOLARES?$/, 'USD');
   if (!moneda) errores.push('falta la moneda (USD o PEN)');
   else if (!MONEDAS.includes(moneda)) errores.push(`moneda "${f.moneda}" no válida (USD o PEN)`);
@@ -172,6 +178,7 @@ export function leerFila(cruda) {
     if (ventaH === undefined) errores.push(`precio_es_venta "${f.precio_es_venta}" no se entiende (si o no)`);
     d.precio_es_venta = ventaH === null || ventaH === undefined ? null : (ventaH ? 1 : 0);
     if (f.pax_desde || f.pax_hasta || f.tramo_pax) avisos.push('los hoteles no usan tramo de pasajeros: se ignora');
+    if (gan !== null) avisos.push('los hoteles todavía no guardan ganancia: se ignora');
     if (d.categoria && nombre && ciudad) d.clave = claveHotel(ciudad, d.categoria, nombre);
   } else {
     d.clase = 'servicio';
@@ -197,6 +204,8 @@ export function leerFila(cruda) {
     const pm = entero(f.pax_min);
     if (Number.isNaN(pm) || (pm !== null && pm < 1)) errores.push('pax_min tiene que ser un número entero desde 1');
     d.pax_min = Number.isInteger(pm) ? pm : null;
+    d.ganancia_cent = gan;
+    if (gan !== null && venta === false) avisos.push('la ganancia solo se usa si el precio es de venta: se ignora');
     d.duracion = limpio(f.duracion) || null;
     d.incluye = limpio(f.incluye) || null;
     d.no_incluye = limpio(f.no_incluye) || null;
