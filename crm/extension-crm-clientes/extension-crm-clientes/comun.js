@@ -5,8 +5,8 @@
 const COLORES_POR_DEFECTO = { brand: '#C8102E', glacier: '#3A1712' };
 
 const FORMATOS = [
-  'Narrativo', 'Broll Texto', 'Clips Plan/Experiencia', 'Clip/s Paisaje', 'POV Paisaje',
-  'Carrusel', 'Foto con copy', 'MEME', 'GRWM', '3ra Persona', 'Versus Victor H', 'Talking Head',
+  'Narrativo', 'Broll Texto', 'Clip/s Paisaje', 'Carrusel', 'Foto con copy',
+  'Versus Victor H', 'Animado Clasico', 'Animado talking',
 ];
 
 const CATEGORIAS_ANGULO = ['Problema', 'Solución', 'Producto', 'Otros'];

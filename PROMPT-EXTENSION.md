@@ -18,7 +18,7 @@ Todas con header `x-crm-token: <crmToken>`:
 
 Si el CRM responde 401, borrá el token guardado y mostrá "Abrí el panel del CRM para conectar la extensión".
 
-Los formatos van en una lista local: Broll Narrativo, Broll Texto, Clips Plan/Experiencia, Clip/s Paisaje, POV Paisaje, Carrusel, Foto con copy, MEME, GRWM, 3ra Persona, Versus Victor H, Talking Head.
+Los formatos van en una lista local: Narrativo, Broll Texto, Clip/s Paisaje, Carrusel, Foto con copy, Versus Victor H, Animado Clasico, Animado talking.
 
 ## El botón en Instagram (lo más importante)
 
