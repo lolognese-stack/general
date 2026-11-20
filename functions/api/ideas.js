@@ -61,7 +61,7 @@ export async function onRequestPost({ request, env }) {
     // aparte, como hook, sin que una pise a la otra.
     previa = datos.tipo === 'hook'
       ? await env.DB.prepare(`SELECT id, angulo_ids FROM ideas WHERE codigo = ? AND tipo = 'hook'`).bind(datos.codigo).first()
-      : await env.DB.prepare(`SELECT id, angulo_ids FROM ideas WHERE codigo = ? AND COALESCE(tipo, 'post') NOT IN ('audio', 'hook')`).bind(datos.codigo).first();
+      : await env.DB.prepare(`SELECT id, angulo_ids FROM ideas WHERE codigo = ? AND COALESCE(tipo, 'post') NOT IN ('audio', 'hook', 'sin_insp')`).bind(datos.codigo).first();
   }
   if (previa) {
     // Los ángulos se suman: volver a guardar desde la extensión (un solo

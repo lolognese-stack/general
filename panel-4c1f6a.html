@@ -5375,12 +5375,13 @@ function idPiezaDe(i){
   return i.pieza_id ? piezas.find(p => p.id === i.pieza_id) : null;
 }
 
-// Ideas de la sección en la que se está: los audios y los hooks son secciones
-// aparte, no cuentan ni aparecen en "Todas".
-const ID_TIPOS_APARTE = ['audio', 'hook'];
+// Ideas de la sección en la que se está: los audios, los hooks y las ideas sin
+// inspiración (sin link de referencia) son secciones aparte, no cuentan ni
+// aparecen en "Todas".
+const ID_TIPOS_APARTE = ['audio', 'hook', 'sin_insp'];
 const idEnSeccion = (i, f = idFiltro) => ID_TIPOS_APARTE.includes(f.tipo) ? i.tipo === f.tipo : !ID_TIPOS_APARTE.includes(i.tipo);
 const idDeSeccion = (f = idFiltro) => ideas.filter(i => idEnSeccion(i, f));
-const ID_NOMBRE_TIPO = { audio:['audio','audios'], hook:['hook','hooks'] };
+const ID_NOMBRE_TIPO = { audio:['audio','audios'], hook:['hook','hooks'], sin_insp:['idea sin inspiración','ideas sin inspiración'] };
 
 // Filtro de formato en Ideas: "Video" agrupa todo lo que no es Carrusel ni Foto con copy.
 const ID_FMT_NO_VIDEO = ['Carrusel', 'Foto con copy'];
@@ -5539,7 +5540,7 @@ function idCardHtml(i){
     : i.uso ? `<span class="id-uso" data-uso="${i.uso}">${i.uso === 'usado' ? 'Usada' : 'Para usar'}</span>` : '';
   const estrellas = (i.formato_score || 0) + (i.angulo_score || 0);
   return `<article class="id-card" data-id="${i.id}" tabindex="0" role="button" aria-label="${esc(titulo || 'Idea')}">
-    <div class="id-media">${foto}${i.tipo === 'hook' ? '<span class="id-tipo-audio">Hook</span>' : ''}${uso}</div>
+    <div class="id-media">${foto}${i.tipo === 'hook' ? '<span class="id-tipo-audio">Hook</span>' : i.tipo === 'sin_insp' ? '<span class="id-tipo-audio">Sin inspiración</span>' : ''}${uso}</div>
     <div class="id-body">
       ${i.formato ? `<span class="id-fmt" style="${pzChipEstiloAttr('formato', i.formato).replace(/^style="|"$/g,'')}">${esc(i.formato)}${i.formato_score ? ` <span class="id-estrellas-mini">${'★'.repeat(i.formato_score)}</span>` : ''}</span>` : ''}
       <p class="id-texto ${titulo ? '' : 'vacio'}">${esc(titulo || 'Sin texto')}</p>
@@ -5837,7 +5838,7 @@ function idPintarDrawer(){
         <button type="button" class="btn btn-ghost btn-sm" id="id-guardar-audio">Guardar este audio</button></div>
       </div>` : ''}
       <div class="field"><label>Guardar como</label>
-        <div class="id-uso-sw" id="id-tipo-sw">${[['post','Idea'],['hook','Hook']].map(([v,l]) => `<button type="button" data-tipo="${v}" aria-pressed="${(d.tipo === 'hook' ? 'hook' : 'post') === v}">${l}</button>`).join('')}</div>
+        <div class="id-uso-sw" id="id-tipo-sw">${[['post','Idea'],['hook','Hook'],['sin_insp','Sin inspiración']].map(([v,l]) => `<button type="button" data-tipo="${v}" aria-pressed="${(['hook','sin_insp'].includes(d.tipo) ? d.tipo : 'post') === v}">${l}</button>`).join('')}</div>
       </div>
       <div class="field"><label>¿Se usó?</label>
         <div class="id-uso-sw">${ID_USOS.map(u => `<button type="button" data-v="${u.v}" aria-pressed="${(d.uso||'') === u.v}">${u.label}</button>`).join('')}</div>
@@ -6618,7 +6619,7 @@ function renderPlanificadorIdeas(){
     <div class="ag-sec-h">${pzToolbarIzqHtml('id-add-btn', 'Nueva idea')}
       <button type="button" class="btn btn-ghost" id="id-add-audio">${ID_NOTA_SVG} Guardar un audio</button></div>
     <div id="pz-body"></div>`;
-  el('id-add-btn').addEventListener('click', () => abrirDrawerIdea(null, idFiltro.tipo === 'hook' ? 'hook' : 'post'));
+  el('id-add-btn').addEventListener('click', () => abrirDrawerIdea(null, ['hook','sin_insp'].includes(idFiltro.tipo) ? idFiltro.tipo : 'post'));
   el('id-add-audio').addEventListener('click', () => abrirDrawerIdea(null, 'audio'));
   pzWireVswitch();
   renderIdeador();
