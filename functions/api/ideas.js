@@ -50,8 +50,11 @@ export async function onRequestPost({ request, env }) {
 
   // Un audio ya guardado (mismo link de audio, o mismo nombre y artista) se
   // actualiza en vez de duplicarse; un post, por su código de Instagram.
+  // duplicar: el CRM pide una copia aparte del mismo post (otra idea, otro ángulo).
   let previa = null;
-  if (datos.tipo === 'audio') {
+  if (body.duplicar) {
+    previa = null;
+  } else if (datos.tipo === 'audio') {
     if (datos.audio_url) previa = await env.DB.prepare(`SELECT id, angulo_ids FROM ideas WHERE tipo = 'audio' AND audio_url = ?`).bind(datos.audio_url).first();
     if (!previa && datos.audio_nombre) previa = await env.DB.prepare(
       `SELECT id, angulo_ids FROM ideas WHERE tipo = 'audio' AND lower(audio_nombre) = lower(?) AND lower(COALESCE(audio_artista, '')) = lower(?)`

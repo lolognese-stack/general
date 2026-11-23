@@ -3205,6 +3205,7 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
   <div class="drawer-foot">
     <button class="btn btn-danger" id="id-delete-btn">Eliminar</button>
     <div class="spacer"></div>
+    <button class="btn btn-ghost" id="id-dup-btn" title="Copia la referencia sin ángulos ni «Cómo lo aplicaría yo», para otro ángulo">Duplicar</button>
     <button class="btn btn-ghost" id="id-pieza-btn">Pasar a pieza</button>
     <button class="btn btn-primary" id="id-save-btn">Guardar</button>
   </div>
@@ -5402,7 +5403,7 @@ function idListaFiltrada(f = idFiltro){
   const lista = ideas.filter(i =>
     idCoincideFormato(i.formato, f.formato) &&
     (!f.angulo || i.angulo_ids.includes(Number(f.angulo))) &&
-    (f.uso === 'plan' ? agendada(i) : !agendada(i)) &&
+    (f.uso !== 'plan' || agendada(i)) &&
     (f.uso === '' || f.uso === 'todas' || f.uso === 'plan' ? true : (i.uso || '') === (f.uso === 'sin' ? '' : f.uso)) &&
     idEnSeccion(i, f) &&
     (!q || angNormalizar([i.texto, i.aplicacion, i.caption, i.transcripcion, i.creador, i.formato, i.audio_nombre, i.audio_artista, ...i.angulo_ids.map(id => (idAngulo(id) || {}).nombre)].join(' ')).includes(q))
@@ -5530,7 +5531,7 @@ function idCardAudioHtml(i){
 
 function idCardHtml(i){
   if(i.tipo === 'audio') return idCardAudioHtml(i);
-  const titulo = i.texto || i.aplicacion || (i.transcripcion || '').slice(0, 140);
+  const titulo = (i.tipo === 'hook' ? i.texto || i.aplicacion : i.aplicacion || i.texto) || (i.transcripcion || '').slice(0, 140);
   const foto = i.foto_v
     ? `<img src="/api/foto-idea/${i.id}?v=${i.foto_v}" alt="" loading="lazy" decoding="async">`
     : `<div class="id-media-vacia">${i.url ? 'Sin portada todavía' : esc((i.aplicacion || i.texto || 'Idea suelta').slice(0, 90))}</div>`;
@@ -5751,17 +5752,19 @@ function idPintarDrawerAudio(){
       <div class="field"><label for="id-f-audio_url">Link del audio (opcional)</label>
         <div class="pz-link-row"><input id="id-f-audio_url" type="url" value="${esc(d.audio_url || '')}" placeholder="https://www.instagram.com/reels/audio/...">${d.audio_url ? `<a class="btn btn-ghost pz-abrir" href="${esc(d.audio_url)}" target="_blank" rel="noopener">Abrir ↗</a>` : ''}</div>
       </div>
-      <div class="field"><label>¿Se usó?</label>
-        <div class="id-uso-sw">${ID_USOS.map(u => `<button type="button" data-v="${u.v}" aria-pressed="${(d.uso||'') === u.v}">${u.label}</button>`).join('')}</div>
-      </div>
       <div class="field"><label>Ángulos</label>
         <div class="id-angs-edit" id="id-angs">${d.angulo_ids.map(id => idAngChipHtml(id, true)).join('')}${angPickerHtml(null, { modo:'id', campo:'id_nuevo_angulo' })}</div>
       </div>
       <div class="field"><label for="id-f-aplicacion">Cómo lo usaría</label><textarea id="id-f-aplicacion" placeholder="Para qué video, con qué tomas, en qué momento del audio…">${esc(d.aplicacion || '')}</textarea></div>
+    </fieldset>
+    <fieldset class="fieldset">
+      <legend>¿Se usó?</legend>
+      <div class="id-uso-sw">${ID_USOS.map(u => `<button type="button" data-v="${u.v}" aria-pressed="${(d.uso||'') === u.v}">${u.label}</button>`).join('')}</div>
     </fieldset>`;
   idWireDrawerComun();
   el('id-drawer-title').textContent = d.id ? 'Audio' : 'Nuevo audio';
   el('id-delete-btn').style.display = d.id ? '' : 'none';
+  el('id-dup-btn').style.display = d.id ? '' : 'none';
   el('id-pieza-btn').textContent = d.pieza_id && piezas.some(p => p.id === d.pieza_id) ? 'Ver pieza' : 'Pasar a pieza';
 }
 
@@ -5822,6 +5825,11 @@ function idPintarDrawer(){
   const d = idDraft;
   if(d.tipo === 'audio'){ idPintarDrawerAudio(); return; }
   const formatos = [...new Set([...FORMATOS, d.formato].filter(Boolean))];
+  // "Texto / gancho" ya no existe (salvo en hooks): lo que tenía pasa a "Cómo lo aplicaría yo".
+  if(d.tipo !== 'hook' && d.texto){
+    d.aplicacion = [d.texto, d.aplicacion].filter(Boolean).join('\n\n');
+    d.texto = null;
+  }
   const hero = d.id && d.foto_v
     ? `<a class="id-hero" ${d.url ? `href="${esc(d.url)}" target="_blank" rel="noopener"` : ''}><img src="/api/foto-idea/${d.id}?v=${d.foto_v}" alt="Portada de la referencia">${d.url ? `<span class="pz-hero-cta">Ver en Instagram ↗</span>` : ''}</a>`
     : `<label class="id-subir">${d.id ? 'Sin portada. Tocá para subir una captura, o usá "Traer datos".' : 'Guardá la idea y después podés subir una captura.'}<input type="file" accept="image/*" hidden id="id-f-archivo" ${d.id ? '' : 'disabled'}></label>`;
@@ -5840,9 +5848,6 @@ function idPintarDrawer(){
       <div class="field"><label>Guardar como</label>
         <div class="id-uso-sw" id="id-tipo-sw">${[['post','Idea'],['hook','Hook'],['sin_insp','Sin inspiración']].map(([v,l]) => `<button type="button" data-tipo="${v}" aria-pressed="${(['hook','sin_insp'].includes(d.tipo) ? d.tipo : 'post') === v}">${l}</button>`).join('')}</div>
       </div>
-      <div class="field"><label>¿Se usó?</label>
-        <div class="id-uso-sw">${ID_USOS.map(u => `<button type="button" data-v="${u.v}" aria-pressed="${(d.uso||'') === u.v}">${u.label}</button>`).join('')}</div>
-      </div>
       <div class="grid2">
         <div class="field"><label for="id-f-formato">Formato</label>
           <select id="id-f-formato"><option value="">—</option>${formatos.map(f => `<option ${d.formato===f?'selected':''}>${esc(f)}</option>`).join('')}</select>
@@ -5857,7 +5862,7 @@ function idPintarDrawer(){
     </fieldset>
     <fieldset class="fieldset">
       <legend>${d.tipo === 'hook' ? 'Hook' : 'Idea'}</legend>
-      <div class="field"><label for="id-f-texto">${d.tipo === 'hook' ? 'El hook: qué dice o muestra en los primeros segundos' : 'Texto / gancho del video'}</label><textarea id="id-f-texto" placeholder="Lo que dice en pantalla o el gancho">${esc(d.texto || '')}</textarea></div>
+      ${d.tipo === 'hook' ? `<div class="field"><label for="id-f-texto">El hook: qué dice o muestra en los primeros segundos</label><textarea id="id-f-texto" placeholder="Lo que dice en pantalla o el gancho">${esc(d.texto || '')}</textarea></div>` : ''}
       <div class="field"><label for="id-f-aplicacion">Cómo lo aplicaría yo</label><textarea id="id-f-aplicacion" placeholder="Adaptación a la marca, qué cambiaría…">${esc(d.aplicacion || '')}</textarea></div>
     </fieldset>
     <fieldset class="fieldset">
@@ -5878,6 +5883,10 @@ function idPintarDrawer(){
         <div class="field"><label for="id-f-comentarios">Comentarios</label><input id="id-f-comentarios" type="number" min="0" value="${d.comentarios ?? ''}"></div>
       </div>
       ${d.caption ? `<details class="id-caption"><summary>Caption original</summary>${esc(d.caption)}</details>` : ''}
+    </fieldset>
+    <fieldset class="fieldset">
+      <legend>¿Se usó?</legend>
+      <div class="id-uso-sw">${ID_USOS.map(u => `<button type="button" data-v="${u.v}" aria-pressed="${(d.uso||'') === u.v}">${u.label}</button>`).join('')}</div>
     </fieldset>`;
 
   const host = el('id-drawer-body');
@@ -5918,6 +5927,7 @@ function idPintarDrawer(){
 
   el('id-drawer-title').textContent = d.tipo === 'hook' ? (d.id ? 'Hook' : 'Nuevo hook') : (d.id ? 'Idea' : 'Nueva idea');
   el('id-delete-btn').style.display = d.id ? '' : 'none';
+  el('id-dup-btn').style.display = d.id ? '' : 'none';
   el('id-pieza-btn').textContent = d.pieza_id && piezas.some(p => p.id === d.pieza_id) ? 'Ver pieza' : 'Pasar a pieza';
 }
 
@@ -5930,7 +5940,7 @@ function idLeerCampos(){
     url: v('id-f-url') || null,
     formato: v('id-f-formato') || null,
     creador: (v('id-f-creador') || '').replace(/^@/, '') || null,
-    texto: v('id-f-texto') || null,
+    texto: el('id-f-texto') ? (v('id-f-texto') || null) : (idDraft.tipo === 'hook' ? idDraft.texto : null),
     aplicacion: v('id-f-aplicacion') || null,
     transcripcion: v('id-f-transcripcion') || null,
     views: nro('id-f-views'), likes: nro('id-f-likes'), comentarios: nro('id-f-comentarios'),
@@ -6066,6 +6076,39 @@ function idSubirCaptura(file){
     }
   };
   lector.readAsDataURL(file);
+}
+
+// Duplicar: la misma referencia (link, formato, creador, números,
+// transcripción) como idea aparte, sin ángulos ni "Cómo lo aplicaría yo" ni
+// uso: de un mismo video pueden salir ideas para ángulos distintos.
+let idDuplicando = false;
+async function idDuplicar(){
+  if(!idDraft || !idDraft.id || idDuplicando) return;
+  idDuplicando = true;
+  const btn = el('id-dup-btn');
+  btn.disabled = true;
+  try{
+    const orig = await guardarIdea({ cerrar:false, avisar:false });
+    if(!orig) return;
+    const copia = { ...idCuerpo(orig), angulo_ids:[], angulo_score:0, aplicacion:null, texto: orig.tipo === 'hook' ? orig.texto : null, uso:null, caption:orig.caption || null, origen:'crm', duplicar:true };
+    const row = await api('/api/ideas', { method:'POST', body:JSON.stringify(copia) });
+    idReemplazar(row);
+    if(row.url && /instagram\.com/.test(row.url)){
+      api('/api/foto-idea/' + row.id, { method:'POST', body:'{}' }).then(r => {
+        const i = ideas.find(x => x.id === row.id);
+        if(i) Object.assign(i, { foto_v:r.foto_v });
+        if(idDraft && idDraft.id === row.id){ idDraft.foto_v = r.foto_v; idPintarDrawer(); }
+        else if(seccion === 'planificador' && pzVista === 'ideas' && !idDrawerAbierto) renderIdeador();
+      }).catch(() => {});
+    }
+    abrirDrawerIdea(row.id);
+    toast('Idea duplicada: elegí el ángulo y cómo lo aplicarías.');
+  }catch(e){
+    if(e.message !== 'unauthorized') toast('No se pudo duplicar: ' + e.message, { tipo:'error' });
+  }finally{
+    idDuplicando = false;
+    btn.disabled = false;
+  }
 }
 
 // La idea se convierte en pieza "IDEA" del Planificador (sin fecha): el
@@ -13108,6 +13151,7 @@ el('id-scrim').addEventListener('click', cerrarDrawerIdea);
 el('id-save-btn').addEventListener('click', () => guardarIdea());
 el('id-delete-btn').addEventListener('click', idEliminar);
 el('id-pieza-btn').addEventListener('click', idPasarAPieza);
+el('id-dup-btn').addEventListener('click', idDuplicar);
 el('hs-scrim').addEventListener('click', cerrarDrawerHistoria);
 el('hs-full-close').addEventListener('click', hsCerrarFull);
 el('hs-full-ant').addEventListener('click', () => hsMoverSel(-1));
