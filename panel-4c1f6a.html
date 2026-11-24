@@ -2095,12 +2095,34 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 .ib-head-quien{flex:1;min-width:160px}
 .ib-head-quien b{display:block;font-size:14px;font-weight:700;letter-spacing:-.01em}
 .ib-head-quien small{font-size:11.5px;color:var(--ink-3);font-variant-numeric:tabular-nums}
-.ib-calif{font:inherit;font-size:11.5px;font-weight:650;border:1px solid var(--line);border-radius:6px;padding:2px 6px;background:var(--surface);color:var(--ink-2);margin-left:6px;vertical-align:1px;cursor:pointer}
-.ib-calif[data-c="interesado"]{border-color:var(--si);color:var(--si)}
-.ib-calif[data-c="caliente"]{border-color:var(--ib-c-caliente);color:var(--ib-c-caliente)}
-.ib-calif[data-c="cotizado"]{border-color:#7C5CD6;color:#7C5CD6}
-.ib-calif[data-c="curioso"]{border-color:var(--curioso);color:var(--ink-2)}
-.ib-calif[data-c="no_califica"]{border-color:var(--danger);color:var(--danger)}
+/* Calificación como chips de color: el actual al lado del nombre; al tocarlo se despliegan los demás hacia la derecha. */
+.ib-calif-w{position:relative;display:inline-flex;align-items:center;margin-left:4px}
+.ib-chip-c{--cc:var(--ink-3);display:inline-flex;align-items:center;gap:5px;font:inherit;font-size:11.5px;font-weight:650;line-height:1;white-space:nowrap;
+  padding:5px 9px;border-radius:999px;border:1px solid color-mix(in srgb,var(--cc) 55%,transparent);background:color-mix(in srgb,var(--cc) 14%,var(--surface));color:var(--ink);cursor:pointer;transition:background .15s ease,box-shadow .15s ease}
+.ib-chip-c::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--cc)}
+.ib-chip-c:hover{background:color-mix(in srgb,var(--cc) 24%,var(--surface))}
+.ib-chip-c:focus-visible{outline:2px solid var(--glacier);outline-offset:2px}
+.ib-chip-c[aria-checked="true"]{box-shadow:0 0 0 2px var(--cc)}
+.ib-chip-c[data-c="caliente"]{--cc:var(--ib-c-caliente)}
+.ib-chip-c[data-c="interesado"]{--cc:var(--si)}
+.ib-chip-c[data-c="cotizado"]{--cc:var(--ib-c-cotizado)}
+.ib-chip-c[data-c="curioso"]{--cc:var(--ib-c-curioso)}
+.ib-chip-c[data-c="no_califica"]{--cc:var(--ib-c-frio)}
+.ib-calif .ib-calif-fl{transition:transform .16s ease-out}
+.ib-calif[aria-expanded="true"] .ib-calif-fl{transform:rotate(180deg)}
+.ib-calif-pop{position:absolute;left:calc(100% + 6px);top:50%;z-index:30;display:flex;gap:6px;padding:5px;border:1px solid var(--line);border-radius:999px;background:var(--surface);box-shadow:var(--shadow-lift);
+  transform:translateY(-50%);transform-origin:left center;animation:ib-calif-in .16s cubic-bezier(.2,.8,.2,1)}
+.ib-calif-pop[hidden]{display:none}
+@keyframes ib-calif-in{from{opacity:0;transform:translateY(-50%) translateX(-8px) scaleX(.96)}to{opacity:1;transform:translateY(-50%)}}
+@media (prefers-reduced-motion:reduce){.ib-calif-pop{animation:none}.ib-calif .ib-calif-fl{transition:none}}
+@media (max-width:760px){.ib-calif-pop{left:auto;right:0;top:calc(100% + 6px);transform:none;flex-wrap:wrap;border-radius:12px;width:max-content;max-width:80vw;animation:none}}
+
+/* Archivados (curiosos y no califica): fuera de la lista principal, como en WhatsApp. */
+.ib-arch{display:flex;align-items:center;gap:12px;width:100%;padding:10px 16px 10px 24px;border:none;border-bottom:1px solid var(--line-soft);background:none;color:var(--ink-2);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;text-align:left}
+.ib-arch:hover{background:var(--surface-2);color:var(--ink)}
+.ib-arch svg{flex:none;color:var(--ink-3)}
+.ib-arch i{margin-left:auto;font-style:normal;font-size:12px;font-weight:700;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.ib-arch-nota{padding:8px 24px;font-size:12px;color:var(--ink-3)}
 .ib-item-calif{font-size:10.5px;font-weight:650;color:var(--ink-3);flex:none}
 .ib-ia{font-size:11.5px;font-weight:600;color:var(--ink-2);display:flex;align-items:center;gap:6px}
 .ib-ia i{width:7px;height:7px;border-radius:50%;background:var(--si)}
@@ -16043,6 +16065,8 @@ function renderInbox(){
   });
   el('ib-seg-btn').addEventListener('click', ibSegModoToggle);
   el('ib-lista').addEventListener('click', e => {
+    const ar = e.target.closest('[data-ib-arch]');
+    if(ar){ ibVerArch = ar.dataset.ibArch === '1'; ibPintarLista(); el('ib-lista').scrollTop = 0; return; }
     const b = e.target.closest('[data-ib]');
     if(b) ibAbrir(Number(b.dataset.ib));
   });
@@ -16097,17 +16121,31 @@ function ibColorDe(c){
 }
 const IB_RELOJ = '<svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 6.5V9l1.8 1.2M6 2h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
 
+let ibVerArch = false;   // la lista muestra los archivados (curiosos y no califica)
+const ibArchivado = c => c.ia_calificacion === 'curioso' || c.ia_calificacion === 'no_califica';
+const IB_ARCH_IC = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9M10 13h4"/></svg>';
+
 function ibPintarLista(){
   const box = el('ib-lista');
   if(!box) return;
   if(ibSegModo) return ibSegPintarLista(box);
-  el('ib-cuenta').textContent = ibLista.length === 1 ? '1 chat' : `${ibLista.length} chats`;
+  const todos = ibLista, arch = todos.filter(ibArchivado);
+  if(!arch.length) ibVerArch = false;
+  const lista = ibVerArch ? arch : todos.filter(c => !ibArchivado(c));
+  el('ib-cuenta').textContent = ibVerArch ? `${arch.length} archivado${arch.length === 1 ? '' : 's'}` : lista.length === 1 ? '1 chat' : `${lista.length} chats`;
+  const cabArch = ibVerArch
+    ? `<button type="button" class="ib-arch" data-ib-arch="0"><svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3L5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Volver a los chats</button><div class="ib-arch-nota">Curiosos y no califica. Si cambiás la calificación, vuelve a la lista.</div>`
+    : arch.length ? `<button type="button" class="ib-arch" data-ib-arch="1">${IB_ARCH_IC}Archivados<i>${arch.length}</i></button>` : '';
+  if(!lista.length && todos.length){
+    box.innerHTML = cabArch + `<div class="ib-vacio">Ningún chat ${ibVerArch ? 'archivado' : 'fuera de Archivados'}.</div>`;
+    return;
+  }
   if(!ibLista.length){
     box.innerHTML = `<div class="ib-vacio">${ibListaDe === null && !ibUltimo ? 'Todavía no entró ningún WhatsApp.' : 'Ningún chat con estos filtros.'}</div>`;
     return;
   }
   const autorPrev = a => a === 'lead' ? '' : a === 'ia' ? 'IA: ' : a === 'sistema' ? '' : 'Tú: ';
-  box.innerHTML = ibLista.map(c => {
+  box.innerHTML = cabArch + lista.map(c => {
     // Una sola línea de contexto, sin chips: lo urgente va con ícono y texto, el resto en gris.
     const meta = [];
     if(c.rol === 'cotizador') meta.push('Cotizador');
@@ -16251,9 +16289,10 @@ function ibPintarHilo(){
   el('ib-head').innerHTML = `
     <button type="button" class="btn btn-ghost btn-sm ib-volver" id="ib-volver">Chats</button>
     ${ibAvatar(nombre)}
-    <div class="ib-head-quien"><b>${esc(nombre)}${d.lead ? ` <select class="ib-calif" id="ib-calif" data-c="${esc(d.lead.ia_calificacion || '')}" title="${d.lead.ia_calificacion_por === 'persona' ? 'Calificación puesta por una persona' : 'Calificación de la IA'}">
-        <option value="">Sin calificar</option>${IB_CALIF.map(([k, lbl]) => `<option value="${k}"${d.lead.ia_calificacion === k ? ' selected' : ''}>${lbl}</option>`).join('')}
-      </select>` : ''}</b><small>+${esc(c.wa_id)}${c.asignada_a ? ' · ' + esc(c.asignada_a) : ''} · <span class="ib-ia" data-on="${c.ia_activa ? 1 : 0}"><i></i>${c.ia_activa ? 'IA activa' + (c.agente_activo ? ' · ' + esc(c.agente_activo) : '') : 'IA pausada' + (c.ia_pausa_motivo ? ' · ' + esc(IB_PAUSA_LBL[c.ia_pausa_motivo] || c.ia_pausa_motivo) : '')}</span></small></div>
+    <div class="ib-head-quien"><b>${esc(nombre)}${d.lead ? ` <span class="ib-calif-w">
+        <button type="button" class="ib-chip-c ib-calif" id="ib-calif" data-c="${esc(d.lead.ia_calificacion || '')}" aria-haspopup="true" aria-expanded="false" aria-controls="ib-calif-pop" title="${d.lead.ia_calificacion_por === 'persona' ? 'Calificación puesta por una persona' : 'Calificación de la IA'} · tocá para cambiarla">${esc(ibCalifLbl(d.lead.ia_calificacion || ''))}<svg class="ib-calif-fl" width="10" height="10" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <span class="ib-calif-pop" id="ib-calif-pop" role="radiogroup" aria-label="Calificación" hidden>${[['', 'Sin calificar'], ...IB_CALIF].filter(([k]) => k !== (d.lead.ia_calificacion || '')).map(([k, lbl]) => `<button type="button" class="ib-chip-c" role="radio" aria-checked="false" data-c="${k}" data-calif="${k}">${lbl}</button>`).join('')}</span>
+      </span>` : ''}</b><small>+${esc(c.wa_id)}${c.asignada_a ? ' · ' + esc(c.asignada_a) : ''} · <span class="ib-ia" data-on="${c.ia_activa ? 1 : 0}"><i></i>${c.ia_activa ? 'IA activa' + (c.agente_activo ? ' · ' + esc(c.agente_activo) : '') : 'IA pausada' + (c.ia_pausa_motivo ? ' · ' + esc(IB_PAUSA_LBL[c.ia_pausa_motivo] || c.ia_pausa_motivo) : '')}</span></small></div>
     <div class="ib-head-acc">
     <button type="button" class="btn btn-ghost btn-sm" id="ib-ia-btn">${c.ia_activa ? 'Tomar control' : 'Devolver a la IA'}</button>
     <details class="ib-mas"><summary class="btn btn-ghost btn-sm">Más</summary><div class="ib-mas-menu">
@@ -16268,12 +16307,27 @@ function ibPintarHilo(){
   el('ib-ficha-btn').addEventListener('click', ibFichaToggle);
   el('ib-volver').addEventListener('click', () => { ibSel = null; el('ib-root').dataset.abierto = '0'; sincronizarHash(); ibPintarLista(); });
   el('ib-ia-btn').addEventListener('click', () => ibAccion({ accion: c.ia_activa ? 'tomar_control' : 'devolver_ia' }));
-  const calif = el('ib-calif');
-  if(calif) calif.addEventListener('change', () => {
-    const antes = d.lead.ia_calificacion || '';
-    if(!confirm(`¿Cambiar la calificación de ${nombre} de "${ibCalifLbl(antes)}" a "${ibCalifLbl(calif.value)}"? La IA ya no la va a cambiar.`)){ calif.value = antes; return; }
-    ibAccion({ accion:'calificacion', ia_calificacion: calif.value });
-  });
+  const calif = el('ib-calif'), pop = el('ib-calif-pop');
+  if(calif){
+    const cerrar = () => { pop.hidden = true; calif.setAttribute('aria-expanded', 'false'); document.removeEventListener('click', fuera, true); document.removeEventListener('keydown', esc_); };
+    const fuera = e => { if(!e.target.closest('.ib-calif-w')) cerrar(); };
+    const esc_ = e => { if(e.key === 'Escape'){ cerrar(); calif.focus(); } };
+    calif.addEventListener('click', () => {
+      if(!pop.hidden) return cerrar();
+      pop.hidden = false; calif.setAttribute('aria-expanded', 'true');
+      document.addEventListener('click', fuera, true); document.addEventListener('keydown', esc_);
+      const p = pop.querySelector('button'); if(p) p.focus();
+    });
+    pop.addEventListener('click', e => {
+      const b = e.target.closest('[data-calif]'); if(!b) return;
+      const antes = d.lead.ia_calificacion || '', nuevo = b.dataset.calif;
+      cerrar();
+      const arch = nuevo === 'curioso' || nuevo === 'no_califica';
+      if(!confirm(`¿Cambiar la calificación de ${nombre} de "${ibCalifLbl(antes)}" a "${ibCalifLbl(nuevo)}"? La IA ya no la va a cambiar.${arch ? '\n\nEl chat pasa a Archivados.' : ''}`)) return;
+      ibAccion({ accion:'calificacion', ia_calificacion: nuevo });
+      if(arch) toast('Pasó a Archivados', { ms: 3000 });
+    });
+  }
   el('ib-borrar-btn').addEventListener('click', () => ibBorrarContacto(c, nombre));
   if(el('ib-aprender-btn')) el('ib-aprender-btn').addEventListener('click', () => {
     const f = el('ib-aprender');
