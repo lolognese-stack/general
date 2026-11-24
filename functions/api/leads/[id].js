@@ -61,10 +61,18 @@ export async function onRequestDelete({ request, env, params }) {
   // tienen todas las tablas (depende de las migraciones corridas), así que
   // solo se tocan las que existen.
   const id = params.id;
+  // Pedidos del cotizador e itinerarios web no se borran: quedan sin lead
+  // (lead_id = NULL), se siguen viendo en Pedidos y se borran desde ahí.
+  const desvincular = [
+    ['ct_pedidos', 'lead_id = ?'],
+    ['web_itinerarios', 'lead_id = ?'],
+  ];
   const hijos = [
     ['cotizacion_items', 'cotizacion_id IN (SELECT id FROM cotizaciones WHERE lead_id = ?)', 'cotizaciones'],
     ['cotizaciones', 'lead_id = ?'],
     ['cotizador_cotizaciones', 'lead_id = ?'],
+    ['wa_reportes', 'lead_id = ? OR conversacion_id IN (SELECT id FROM wa_conversaciones WHERE lead_id = ?)'],
+    ['propuesta_seguimientos', 'lead_id = ? OR conversacion_id IN (SELECT id FROM wa_conversaciones WHERE lead_id = ?)'],
     ['wa_mensajes', 'conversacion_id IN (SELECT id FROM wa_conversaciones WHERE lead_id = ?)', 'wa_conversaciones'],
     ['wa_analisis', 'conversacion_id IN (SELECT id FROM wa_conversaciones WHERE lead_id = ?)', 'wa_conversaciones'],
     ['wa_conversaciones', 'lead_id = ?'],
@@ -74,9 +82,12 @@ export async function onRequestDelete({ request, env, params }) {
   ];
   const { results } = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all();
   const tablas = new Set(results.map((r) => r.name));
-  const stmts = hijos
-    .filter(([t, , dep]) => tablas.has(t) && (!dep || tablas.has(dep)))
-    .map(([t, w]) => env.DB.prepare(`DELETE FROM ${t} WHERE ${w}`).bind(id));
+  const conIds = (w) => Array((w.match(/\?/g) || []).length).fill(id);
+  const existe = ([t, w, dep]) => tablas.has(t) && (!dep || tablas.has(dep)) && (!w.includes('wa_conversaciones') || tablas.has('wa_conversaciones'));
+  const stmts = [
+    ...desvincular.filter(existe).map(([t, w]) => env.DB.prepare(`UPDATE ${t} SET lead_id = NULL WHERE ${w}`).bind(...conIds(w))),
+    ...hijos.filter(existe).map(([t, w]) => env.DB.prepare(`DELETE FROM ${t} WHERE ${w}`).bind(...conIds(w))),
+  ];
   stmts.push(env.DB.prepare('DELETE FROM leads WHERE id = ?').bind(id));
   await env.DB.batch(stmts);
   return json({ ok: true });

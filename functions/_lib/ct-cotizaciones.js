@@ -353,6 +353,23 @@ export async function editarPedido(env, id, body, por) {
   return json({ ok: true });
 }
 
+// Borra el pedido entero: propuestas, líneas, cotizaciones e historial de estados
+// (las claves foráneas no tienen CASCADE), todo en un batch atómico.
+export async function borrarPedido(env, id) {
+  const p = await env.DB.prepare(`SELECT id FROM ct_pedidos WHERE id = ?`).bind(id).first();
+  if (!p) return json({ error: 'No existe' }, 404);
+  const cots = `SELECT id FROM ct_cotizaciones WHERE pedido_id = ?`;
+  await env.DB.batch([
+    env.DB.prepare(`DELETE FROM ct_propuestas WHERE pedido_id = ?`).bind(id),
+    env.DB.prepare(`DELETE FROM ct_cambios_precio WHERE entidad = 'linea' AND entidad_id IN (SELECT CAST(id AS TEXT) FROM ct_lineas WHERE cotizacion_id IN (${cots}))`).bind(id),
+    env.DB.prepare(`DELETE FROM ct_lineas WHERE cotizacion_id IN (${cots})`).bind(id),
+    env.DB.prepare(`DELETE FROM ct_cotizaciones WHERE pedido_id = ?`).bind(id),
+    env.DB.prepare(`DELETE FROM ct_pedido_estados WHERE pedido_id = ?`).bind(id),
+    env.DB.prepare(`DELETE FROM ct_pedidos WHERE id = ?`).bind(id),
+  ]);
+  return json({ ok: true });
+}
+
 export async function estadoPedido(env, id, body, por) {
   const estado = String(body.estado || '');
   if (!ESTADOS_PEDIDO.includes(estado)) return json({ error: 'estado no válido' }, 400);

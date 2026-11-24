@@ -2355,6 +2355,8 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 #view-cotizaciones #ct-raiz button.prim,#view-cotizaciones dialog button.prim{background:var(--brand);color:var(--brand-on);border-color:var(--brand)}
 #view-cotizaciones #ct-raiz button.prim:hover,#view-cotizaciones dialog button.prim:hover{opacity:.88;background:var(--brand)}
 #view-cotizaciones #ct-raiz button.chico,#view-cotizaciones dialog button.chico{padding:4px 10px;font-size:12px;min-height:30px}
+#view-cotizaciones button.ct-borrar-ped{color:var(--danger);border-color:var(--danger)}
+#view-cotizaciones dialog button.prim.ct-borrar-ped{background:var(--danger);color:#fff}
 #view-cotizaciones #ct-raiz button.link,#view-cotizaciones dialog button.link{min-height:0}
 #view-cotizaciones #ct-raiz button:disabled,#view-cotizaciones dialog button:disabled{opacity:.45;cursor:not-allowed}
 #view-cotizaciones input,#view-cotizaciones select,#view-cotizaciones textarea{background:var(--surface-2)}
@@ -18043,6 +18045,7 @@ function dibujarPedido() {
         <label>Estado<select id="ct-estado">${ESTADOS.map(([k, n]) => `<option value="${k}" ${k === p.estado ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
         <small class="nota" style="margin:0">hace ${haceCuanto(p.estado_desde)}${ultimoEstado?.por ? ' · ' + esc(ultimoEstado.por) : ''} · <button type="button" class="link" id="ct-hist-est">historial</button></small>
         <button type="button" class="chico" id="ct-editar-ped">Editar datos</button>
+        ${esCotizador() ? '' : '<button type="button" class="chico ct-borrar-ped" id="ct-borrar-ped">Eliminar pedido</button>'}
       </div>
     </div>
     ${barraDueno(p)}
@@ -18058,6 +18061,11 @@ function dibujarPedido() {
     catch (x) { alert(x.message); e.target.value = p.estado; }
   });
   $('#ct-editar-ped').addEventListener('click', () => irA(`editar/${p.id}`));
+  if ($('#ct-borrar-ped')) $('#ct-borrar-ped').addEventListener('click', () => abrirDialogo(
+    `<h3>¿Eliminar el pedido de ${esc(p.nombre)}?</h3>
+    <p class="nota" style="margin:0">Se borran sus cotizaciones (todas las versiones), la propuesta y el historial. No se puede deshacer. El lead no se toca.</p>
+    <div class="pie"><button value="cancel" formnovalidate>Cancelar</button><button class="prim ct-borrar-ped" value="ok">Eliminar</button></div>`,
+    async () => { await api(`pedidos/${p.id}`, { method: 'DELETE' }); toast('Pedido eliminado'); irA('pedidos'); }));
   $('#ct-hist-est').addEventListener('click', () => abrirDialogo(`<h3>Estados</h3><table><tbody>${ped.estados.map((s) => `<tr><td>${esc(NOMBRE_ESTADO[s.estado] || s.estado)}</td><td>${peru(s.creado_en)}</td><td>${esc(s.por || '')}${s.nota ? ` · ${esc(s.nota)}` : ''}</td></tr>`).join('')}</tbody></table><div class="pie"><button value="cancel" formnovalidate>Cerrar</button></div>`, () => {}));
   dibujarCotizacion();
   pintarPropuesta();

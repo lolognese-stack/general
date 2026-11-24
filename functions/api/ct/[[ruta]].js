@@ -9,7 +9,7 @@
 //   POST   /api/ct/importar                    { filas, aplicar, reemplazar_ilustrativas, fuente }
 //   GET    /api/ct/cambios?entidad=&id=        registro de cambios de precio
 //   GET    /api/ct/pedidos                     tablero        POST /api/ct/pedidos (alta + borrador automático)
-//   GET|PUT /api/ct/pedidos/:id               ver / editar datos del pedido
+//   GET|PUT|DELETE /api/ct/pedidos/:id        ver / editar / borrar el pedido
 //   POST   /api/ct/pedidos/:id/estado          { estado, nota }      POST /api/ct/pedidos/:id/rearmar
 //   GET    /api/ct/pedidos/:id/chat            chat del cliente (sin notas internas), solo lectura
 //   GET|PUT /api/ct/cotizaciones/:id          ver (recalcula) / { notas_alvaro, usar_config_actual }
@@ -25,7 +25,7 @@ import {
   TIPOS_SERVICIO, CATEGORIAS,
 } from '../../_lib/tarifario.js';
 import {
-  listarPedidos, pedidosDe, crearPedido, crearPedidoExcel, verPedido, editarPedido, estadoPedido, rearmar, nuevaVersion,
+  listarPedidos, pedidosDe, crearPedido, crearPedidoExcel, verPedido, editarPedido, borrarPedido, estadoPedido, rearmar, nuevaVersion,
   vistaCotizacion, editarCotizacion, agregarLinea, editarLinea, borrarLinea, cambiosCotizacion, chatDePedido,
 } from '../../_lib/ct-cotizaciones.js';
 import { mandarARevision, aprobar, pedirCambios } from '../../_lib/ct-revision.js';
@@ -315,6 +315,7 @@ export async function onRequest({ request, env, params }) {
       if (!id && !sub && m === 'POST') return crearPedido(env, body, por);
       if (id && !sub && m === 'GET') return verPedido(env, id);
       if (id && !sub && m === 'PUT') return editarPedido(env, id, body, por);
+      if (id && !sub && m === 'DELETE') return soloEquipo(rol) || borrarPedido(env, id);
       if (id && sub === 'estado' && m === 'POST') return estadoPedido(env, id, body, por);
       if (id && sub === 'rearmar' && m === 'POST') return rearmar(env, id, por);
       // Chat del cliente, solo lectura (también para el cotizador).
