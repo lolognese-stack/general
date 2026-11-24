@@ -17,9 +17,9 @@ const CAMPOS_LEAD = `id, nombre, etapa, calificado, score, setter, closer, fuent
   whatsapp, email, pais, dias, pasajes, llegada, salida, itinerario, manychat_id,
   ia_estado, ia_resumen, ia_score_motivo, ia_origen, ia_primera_intencion, ia_calificacion, ia_calificacion_por`;
 
-const ETIQUETAS = ['interesado', 'curioso', 'no_califica', 'cotizado'];
+const ETIQUETAS = ['caliente', 'interesado', 'curioso', 'no_califica', 'cotizado'];
 // La calificación de siempre del CRM (si/masomenos/curioso) sigue a la etiqueta.
-const CALIFICADO_DE = { interesado: 'si', curioso: 'curioso' };
+const CALIFICADO_DE = { caliente: 'si', interesado: 'si', curioso: 'curioso' };
 
 async function conversacion(env, id) {
   return env.DB.prepare('SELECT * FROM wa_conversaciones WHERE id = ?').bind(id).first();

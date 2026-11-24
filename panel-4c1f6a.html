@@ -2097,6 +2097,7 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 .ib-head-quien small{font-size:11.5px;color:var(--ink-3);font-variant-numeric:tabular-nums}
 .ib-calif{font:inherit;font-size:11.5px;font-weight:650;border:1px solid var(--line);border-radius:6px;padding:2px 6px;background:var(--surface);color:var(--ink-2);margin-left:6px;vertical-align:1px;cursor:pointer}
 .ib-calif[data-c="interesado"]{border-color:var(--si);color:var(--si)}
+.ib-calif[data-c="caliente"]{border-color:var(--ib-c-caliente);color:var(--ib-c-caliente)}
 .ib-calif[data-c="cotizado"]{border-color:#7C5CD6;color:#7C5CD6}
 .ib-calif[data-c="curioso"]{border-color:var(--curioso);color:var(--ink-2)}
 .ib-calif[data-c="no_califica"]{border-color:var(--danger);color:var(--danger)}
@@ -2171,8 +2172,36 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 .ib-head-quien .ib-ia{display:inline-flex;align-items:center;gap:5px}
 .ib-head-acc{display:flex;align-items:center;gap:6px;margin-left:auto;flex:none}
 .ib-ia{font-size:11.5px;color:var(--ink-3);font-weight:500}
-.ib-ficha-btn{display:inline-grid;place-items:center;width:32px;height:32px;border:none;background:transparent;color:var(--ink-2);border-radius:8px;cursor:pointer}
+/* Botón de la ficha: sobre la línea que separa el chat de la ficha, a la altura del encabezado. */
+.ib-head{position:relative}
+.ib-ficha-btn{position:absolute;z-index:6;top:50%;right:-15px;transform:translateY(-50%);display:grid;place-items:center;width:30px;height:30px;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);border-radius:50%;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.12);padding:0}
+.ib[data-ficha="0"] .ib-ficha-btn{right:8px}
 .ib-ficha-btn:hover{background:var(--surface-sunk);color:var(--ink)}
+.ib-ficha-btn:focus-visible{outline:2px solid var(--glacier);outline-offset:2px}
+.ib-head-acc{padding-right:14px}
+
+/* Línea de color de cada chat (como la del pedido en la ficha): en qué punto está el lead. */
+:root{--ib-c-nuevo:#38BDF8;--ib-c-pedido:#FF7A00;--ib-c-curioso:#8B5A2B;--ib-c-cotizado:#EAB308;--ib-c-caliente:#166534;--ib-c-compro:#39FF14;--ib-c-frio:#9CA3AF}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ib-c-curioso:#B98555;--ib-c-caliente:#22A55A}}
+:root[data-theme="dark"]{--ib-c-curioso:#B98555;--ib-c-caliente:#22A55A}
+.ib-item[data-color]::after{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--ib-c)}
+.ib-item[data-color="nuevo"]{--ib-c:var(--ib-c-nuevo)}
+.ib-item[data-color="pedido"]{--ib-c:var(--ib-c-pedido)}
+.ib-item[data-color="curioso"]{--ib-c:var(--ib-c-curioso)}
+.ib-item[data-color="cotizado"]{--ib-c:var(--ib-c-cotizado)}
+.ib-item[data-color="caliente"]{--ib-c:var(--ib-c-caliente)}
+.ib-item[data-color="compro"]{--ib-c:var(--ib-c-compro)}
+.ib-item[data-color="frio"]{--ib-c:var(--ib-c-frio)}
+.ib-estado{font-weight:600;color:var(--ib-c)}
+.ib-item[data-color="compro"] .ib-estado,.ib-item[data-color="cotizado"] .ib-estado,.ib-item[data-color="nuevo"] .ib-estado{color:var(--ink-2)}
+/* Alerta: pedido derivado hace más de 24 h y todavía sin cotizar. La línea late, se ensancha y el chat se tiñe. */
+.ib-item[data-alerta="1"]{background:color-mix(in srgb,var(--ib-c-pedido) 7%,var(--surface))}
+.ib-item[data-alerta="1"]::after{width:5px;animation:ib-alerta 1.6s ease-in-out infinite}
+.ib-alerta-tag{display:inline-flex;align-items:center;gap:4px;color:var(--danger);font-weight:700}
+.ib-alerta-tag svg{animation:ib-reloj 1.6s ease-in-out infinite;transform-origin:50% 50%}
+@keyframes ib-alerta{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--ib-c-pedido) 0%,transparent);opacity:1}50%{box-shadow:0 0 10px 3px color-mix(in srgb,var(--ib-c-pedido) 55%,transparent);opacity:.55}}
+@keyframes ib-reloj{0%,70%,100%{transform:rotate(0)}76%{transform:rotate(-14deg)}84%{transform:rotate(12deg)}92%{transform:rotate(-6deg)}}
+@media (prefers-reduced-motion:reduce){.ib-item[data-alerta="1"]::after,.ib-alerta-tag svg{animation:none}}
 .ib-ficha-btn svg{transition:transform .16s ease-out}
 .ib-ficha-btn[aria-pressed="false"] svg{transform:rotate(180deg)}
 @media (prefers-reduced-motion:reduce){.ib-ficha-btn svg{transition:none}}
@@ -13894,7 +13923,7 @@ const IB_ESTADOS = [
 const IB_ESTADO_LBL = Object.fromEntries(IB_ESTADOS);
 const IB_ORIGEN_LBL = { directo:'WhatsApp directo', web_ref:'Web (código LL-)', anuncio:'Anuncio', instagram:'Instagram', otro:'Otro' };
 // Etiqueta comercial del lead (la pone la IA o una persona desde el chat).
-const IB_CALIF = [['interesado','Interesado'], ['cotizado','Cotizado'], ['curioso','Curioso'], ['no_califica','No califica']];
+const IB_CALIF = [['caliente','Lead caliente'], ['interesado','Interesado'], ['cotizado','Cotizado'], ['curioso','Curioso'], ['no_califica','No califica']];
 const ibCalifLbl = k => (IB_CALIF.find(x => x[0] === k) || [null, 'Sin calificar'])[1];
 
 const IB_PAUSA_LBL = { manual:'tomada a mano', asesora_respondio:'respondió una asesora', handoff:'derivada', kill_switch:'kill switch' };
@@ -15992,6 +16021,24 @@ function ibPedirNombre(){
   return true;
 }
 
+// En qué punto está el lead: define la línea de color del chat. Lo que se marca a mano (caliente, curioso) gana sobre lo automático; compró/reservó gana sobre todo.
+const IB_PEDIDO_ABIERTO = ['nuevo', 'borrador_listo', 'en_revision', 'aprobada'];
+function ibColorDe(c){
+  const cal = c.ia_calificacion;
+  if(c.compro || c.etapa === 'ganado' || c.pedido_estado === 'cerrada') return { color:'compro', lbl:'Compró / reservó' };
+  if(cal === 'caliente') return { color:'caliente', lbl:'Lead caliente' };
+  if(cal === 'curioso') return { color:'curioso', lbl:'Curioso' };
+  if(cal === 'no_califica' || c.etapa === 'perdido' || c.pedido_estado === 'perdida') return { color:'frio', lbl: cal === 'no_califica' ? 'No califica' : 'Perdido' };
+  if(cal === 'cotizado' || c.pedido_estado === 'enviada') return { color:'cotizado', lbl:'Cotizado' };
+  if(c.pedido_estado && IB_PEDIDO_ABIERTO.includes(c.pedido_estado)){
+    const t = Date.parse(String(c.pedido_en || '').replace(' ', 'T') + 'Z');
+    const horas = Number.isFinite(t) ? Math.floor((Date.now() - t) / 3600e3) : 0;
+    return { color:'pedido', lbl:'Pedido derivado', horas, alerta: horas >= 24 };
+  }
+  return { color:'nuevo', lbl:'Nuevo · sin pedido' };
+}
+const IB_RELOJ = '<svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 6.5V9l1.8 1.2M6 2h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+
 function ibPintarLista(){
   const box = el('ib-lista');
   if(!box) return;
@@ -16014,7 +16061,13 @@ function ibPintarLista(){
     if(c.visto_por_lead === 'vio_no_contesto') meta.push('Vio y no contestó');
     const sg = ibSegDe(c.id);
     if(sg) meta.unshift(`<span class="ib-seg-tag">${esc(ibSegTag(sg))}</span>`);
-    return `<button type="button" class="ib-item" data-ib="${c.id}" aria-current="${String(c.id === ibSel)}" data-urgente="${c.espera_persona ? 1 : 0}" data-noleido="${c.no_leidos > 0 ? 1 : 0}" data-anclada="${c.anclada ? 1 : 0}">
+    const col = ibColorDe(c);
+    // El estado va también en texto (no solo el color); la calificación ya no se repite si es la misma.
+    if(c.ia_calificacion && ibCalifLbl(c.ia_calificacion) === col.lbl) meta.splice(meta.indexOf(esc(col.lbl)), 1);
+    meta.unshift(col.alerta
+      ? `<span class="ib-alerta-tag">${IB_RELOJ}Pedido hace ${col.horas} h sin cotizar</span>`
+      : `<span class="ib-estado">${esc(col.lbl)}${col.color === 'pedido' && col.horas != null ? ` · hace ${col.horas < 1 ? 'menos de 1' : col.horas} h` : ''}</span>`);
+    return `<button type="button" class="ib-item" data-ib="${c.id}" aria-current="${String(c.id === ibSel)}" data-urgente="${c.espera_persona ? 1 : 0}" data-noleido="${c.no_leidos > 0 ? 1 : 0}" data-anclada="${c.anclada ? 1 : 0}" data-color="${col.color}" data-alerta="${col.alerta ? 1 : 0}" title="${esc(col.lbl)}">
       ${ibAvatar(ibNombre(c))}
       <div class="ib-item-body">
         <div class="ib-item-top"><b>${esc(ibNombre(c))}</b>${c.anclada ? IB_PIN : ''}<time>${ibCuando(c.ultimo_en)}</time></div>
@@ -16153,7 +16206,7 @@ function ibPintarHilo(){
     <button type="button" class="btn btn-ghost btn-sm" id="ib-asig-btn">${c.asignada_a && c.asignada_a === ibYo() ? 'Desasignarme' : 'Asignarme'}</button>
     ${window.crmRol === 'cotizador' ? '' : `<button type="button" class="btn btn-ghost btn-sm" id="ib-aprender-btn" title="La IA lee este chat y propone qué aprender (queda en Setter IA › Para aprobar)">Aprender de este chat</button>`}
     <button type="button" class="btn btn-ghost btn-sm ib-borrar" id="ib-borrar-btn" title="Borra este chat del Inbox">Eliminar contacto</button></div></details>
-    <button type="button" class="ib-ficha-btn" id="ib-ficha-btn" aria-pressed="${ibFichaGet() === '1'}" aria-controls="ib-ficha" aria-label="Mostrar u ocultar la ficha del lead" title="Mostrar u ocultar la ficha del lead"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button type="button" class="ib-ficha-btn" id="ib-ficha-btn" aria-pressed="${ibFichaGet() === '1'}" aria-controls="ib-ficha" aria-label="Mostrar u ocultar la ficha del lead" title="Mostrar u ocultar la ficha del lead"><svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M3.5 3.5l4.5 4.5-4.5 4.5M8.5 3.5l4.5 4.5-4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </div>`;
   el('ib-ficha-btn').addEventListener('click', ibFichaToggle);
   el('ib-volver').addEventListener('click', () => { ibSel = null; el('ib-root').dataset.abierto = '0'; sincronizarHash(); ibPintarLista(); });

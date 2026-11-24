@@ -60,7 +60,11 @@ export async function onRequestGet({ request, env }) {
     `SELECT c.id, c.lead_id, c.wa_id, c.nombre_perfil, c.agente_activo, c.ia_activa, c.ia_pausa_motivo,
             c.abierta_por, c.asignada_a, c.espera_persona, c.no_leidos, c.visto_por_lead, c.ventana_hasta,
             c.ultimo_texto, c.ultimo_autor, c.ultimo_en, c.anclada, c.rol, c.alias,
-            l.nombre, l.etapa, l.calificado, l.score, l.ia_estado, l.ia_origen, l.ia_calificacion
+            l.nombre, l.etapa, l.calificado, l.score, l.ia_estado, l.ia_origen, l.ia_calificacion,
+            -- Para la línea de color del Inbox: el último pedido del chat o del lead, y si ya compró o reservó.
+            (SELECT p.estado FROM ct_pedidos p WHERE p.conversacion_id = c.id OR p.lead_id = c.lead_id ORDER BY p.id DESC LIMIT 1) AS pedido_estado,
+            (SELECT p.creado_en FROM ct_pedidos p WHERE p.conversacion_id = c.id OR p.lead_id = c.lead_id ORDER BY p.id DESC LIMIT 1) AS pedido_en,
+            EXISTS (SELECT 1 FROM ventas v WHERE v.lead_id = c.lead_id AND v.estado NOT IN ('cancelada', 'anulada')) AS compro
        FROM wa_conversaciones c LEFT JOIN leads l ON l.id = c.lead_id
       ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
       ORDER BY c.anclada DESC, c.espera_persona DESC, c.ultimo_en DESC
