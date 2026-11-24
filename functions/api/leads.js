@@ -48,7 +48,12 @@ function json(data, status = 200) {
 export async function onRequestGet({ request, env }) {
   if (!checkToken(request, env)) return json({ error: 'unauthorized' }, 401);
   const { results } = await env.DB.prepare(
-    'SELECT * FROM leads ORDER BY actualizado_en DESC'
+    // pedido_estado / pedido_en / compro: para la línea de color del lead (Pipeline, panel lateral e Inbox).
+    `SELECT l.*,
+       (SELECT p.estado FROM ct_pedidos p WHERE p.lead_id = l.id ORDER BY p.id DESC LIMIT 1) AS pedido_estado,
+       (SELECT p.creado_en FROM ct_pedidos p WHERE p.lead_id = l.id ORDER BY p.id DESC LIMIT 1) AS pedido_en,
+       EXISTS (SELECT 1 FROM ventas v WHERE v.lead_id = l.id AND v.estado NOT IN ('cancelada', 'anulada')) AS compro
+     FROM leads l ORDER BY l.actualizado_en DESC`
   ).all();
   return json(results);
 }

@@ -2184,24 +2184,69 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 :root{--ib-c-nuevo:#38BDF8;--ib-c-pedido:#FF7A00;--ib-c-curioso:#8B5A2B;--ib-c-cotizado:#EAB308;--ib-c-caliente:#166534;--ib-c-compro:#39FF14;--ib-c-frio:#9CA3AF}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ib-c-curioso:#B98555;--ib-c-caliente:#22A55A}}
 :root[data-theme="dark"]{--ib-c-curioso:#B98555;--ib-c-caliente:#22A55A}
+[data-color="nuevo"]{--ib-c:var(--ib-c-nuevo)}
+[data-color="pedido"]{--ib-c:var(--ib-c-pedido)}
+[data-color="curioso"]{--ib-c:var(--ib-c-curioso)}
+[data-color="cotizado"]{--ib-c:var(--ib-c-cotizado)}
+[data-color="caliente"]{--ib-c:var(--ib-c-caliente)}
+[data-color="compro"]{--ib-c:var(--ib-c-compro)}
+[data-color="frio"]{--ib-c:var(--ib-c-frio)}
+/* Alertas: ámbar (pedido +23 h sin cotizar, o seguimiento de cotización atrasado) y rojo (pedido +48 h). */
+[data-alerta="ambar"]{--ib-a:#F59E0B}
+[data-alerta="rojo"]{--ib-a:var(--danger)}
 .ib-item[data-color]::after{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--ib-c)}
-.ib-item[data-color="nuevo"]{--ib-c:var(--ib-c-nuevo)}
-.ib-item[data-color="pedido"]{--ib-c:var(--ib-c-pedido)}
-.ib-item[data-color="curioso"]{--ib-c:var(--ib-c-curioso)}
-.ib-item[data-color="cotizado"]{--ib-c:var(--ib-c-cotizado)}
-.ib-item[data-color="caliente"]{--ib-c:var(--ib-c-caliente)}
-.ib-item[data-color="compro"]{--ib-c:var(--ib-c-compro)}
-.ib-item[data-color="frio"]{--ib-c:var(--ib-c-frio)}
+/* Cotizado: línea punteada (está en seguimiento). */
+.ib-item[data-color="cotizado"]::after,.card[data-color="cotizado"]::before,.ib-ficha-cab[data-color="cotizado"]::before,.drawer-estado[data-color="cotizado"]::before{background:repeating-linear-gradient(to bottom,var(--ib-c) 0 5px,transparent 5px 9px)}
 .ib-estado{font-weight:600;color:var(--ib-c)}
 .ib-item[data-color="compro"] .ib-estado,.ib-item[data-color="cotizado"] .ib-estado,.ib-item[data-color="nuevo"] .ib-estado{color:var(--ink-2)}
-/* Alerta: pedido derivado hace más de 24 h y todavía sin cotizar. La línea late, se ensancha y el chat se tiñe. */
-.ib-item[data-alerta="1"]{background:color-mix(in srgb,var(--ib-c-pedido) 7%,var(--surface))}
-.ib-item[data-alerta="1"]::after{width:5px;animation:ib-alerta 1.6s ease-in-out infinite}
-.ib-alerta-tag{display:inline-flex;align-items:center;gap:4px;color:var(--danger);font-weight:700}
+.ib-item[data-alerta]{background:color-mix(in srgb,var(--ib-a) 8%,var(--surface))}
+.ib-item[data-alerta]::after{width:5px;background:var(--ib-a);animation:ib-alerta 1.6s ease-in-out infinite}
+.ib-item[data-alerta][data-color="cotizado"]::after{background:repeating-linear-gradient(to bottom,var(--ib-a) 0 5px,transparent 5px 9px)}
+.ib-item[data-alerta="rojo"]::after{animation-duration:.9s}
+.ib-alerta-tag{display:inline-flex;align-items:center;gap:4px;color:var(--ib-a);font-weight:700}
+[data-alerta="ambar"] .ib-alerta-tag{color:color-mix(in srgb,#F59E0B 70%,var(--ink))}
 .ib-alerta-tag svg{animation:ib-reloj 1.6s ease-in-out infinite;transform-origin:50% 50%}
-@keyframes ib-alerta{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--ib-c-pedido) 0%,transparent);opacity:1}50%{box-shadow:0 0 10px 3px color-mix(in srgb,var(--ib-c-pedido) 55%,transparent);opacity:.55}}
+@keyframes ib-alerta{0%,100%{box-shadow:0 0 0 0 transparent;opacity:1}50%{box-shadow:0 0 10px 3px color-mix(in srgb,var(--ib-a) 55%,transparent);opacity:.55}}
 @keyframes ib-reloj{0%,70%,100%{transform:rotate(0)}76%{transform:rotate(-14deg)}84%{transform:rotate(12deg)}92%{transform:rotate(-6deg)}}
-@media (prefers-reduced-motion:reduce){.ib-item[data-alerta="1"]::after,.ib-alerta-tag svg{animation:none}}
+@media (prefers-reduced-motion:reduce){.ib-item[data-alerta]::after,.ib-alerta-tag svg,.card[data-alerta]::before{animation:none}}
+
+/* Pipeline: la franja de la tarjeta usa el mismo color del lead. */
+.card[data-color]::before{background:var(--ib-c)}
+.card[data-alerta]::before{width:4px;background:var(--ib-a);animation:ib-alerta 1.6s ease-in-out infinite}
+.chip-estado{display:inline-flex;align-items:center;gap:5px}
+.chip-estado::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ib-c)}
+
+/* Panel lateral del lead: más ancho (se abre para leer) y con el estado en color arriba. */
+#drawer{width:min(860px,100%)}
+.drawer-estado{position:relative;display:inline-flex;align-items:center;gap:6px;margin-left:10px;padding:2px 8px 2px 11px;font-size:12px;font-weight:600;color:var(--ink-2);border:1px solid var(--line);border-radius:6px;white-space:nowrap}
+.drawer-estado::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:6px 0 0 6px;background:var(--ib-c)}
+.drawer-estado[hidden]{display:none}
+
+/* Ficha del Inbox: lo importante grande, lo demás chico y lo largo en un desplegable. */
+.ib-ficha-cab{position:relative;display:flex;align-items:center;gap:8px;padding:2px 0 2px 11px;margin:0 0 var(--s3)}
+.ib-ficha-cab::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:2px;background:var(--ib-c,var(--line))}
+.ib-ficha-cab h3{margin:0}
+.ib-ficha-cab .ib-estado{font-size:12px}
+.ib-score{margin-left:auto;font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--ink)}
+.ib-score small{font-size:11px;font-weight:600;color:var(--ink-3)}
+.ib-clave{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;margin:0 0 var(--s4)}
+.ib-clave div{min-width:0}
+.ib-clave .ib-ancho{grid-column:1/-1}
+.ib-clave span{display:block;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin-bottom:2px}
+.ib-clave b{display:block;font-size:16px;font-weight:700;line-height:1.3;color:var(--ink);overflow-wrap:anywhere}
+.ib-clave .ib-itin{font-size:14px;font-weight:600;white-space:pre-line}
+.ib-clave b.ib-vacio-dato{color:var(--ink-3);font-weight:500}
+.ib-clave b.ib-falta{color:var(--danger)}
+.ib-chicos{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:0 0 var(--s4);font-size:12px;line-height:1.4}
+.ib-chicos dt{color:var(--ink-3)}
+.ib-chicos dd{margin:0;color:var(--ink-2);overflow-wrap:anywhere}
+.ib-desp{margin-top:var(--s4);border-top:1px solid var(--line)}
+.ib-desp>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:6px;padding:10px 0;font-size:13px;font-weight:600;color:var(--ink-2)}
+.ib-desp>summary::-webkit-details-marker{display:none}
+.ib-desp>summary svg{transition:transform .16s ease-out}
+.ib-desp[open]>summary svg{transform:rotate(90deg)}
+.ib-desp>summary:hover{color:var(--ink)}
+@media (prefers-reduced-motion:reduce){.ib-desp>summary svg{transition:none}}
 .ib-ficha-btn svg{transition:transform .16s ease-out}
 .ib-ficha-btn[aria-pressed="false"] svg{transform:rotate(180deg)}
 @media (prefers-reduced-motion:reduce){.ib-ficha-btn svg{transition:none}}
@@ -2910,7 +2955,7 @@ body.ib-np-moviendo{user-select:none;cursor:grabbing}
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" aria-hidden="true">
   <div class="drawer-head">
-    <h2 id="drawer-title">Lead</h2>
+    <h2 id="drawer-title">Lead</h2><span class="drawer-estado" id="drawer-estado" hidden></span>
       <button class="icon-btn" id="lead-nav-prev" title="Anterior (flecha arriba)" aria-label="Lead anterior">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 15l-6-6-6 6"/></svg>
       </button>
@@ -4288,9 +4333,12 @@ function cardHtml(l){
     `<span class="chip chip-link"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M10 14L20 4M20 4h-6M20 4v6"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>propuesta</span>`
   );
   if(l.fecha_viaje) chips.push(`<span class="chip" data-kind="fecha">${esc(l.fecha_viaje)}</span>`);
+  // Mismo color que en el Inbox (el texto del estado va en un chip: el color nunca va solo).
+  const col = ibColorDe(l);
+  if(col.color !== 'nuevo') chips.unshift(`<span class="chip chip-estado" data-color="${col.color}">${esc(col.lbl)}</span>`);
 
   return `
-    <article class="card" draggable="true" data-id="${l.id}"${l.calificado ? ` data-cal="${l.calificado}"` : ''} tabindex="0" role="button">
+    <article class="card" draggable="true" data-id="${l.id}"${l.calificado ? ` data-cal="${l.calificado}"` : ''} data-color="${col.color}"${col.alerta ? ` data-alerta="${col.alerta}"` : ''} title="${esc(col.lbl)}" tabindex="0" role="button">
       <div class="card-top">
         <span class="card-name">${esc(leadNombre(l))}${(l.nombre || '').trim() && l.ig_username ? `<span class="card-ig">@${esc(l.ig_username)}</span>` : ''}</span>
         ${pax ? `<span class="card-pax">${pax}</span>` : ''}
@@ -11811,6 +11859,8 @@ function abrirDrawer(id){
 
   poblarAtribucion(l);
   el('drawer-title').textContent = l ? leadNombre(l) : 'Nuevo lead';
+  { const de = el('drawer-estado'), col = l ? ibColorDe(l) : null;
+    de.hidden = !col; if(col){ de.dataset.color = col.color; de.textContent = col.lbl; } }
   el('f-id').value = l ? l.id : '';
 
   CAMPOS_FORM.forEach(f => {
@@ -16022,18 +16072,22 @@ function ibPedirNombre(){
 }
 
 // En qué punto está el lead: define la línea de color del chat. Lo que se marca a mano (caliente, curioso) gana sobre lo automático; compró/reservó gana sobre todo.
-const IB_PEDIDO_ABIERTO = ['nuevo', 'borrador_listo', 'en_revision', 'aprobada'];
 function ibColorDe(c){
   const cal = c.ia_calificacion;
   if(c.compro || c.etapa === 'ganado' || c.pedido_estado === 'cerrada') return { color:'compro', lbl:'Compró / reservó' };
   if(cal === 'caliente') return { color:'caliente', lbl:'Lead caliente' };
   if(cal === 'curioso') return { color:'curioso', lbl:'Curioso' };
   if(cal === 'no_califica' || c.etapa === 'perdido' || c.pedido_estado === 'perdida') return { color:'frio', lbl: cal === 'no_califica' ? 'No califica' : 'Perdido' };
-  if(cal === 'cotizado' || c.pedido_estado === 'enviada') return { color:'cotizado', lbl:'Cotizado' };
-  if(c.pedido_estado && IB_PEDIDO_ABIERTO.includes(c.pedido_estado)){
+  if(cal === 'cotizado' || c.pedido_estado === 'enviada'){
+    // Cotizado = en seguimiento (línea punteada). Si el seguimiento de hoy ya pasó hace más de 24 h, alerta ámbar.
+    const sg = c.wa_id && c.id ? ibSegDe(c.id) : null;   // solo chats del Inbox (el Pipeline se dibuja antes de que exista ibSeg)
+    return { color:'cotizado', lbl:'Cotizado', alerta: sg && sg.atraso > 0 ? 'ambar' : '', atraso: sg ? sg.atraso : 0 };
+  }
+  if(['nuevo', 'borrador_listo', 'en_revision', 'aprobada'].includes(c.pedido_estado)){
     const t = Date.parse(String(c.pedido_en || '').replace(' ', 'T') + 'Z');
     const horas = Number.isFinite(t) ? Math.floor((Date.now() - t) / 3600e3) : 0;
-    return { color:'pedido', lbl:'Pedido derivado', horas, alerta: horas >= 24 };
+    // Escalones: ámbar desde las 23 h, rojo desde las 48 h.
+    return { color:'pedido', lbl:'Pedido derivado', horas, alerta: horas >= 48 ? 'rojo' : horas >= 23 ? 'ambar' : '' };
   }
   return { color:'nuevo', lbl:'Nuevo · sin pedido' };
 }
@@ -16065,9 +16119,9 @@ function ibPintarLista(){
     // El estado va también en texto (no solo el color); la calificación ya no se repite si es la misma.
     if(c.ia_calificacion && ibCalifLbl(c.ia_calificacion) === col.lbl) meta.splice(meta.indexOf(esc(col.lbl)), 1);
     meta.unshift(col.alerta
-      ? `<span class="ib-alerta-tag">${IB_RELOJ}Pedido hace ${col.horas} h sin cotizar</span>`
+      ? `<span class="ib-alerta-tag">${IB_RELOJ}${col.color === 'cotizado' ? `Cotizado · seguimiento atrasado ${col.atraso} día${col.atraso > 1 ? 's' : ''}` : `Pedido hace ${col.horas} h sin cotizar`}</span>`
       : `<span class="ib-estado">${esc(col.lbl)}${col.color === 'pedido' && col.horas != null ? ` · hace ${col.horas < 1 ? 'menos de 1' : col.horas} h` : ''}</span>`);
-    return `<button type="button" class="ib-item" data-ib="${c.id}" aria-current="${String(c.id === ibSel)}" data-urgente="${c.espera_persona ? 1 : 0}" data-noleido="${c.no_leidos > 0 ? 1 : 0}" data-anclada="${c.anclada ? 1 : 0}" data-color="${col.color}" data-alerta="${col.alerta ? 1 : 0}" title="${esc(col.lbl)}">
+    return `<button type="button" class="ib-item" data-ib="${c.id}" aria-current="${String(c.id === ibSel)}" data-urgente="${c.espera_persona ? 1 : 0}" data-noleido="${c.no_leidos > 0 ? 1 : 0}" data-anclada="${c.anclada ? 1 : 0}" data-color="${col.color}"${col.alerta ? ` data-alerta="${col.alerta}"` : ''} title="${esc(col.lbl)}">
       ${ibAvatar(ibNombre(c))}
       <div class="ib-item-body">
         <div class="ib-item-top"><b>${esc(ibNombre(c))}</b>${c.anclada ? IB_PIN : ''}<time>${ibCuando(c.ultimo_en)}</time></div>
@@ -16199,7 +16253,6 @@ function ibPintarHilo(){
     <div class="ib-head-acc">
     <button type="button" class="btn btn-ghost btn-sm" id="ib-ia-btn">${c.ia_activa ? 'Tomar control' : 'Devolver a la IA'}</button>
     <details class="ib-mas"><summary class="btn btn-ghost btn-sm">Más</summary><div class="ib-mas-menu">
-    ${d.lead && !c.rol ? `<button type="button" class="btn btn-ghost btn-sm" id="ib-pase-btn">Pasar al cotizador</button>` : ''}
     <button type="button" class="btn btn-ghost btn-sm" id="ib-seg-alta-btn">Propuesta enviada…</button>
     <button type="button" class="btn btn-ghost btn-sm" id="ib-anclar-btn">${c.anclada ? 'Desanclar el chat' : 'Anclar el chat'}</button>
     <button type="button" class="btn btn-ghost btn-sm" id="ib-rol-btn">${c.rol === 'cotizador' ? 'Ya no es el cotizador' : 'Es el cotizador'}</button>
@@ -16860,29 +16913,41 @@ function ibPintarFicha(){
   const req = (k, v) => v || v === 0 ? fila(k, v) : (hayAviso ? `<dt>${k}</dt><dd class="ib-falta">⚠ Falta</dd>` : '');
   const faltan = hayAviso ? [['Personas', l.personas], ['Mail', l.email], ['País', l.pais], ['Fecha', fecha], ['Días', diasTot], ['Destinos', l.destinos || itTxt], ['Pasajes', l.pasajes], ['Presupuesto por persona', l.presupuesto_pp]]
     .filter(([, v]) => !(v || v === 0)).map(([k]) => k) : [];
+  // Estado del lead (mismo color que la lista): del chat en la lista, si no del lead cargado en el panel.
+  const col = ibColorDe({ ...(leads.find(x => x.id === l.id) || {}), ...l, ...(ibLista.find(x => x.id === c.id) || {}) });
+  const grande = (k, v, cls = '') => `<div class="${cls}"><span>${k}</span>${v || v === 0 ? `<b${cls.includes('ib-ancho') && itTxt ? ' class="ib-itin"' : ''}>${esc(String(v))}</b>` : hayAviso ? '<b class="ib-falta">⚠ Falta</b>' : '<b class="ib-vacio-dato">—</b>'}</div>`;
+  const chico = (k, v) => v || v === 0 ? `<dt>${k}</dt><dd>${esc(String(v))}</dd>` : '';
+  const chicoReq = (k, v) => v || v === 0 ? chico(k, v) : (hayAviso ? `<dt>${k}</dt><dd class="ib-falta">⚠ Falta</dd>` : '');
+  const flecha = '<svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   box.innerHTML = `
-    <h3>Lead</h3>
+    <div class="ib-ficha-cab" data-color="${col.color}"><h3>Lead</h3><span class="ib-estado">${esc(col.lbl)}</span>${l.score ? `<span class="ib-score" title="Calificación del lead">${esc(String(l.score))}<small>/10</small></span>` : ''}</div>
     ${faltan.length ? `<div class="ib-faltan"><b>Faltan para cotizar</b>${faltan.map(esc).join(' · ')}</div>` : ''}
-    <dl>
-      ${fila('Nombre', l.nombre)}${fila('Etapa', etapa)}${fila('Calificación', cal + (l.score ? ` · ${l.score}/10` : ''))}
-      ${fila('Estado IA', IB_ESTADO_LBL[l.ia_estado] || l.ia_estado)}${fila('Origen', IB_ORIGEN_LBL[l.ia_origen] || l.ia_origen)}
-      ${fila('WhatsApp', l.whatsapp)}${req('Mail', l.email)}${req('País', l.pais)}
-      ${itTxt ? `<dt>Itinerario</dt><dd class="ib-itin">${esc(itTxt)}</dd>` : req('Destinos', l.destinos)}${req('Fecha', fecha)}${req('Días', diasTot)}${req('Personas', l.personas)}
-      ${req('Pasajes', l.pasajes)}${req('Presupuesto', l.presupuesto_pp)}${fila('Residencia', l.residencia)}${fila('Ocasión', l.ocasion)}
-      ${fila('Código web', l.codigo_web)}${fila('Abrió', c.abierta_por === 'nosotros' ? 'Nosotros' : 'El lead')}
+    <div class="ib-clave">
+      ${grande(itTxt ? 'Itinerario' : 'Destinos', itTxt || l.destinos, 'ib-ancho')}
+      ${grande('Fecha', fecha)}${grande('Días', diasTot)}
+      ${grande('Personas', l.personas)}${grande('País', l.pais)}
+      ${grande('Pasajes', l.pasajes, 'ib-ancho')}
+    </div>
+    <dl class="ib-chicos">
+      ${chico('Etapa', etapa)}${chico('Origen', IB_ORIGEN_LBL[l.ia_origen] || l.ia_origen)}${chico('WhatsApp', l.whatsapp)}
+      ${chico('Código web', l.codigo_web)}${chico('Abrió', c.abierta_por === 'nosotros' ? 'Nosotros' : 'El lead')}
+      ${chicoReq('Mail', l.email)}${chicoReq('Presupuesto', l.presupuesto_pp)}${chico('Estado IA', IB_ESTADO_LBL[l.ia_estado] || l.ia_estado)}
+      ${chico('Residencia', l.residencia)}${chico('Ocasión', l.ocasion)}
     </dl>
-    ${l.ia_resumen ? `<h3>Resumen de la IA</h3><p>${esc(l.ia_resumen)}</p>` : ''}
     <div id="ib-pedidos"></div>
-    <div class="ib-ficha-acc"><button type="button" class="btn btn-primary btn-sm" id="ib-pase-ficha">Pasar al cotizador</button><button type="button" class="btn btn-primary btn-sm" id="ib-nuevo-pedido" title="Arma la cotización en Cotizaciones con lo que dice el chat">Nuevo pedido</button><button type="button" class="btn btn-ghost btn-sm" id="ib-abrir-lead">Abrir la ficha completa</button>${l.manychat_id ? `<a class="btn btn-ghost btn-sm" href="${esc(MANYCHAT_CHAT(l.manychat_id))}" target="_blank" rel="noopener">Abrir chat en ManyChat</a>` : ''}</div>
-    <h3 style="margin-top:var(--s5)">Análisis</h3>
-    ${a ? `<dl>
-      ${fila('Intención', a.intencion_inicial)}${fila('Tipo', a.tipo_lead)}${fila('Próxima acción', a.proxima_accion)}${fila('Prioridad', a.prioridad)}
-      ${fila('Objeciones', lista(a.objeciones_json).map(o => o.objecion || o).join(' · '))}
-      ${fila('Sin responder', lista(a.preguntas_sin_respuesta_json).join(' · '))}
-    </dl>` : `<p>Todavía no hay análisis de este chat.</p>`}
-    <h3 style="margin-top:var(--s5)">Análisis de WhatsApp</h3>
-    <div id="ib-wr"></div>`;
-  el('ib-pase-ficha').addEventListener('click', ibPasarCotizador);
+    <div class="ib-ficha-acc"><button type="button" class="btn btn-primary btn-sm" id="ib-nuevo-pedido" title="Arma la cotización en Cotizaciones con lo que dice el chat">Nuevo pedido</button><button type="button" class="btn btn-ghost btn-sm" id="ib-abrir-lead">Abrir panel lateral</button>${l.manychat_id ? `<a class="btn btn-ghost btn-sm" href="${esc(MANYCHAT_CHAT(l.manychat_id))}" target="_blank" rel="noopener">Abrir chat en ManyChat</a>` : ''}</div>
+    <details class="ib-desp" id="ib-desp">
+      <summary>${flecha}Desplegar ficha completa</summary>
+      ${l.ia_resumen ? `<h3>Resumen de la IA</h3><p>${esc(l.ia_resumen)}</p>` : ''}
+      <h3 style="margin-top:var(--s4)">Análisis</h3>
+      ${a ? `<dl>
+        ${fila('Intención', a.intencion_inicial)}${fila('Tipo', a.tipo_lead)}${fila('Próxima acción', a.proxima_accion)}${fila('Prioridad', a.prioridad)}
+        ${fila('Objeciones', lista(a.objeciones_json).map(o => o.objecion || o).join(' · '))}
+        ${fila('Sin responder', lista(a.preguntas_sin_respuesta_json).join(' · '))}
+      </dl>` : `<p>Todavía no hay análisis de este chat.</p>`}
+      <h3 style="margin-top:var(--s4)">Análisis de WhatsApp</h3>
+      <div id="ib-wr"></div>
+    </details>`;
   el('ib-nuevo-pedido').addEventListener('click', ibNuevoPedido);
   ibPintarPedidos();
   ibCargarPedidos();
