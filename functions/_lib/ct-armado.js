@@ -214,11 +214,13 @@ function armarPaquete({ pedido, p, catalogo, reglas }) {
     dia: d.dia, orden: orden++, fecha: fechaDia(d.dia), tipo: 'manual', descripcion: `${p.nombre} · día ${d.dia}: ${d.titulo}`.slice(0, 200), pasajeros: pax, cantidad: 1,
     origen_precio: 'web', web_producto_id: p.id, web_dia: d.dia, precio_es_venta: 1, neto_cent: 0, venta_cent: 0, nota: d.relato || null,
   }));
-  const lineas = [...dias, ...hoteles.map((l) => ({ ...l, orden: orden++, origen_precio: 'tarifario' }))];
+  const tras = lineasTraslados({ pedido: { ...pedido, destinos }, catalogo, orden: orden + hoteles.length });
+  const lineas = [...dias, ...hoteles.map((l) => ({ ...l, orden: orden++, origen_precio: 'tarifario' })), ...tras.lineas];
   const { tramos } = tramosDe(destinos);
   const av = [
     `Paquete publicado en la web: ${p.nombre} (${p.dias} días). Los días vienen de la ficha; el precio por componentes solo suma los hoteles con tarifa cargada.`,
     ...avisos.filter((a) => !/fechas dan/.test(a)),
+    ...tras.avisos,
     ...validarItinerario({ tramos, lineas: dias.map((l) => ({ ...l, origen_precio: 'paquete' })), reglas, diasPedidos: pedido.dias || null, esPaquete: true }),
   ];
   return { variante: null, titulo: p.nombre, lineas, avisos: av, precio_modo: 'paquete_web', paquete_web_id: p.id, paquete_web_cent: p.precio_web_cent == null ? null : p.precio_web_cent * pax, tramos };
@@ -249,13 +251,16 @@ async function armarMedida({ pedido, destinos, catalogo, web, reglas, elegir, ti
   const exc = resolverExcursiones(pedido.excursiones, candidatosDe({ catalogo, web, incluirSinTarifa: true }));
   const { elegidas, avisoIA, avisosForzadas } = await llenarHuecos({ tramos: reales, candidatos, ocupados, pedido, elegir, forzadas: exc.forzadas });
   for (const { c, slot } of elegidas) lineas.push({ ...lineaDeCandidato(c, { dia: slot.dia, fecha: fechaDia(slot.dia), pax, orden: orden++ }) });
+  const tras = lineasTraslados({ pedido: { ...pedido, destinos }, catalogo, orden });
+  orden += tras.lineas.length;
+  lineas.push(...tras.lineas);
   const avNoches = descontarNochesIncluidas(lineas, catalogo, reales);
   lineas.sort((a, b) => (a.dia - b.dia) || (a.orden - b.orden));
   const av = [
     ...avisosExtra,
     ...avNoches,
     ...(avisoIA ? [avisoIA] : []),
-    ...exc.avisos, ...avisosForzadas,
+    ...exc.avisos, ...avisosForzadas, ...tras.avisos,
     ...ilustrativas.map((t) => `${t.ciudad} no está en la web ni en el tarifario: quedó como ilustración, sin precio.`),
     ...avisos.filter((a) => !/fechas dan/.test(a)),
     ...validarItinerario({ tramos, lineas, reglas, diasPedidos: pedido.dias || null }),
@@ -263,6 +268,57 @@ async function armarMedida({ pedido, destinos, catalogo, web, reglas, elegir, ti
   const sinHueco = reales.filter((t) => t.noches > 1 && !elegidas.some((e) => mismaCiudad(e.slot.ciudad, t.ciudad)));
   for (const t of sinHueco) av.push(`${t.ciudad}: no hay tours cargados para llenar sus días libres.`);
   return { variante, titulo, lineas, avisos: av, precio_modo: 'componentes', paquete_web_id: null, paquete_web_cent: null, tramos };
+}
+
+
+// ---------- traslados y trenes que pidió el cliente ----------
+// pedido.traslados = [{ que, dia|null, modalidad PRI|GRU }]. Sin día, se deduce del texto:
+//   "→ estación de tren", "tren", "Machu Picchu" → el día que viaja a Aguas Calientes / Machu Picchu;
+//   una ciudad del recorrido → el día que llega ahí (o el que se va, si es "hotel → aeropuerto");
+//   "aeropuerto → hotel" sin ciudad → día 1; "hotel → aeropuerto" → último día.
+const TREN_MP = /\b(tren|estacion|machu picchu|aguas calientes|ollantaytambo|poroy)\b/;
+const destinoMP = (c) => /aguas calientes|machu picchu/.test(normCiudad(c));
+export function diaTraslado(t, tramos, totalDias) {
+  if (t.dia) return { dia: Math.min(Math.max(1, t.dia), totalDias), seguro: true };
+  const q = ` ${normCiudad(t.que)} `;
+  const nombra = (c) => q.includes(` ${normCiudad(c)} `);
+  const iAero = q.indexOf(' aeropuerto '), iHotel = q.indexOf(' hotel ');
+  const aSalida = iAero >= 0 && ((iHotel >= 0 && iHotel < iAero) || /\b(salida|regreso|vuelo de vuelta)\b/.test(q));
+  let tr = null;
+  if (TREN_MP.test(q)) tr = tramos.find((x) => destinoMP(x.ciudad)) || null;
+  if (!tr) tr = tramos.find((x, i) => i > 0 && nombra(x.ciudad)) || tramos.find((x) => nombra(x.ciudad)) || null;
+  if (tr) return { dia: Math.min(aSalida ? tr.hasta : tr.desde, totalDias), seguro: true };
+  if (iAero >= 0) return { dia: aSalida ? totalDias : 1, seguro: true };
+  return { dia: 1, seguro: false };
+}
+
+// Líneas de los traslados pedidos. Con el nombre exacto de un servicio del tarifario (traslado o tren) sale con su tarifa;
+// si no, una línea manual sin precio (origen "pedido") que bloquea la aprobación hasta que alguien le ponga precio.
+export function lineasTraslados({ pedido, catalogo, orden = 0 }) {
+  const lista = (pedido.traslados || []).filter((t) => t && t.que);
+  if (!lista.length) return { lineas: [], avisos: [] };
+  const destinos = (pedido.destinos || []).filter((d) => d && d.ciudad).map((d) => ({ ciudad: d.ciudad, noches: Math.max(0, Number(d.noches) || 0) }));
+  const { tramos, totalDias } = tramosDe(destinos);
+  const pax = Math.max(1, Number(pedido.pasajeros) || 1);
+  const fechaDia = (d) => (pedido.fecha_inicio ? sumarDias(pedido.fecha_inicio, d - 1) : null);
+  const servs = (catalogo.servicios || []).filter((s) => s.activo && ['traslado', 'tren'].includes(s.tipo));
+  const lineas = [], avisos = [];
+  for (const t of lista) {
+    const { dia, seguro } = diaTraslado(t, tramos, Math.max(1, Number(pedido.dias) || totalDias));
+    const mod = t.modalidad === 'GRU' ? 'GRU' : 'PRI';
+    const s = servs.find((x) => normCiudad(x.nombre) === normCiudad(t.que));
+    const base = { dia, orden: orden++, fecha: fechaDia(dia), pasajeros: pax, cantidad: 1, modalidad: mod };
+    if (s) lineas.push({ ...base, tipo: s.tipo, servicio_id: s.id, descripcion: s.nombre, origen_precio: 'tarifario' });
+    else {
+      lineas.push({
+        ...base, tipo: 'manual', descripcion: `${t.que} (${mod === 'PRI' ? 'privado' : 'compartido'})`.slice(0, 200),
+        origen_precio: 'pedido', sin_confirmar: 1, precio_es_venta: 0, neto_cent: 0, venta_cent: 0,
+        nota: 'Lo pidió el cliente y no está en el tarifario: poné el precio (Editar) para que se pueda aprobar.',
+      });
+    }
+    if (!seguro) avisos.push(`"${t.que}" quedó en el día ${dia}: no se pudo saber qué día va. Revisalo.`);
+  }
+  return { lineas, avisos };
 }
 
 // ---------- entrada ----------

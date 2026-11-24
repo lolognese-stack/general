@@ -2,7 +2,7 @@
 import { json } from './auth.js';
 import { aCentavos, aFecha, CATEGORIAS, HABITACIONES } from './tarifario.js';
 import { armarBorrador, precioLinea, totales, usaPrueba, sumarDias } from './cotizar.js';
-import { armarItinerario, indexarReglas } from './ct-armado.js';
+import { armarItinerario, indexarReglas, lineasTraslados } from './ct-armado.js';
 import { elegirConIA } from './ct-armado-ia.js';
 import { guardarTarifa } from './ct-tarifas.js';
 
@@ -41,7 +41,7 @@ export async function configActual(env) {
   return cfg;
 }
 
-const pedidoDe = (p) => p && ({ ...p, destinos: parse(p.destinos, []), servicios: parse(p.servicios, []), excursiones: parse(p.excursiones, []) });
+const pedidoDe = (p) => p && ({ ...p, destinos: parse(p.destinos, []), servicios: parse(p.servicios, []), excursiones: parse(p.excursiones, []), traslados: parse(p.traslados, []) });
 
 // ---------- validación del pedido ----------
 function leerPedido(b) {
@@ -67,6 +67,11 @@ function leerPedido(b) {
   if (cat && ![...CATEGORIAS, 'sin_hotel'].includes(cat)) errores.push('categoría de hotel no válida');
   const servicios = (Array.isArray(b.servicios) ? b.servicios : []).map(Number).filter((n) => Number.isInteger(n) && n > 0).slice(0, 40);
   const excursiones = (Array.isArray(b.excursiones) ? b.excursiones : String(b.excursiones || '').split(/[,\n;]+/)).map((x) => texto(x, 80)).filter(Boolean).slice(0, 20);
+  // Traslados y trenes pedidos: [{ que, dia|null, modalidad PRI|GRU }]
+  const traslados = (Array.isArray(b.traslados) ? b.traslados : []).slice(0, 15).map((t) => {
+    const dia = Number(t && t.dia);
+    return { que: texto(t && t.que, 120), dia: Number.isInteger(dia) && dia >= 1 && dia <= 90 ? dia : null, modalidad: String(t && t.modalidad || '').toUpperCase() === 'GRU' ? 'GRU' : 'PRI' };
+  }).filter((t) => t.que);
   const lead = b.lead_id === undefined || b.lead_id === null || b.lead_id === '' ? null : Number(b.lead_id);
   if (lead !== null && !Number.isInteger(lead)) errores.push('lead no válido');
   const entero = (v) => (v === undefined || v === null || v === '' ? null : Number(v));
@@ -84,7 +89,7 @@ function leerPedido(b) {
   if (tentativa && !fi) errores.push('la fecha tentativa necesita un día elegido');
   // Sin fecha de fin, sale de la de inicio y los días.
   const fin = ff || (fi && dias ? new Date(Date.parse(fi + 'T12:00:00Z') + (dias - 1) * 86400e3).toISOString().slice(0, 10) : null);
-  return { errores, d: { nombre, pais: texto(b.pais, 60), fecha_inicio: fi, fecha_fin: fin, pasajeros, destinos, categoria_hotel: cat, servicios, excursiones, pedidos_especiales: texto(b.pedidos_especiales, 2000), lead_id: lead, dias, fecha_tentativa: tentativa, conversacion_id: conversacion, origen } };
+  return { errores, d: { nombre, pais: texto(b.pais, 60), fecha_inicio: fi, fecha_fin: fin, pasajeros, destinos, categoria_hotel: cat, servicios, excursiones, traslados, pedidos_especiales: texto(b.pedidos_especiales, 2000), lead_id: lead, dias, fecha_tentativa: tentativa, conversacion_id: conversacion, origen } };
 }
 
 // Lo que impide aprobar ("Te falta"): líneas sin precio, ilustraciones (destino que la web no tiene), hoteles y servicios
@@ -99,7 +104,7 @@ export function pendientesDe(cot, lineas, tot) {
     if (l.problema) it('sin_precio', l, `${nombre}: ${l.problema}`);
     else if (l.es_ilustrativa && l.origen_precio === 'ilustrativa') it('ilustrativa', l, `${nombre}: ilustración, la web no tiene este destino. Armalo y ponele precio.`);
     else if (l.es_ilustrativa && !l.pisado_neto && !l.pisado_venta) it('ejemplo', l, `${nombre}: ${l.tipo === 'hotel' ? 'hotel' : 'tarifa'} de ejemplo. Elegí uno real o poné el precio.`);
-    if (l.sin_confirmar) it('sin_confirmar', l, `${nombre}: precio de la web sin confirmar.`);
+    if (l.sin_confirmar) it('sin_confirmar', l, l.origen_precio === 'pedido' ? `${nombre}: lo pidió el cliente y no está en el tarifario. Poné el precio.` : `${nombre}: precio de la web sin confirmar.`);
   }
   if (tot.modo === 'paquete_web' && !cot.paquete_web_confirmado) it('paquete_web', null, 'El precio del paquete de la web, sin confirmar.');
   for (const a of (Array.isArray(cot.avisos) ? cot.avisos : parse(cot.avisos, []))) it('aviso', null, String(a), false);
@@ -174,7 +179,11 @@ async function crearCotizacion(env, pedido, por, { version = 1, lineas = null, c
   catalogo = catalogo || await cargarCatalogo(env);
   const config = await configActual(env);
   let avisos = extra.avisos || [];
-  if (!lineas) { const a = armarBorrador(pedido, catalogo); lineas = a.lineas; avisos = [...avisos, ...a.avisos]; }
+  if (!lineas) {
+    const a = armarBorrador(pedido, catalogo); lineas = a.lineas; avisos = [...avisos, ...a.avisos];
+    const t = lineasTraslados({ pedido, catalogo, orden: lineas.length });
+    lineas = [...lineas, ...t.lineas].sort((x, y) => (x.dia - y.dia) || (x.orden - y.orden)); avisos = [...avisos, ...t.avisos];
+  }
   const r = await env.DB.prepare(`INSERT INTO ct_cotizaciones (pedido_id, version, estado, config_json, avisos, creado_por, variante, precio_modo, paquete_web_cent, paquete_web_confirmado) VALUES (?, ?, 'borrador', ?, ?, ?, ?, ?, ?, 0)`)
     .bind(pedido.id, version, JSON.stringify(config), JSON.stringify(avisos), por, extra.variante || null, extra.precio_modo || 'componentes', extra.paquete_web_cent ?? null).run();
   const cotId = r.meta.last_row_id;
@@ -285,8 +294,8 @@ export async function pedidosDe(env, leadId, convId) {
 }
 
 async function insertarPedido(env, d, por) {
-  const r = await env.DB.prepare(`INSERT INTO ct_pedidos (lead_id, nombre, pais, fecha_inicio, fecha_fin, pasajeros, destinos, servicios, categoria_hotel, pedidos_especiales, creado_por, dias, fecha_tentativa, conversacion_id, origen, excursiones)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(d.lead_id, d.nombre, d.pais, d.fecha_inicio, d.fecha_fin, d.pasajeros, JSON.stringify(d.destinos), JSON.stringify(d.servicios), d.categoria_hotel, d.pedidos_especiales, por, d.dias, d.fecha_tentativa, d.conversacion_id, d.origen, JSON.stringify(d.excursiones)).run();
+  const r = await env.DB.prepare(`INSERT INTO ct_pedidos (lead_id, nombre, pais, fecha_inicio, fecha_fin, pasajeros, destinos, servicios, categoria_hotel, pedidos_especiales, creado_por, dias, fecha_tentativa, conversacion_id, origen, excursiones, traslados)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(d.lead_id, d.nombre, d.pais, d.fecha_inicio, d.fecha_fin, d.pasajeros, JSON.stringify(d.destinos), JSON.stringify(d.servicios), d.categoria_hotel, d.pedidos_especiales, por, d.dias, d.fecha_tentativa, d.conversacion_id, d.origen, JSON.stringify(d.excursiones), JSON.stringify(d.traslados)).run();
   const id = r.meta.last_row_id;
   await env.DB.prepare(`INSERT INTO ct_pedido_estados (pedido_id, estado, por) VALUES (?, 'nuevo', ?)`).bind(id, por).run();
   return id;
@@ -341,10 +350,10 @@ export async function editarPedido(env, id, body, por) {
   const actual = await env.DB.prepare(`SELECT * FROM ct_pedidos WHERE id = ?`).bind(id).first();
   if (!actual) return json({ error: 'No existe' }, 404);
   // Lo que el formulario no manda (conversación, origen, días, fecha tentativa) se conserva.
-  const { errores, d } = leerPedido({ conversacion_id: actual.conversacion_id, origen: actual.origen, dias: actual.dias, fecha_tentativa: actual.fecha_tentativa, ...body });
+  const { errores, d } = leerPedido({ conversacion_id: actual.conversacion_id, origen: actual.origen, dias: actual.dias, fecha_tentativa: actual.fecha_tentativa, traslados: parse(actual.traslados, []), ...body });
   if (errores.length) return json({ error: errores.join('; ') }, 400);
-  await env.DB.prepare(`UPDATE ct_pedidos SET lead_id = ?, nombre = ?, pais = ?, fecha_inicio = ?, fecha_fin = ?, pasajeros = ?, destinos = ?, servicios = ?, categoria_hotel = ?, pedidos_especiales = ?, dias = ?, fecha_tentativa = ?, conversacion_id = ?, origen = ?, excursiones = ?, actualizado_en = ${ahora} WHERE id = ?`)
-    .bind(d.lead_id, d.nombre, d.pais, d.fecha_inicio, d.fecha_fin, d.pasajeros, JSON.stringify(d.destinos), JSON.stringify(d.servicios), d.categoria_hotel, d.pedidos_especiales, d.dias, d.fecha_tentativa, d.conversacion_id, d.origen, JSON.stringify(d.excursiones), id).run();
+  await env.DB.prepare(`UPDATE ct_pedidos SET lead_id = ?, nombre = ?, pais = ?, fecha_inicio = ?, fecha_fin = ?, pasajeros = ?, destinos = ?, servicios = ?, categoria_hotel = ?, pedidos_especiales = ?, dias = ?, fecha_tentativa = ?, conversacion_id = ?, origen = ?, excursiones = ?, traslados = ?, actualizado_en = ${ahora} WHERE id = ?`)
+    .bind(d.lead_id, d.nombre, d.pais, d.fecha_inicio, d.fecha_fin, d.pasajeros, JSON.stringify(d.destinos), JSON.stringify(d.servicios), d.categoria_hotel, d.pedidos_especiales, d.dias, d.fecha_tentativa, d.conversacion_id, d.origen, JSON.stringify(d.excursiones), JSON.stringify(d.traslados), id).run();
   // Si cambió la fecha de inicio, las fechas de las líneas de la cotización editable se corren con ella.
   const cot = await ultimaCotizacion(env, id);
   if (cot && EDITABLES.includes(cot.estado) && d.fecha_inicio && d.fecha_inicio !== actual.fecha_inicio) {

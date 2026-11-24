@@ -2014,6 +2014,13 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 
 
 
+/* Traslados y trenes del pedido (inbox y cotizaciones) */
+.tr-fila{display:grid;grid-template-columns:72px minmax(0,160px) auto;gap:6px 8px;align-items:center;padding:0 0 10px;margin-bottom:10px;border-bottom:1px solid var(--line-soft)}
+.tr-fila [name=t-que]{grid-column:1/-1;width:100%}
+.tr-fila input,.tr-fila select{min-width:0}
+.tr-fila button{justify-self:start}
+#ib-pedido .tr-fila input,#ib-pedido .tr-fila select{border:1px solid var(--line);border-radius:var(--radius-sm);padding:7px 9px;background:var(--surface-2);color:var(--ink);font:inherit;font-size:13px;min-height:36px}
+
 /* ---------------- Inbox (setter de WhatsApp) ---------------- */
 /* La página del Inbox no scrollea: queda fija y solo scrollean sus columnas. */
 #view-inbox:not([hidden]){overflow:hidden;display:flex;flex-direction:column}
@@ -16570,6 +16577,7 @@ function ibPrecargaPedido(l, an){
   };
 }
 
+let ibNpTras = null;   // lee las filas de traslados del formulario de pedido
 function ibPintarPedidoForm(v){
   const hoy = new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10);
   el('ib-np-cuerpo').innerHTML = `
@@ -16583,11 +16591,13 @@ function ibPintarPedidoForm(v){
     <div class="field" data-np="destinos"><label>Destinos, en orden *</label><div id="ib-np-dests"></div>
       <div><button type="button" class="btn btn-ghost btn-sm" id="ib-np-mas">+ Destino</button> <span class="hint" id="ib-np-noches"></span></div></div>
     <div class="field"><label>Excursiones que pidió (no suman noches; van en un día libre de su ciudad)</label><input name="excursiones" maxlength="400" placeholder="Cañón del Colca, Lago Titicaca" value="${esc((v.excursiones || []).join(', '))}"></div>
+    <div class="field"><label>Traslados y trenes que pidió (sin día, se ubica solo)</label><div id="ib-np-tras"></div></div>
     <div class="ib-np-fila">
       <div class="field"><label>País</label><input name="pais" maxlength="60" value="${esc(v.pais)}"></div>
       <div class="field"><label>Hotel</label><select name="categoria_hotel">${[['economico','Económico'],['confort','Confort'],['premium','Premium'],['sin_hotel','Sin hotel']].map(([k, n]) => `<option value="${k}" ${k === v.categoria_hotel ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
     </div>
     <div class="field"><label>Pedidos especiales</label><textarea name="pedidos_especiales" rows="2" maxlength="2000">${esc(v.pedidos_especiales)}</textarea></div>`;
+  ibNpTras = trasladosMontar(el('ib-np-tras'), v.traslados || []);
   const filas = el('ib-np-dests');
   const fila = (d = { ciudad: '', noches: 1 }) => {
     const r = document.createElement('div'); r.className = 'ib-np-dest';
@@ -16618,6 +16628,7 @@ function ibNpLeer(){
     nombre: g('nombre').value.trim(), pais: g('pais').value.trim(), pasajeros: Number(g('pasajeros').value) || 0, dias: Number(g('dias').value) || 0,
     fecha_inicio: g('fecha_inicio').value, fecha_tentativa: g('fecha_tentativa').checked, categoria_hotel: g('categoria_hotel').value,
     destinos, excursiones: g('excursiones').value.split(/[,;\n]+/).map(x => x.trim()).filter(Boolean), pedidos_especiales: g('pedidos_especiales').value.trim(),
+    traslados: ibNpTras ? ibNpTras() : [],
   };
 }
 function ibNpValidar(){
@@ -17665,6 +17676,37 @@ function stPintarAjustes(){
   });
 }
 
+/* ---------------- Traslados y trenes del pedido ---------------- */
+// Filas { que, dia, modalidad } para los formularios de pedido (inbox y cotizaciones). Devuelve una función que lee las filas.
+const TRASLADOS_SUGERIDOS = ['Aeropuerto → hotel', 'Hotel → aeropuerto', 'Hotel → estación de tren (Ollantaytambo)', 'Hotel → estación de tren (Poroy)',
+  'Estación de tren → hotel', 'Tren a Machu Picchu (ida y vuelta)', 'Bus Aguas Calientes ↔ Machu Picchu', 'Terminal de bus → hotel', 'Hotel → terminal de bus'];
+let trasladosN = 0;
+function trasladosMontar(cont, inicial, { sugerencias = [], btn = 'btn btn-ghost btn-sm', quitar = 'btn btn-ghost btn-sm' } = {}){
+  const e = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+  const lid = 'tr-sug-' + (++trasladosN);
+  const opciones = [...new Set([...sugerencias, ...TRASLADOS_SUGERIDOS])];
+  cont.innerHTML = `<div class="tr-filas"></div><datalist id="${lid}">${opciones.map(o => `<option value="${e(o)}">`).join('')}</datalist>
+    <button type="button" class="${btn}" data-tr-mas>+ Traslado o tren</button>`;
+  const filas = cont.querySelector('.tr-filas');
+  const fila = (t = { que:'', dia:null, modalidad:'PRI' }) => {
+    const r = document.createElement('div'); r.className = 'tr-fila';
+    r.innerHTML = `<input name="t-que" list="${lid}" maxlength="120" placeholder="Ej.: Hotel → estación de tren (Ollantaytambo)" aria-label="Qué traslado o tren" value="${e(t.que)}">
+      <input name="t-dia" type="number" min="1" max="90" placeholder="Día" title="Día del viaje (vacío: se ubica solo)" aria-label="Día" value="${e(t.dia || '')}">
+      <select name="t-mod" aria-label="Modalidad"><option value="PRI" ${t.modalidad !== 'GRU' ? 'selected' : ''}>Privado</option><option value="GRU" ${t.modalidad === 'GRU' ? 'selected' : ''}>Compartido</option></select>
+      <button type="button" class="${quitar}">Quitar</button>`;
+    r.querySelector('button').addEventListener('click', () => r.remove());
+    filas.appendChild(r);
+    return r;
+  };
+  (inicial || []).forEach(t => fila(t));
+  cont.querySelector('[data-tr-mas]').addEventListener('click', () => fila().querySelector('input').focus());
+  return () => [...filas.querySelectorAll('.tr-fila')].map(r => ({
+    que: r.querySelector('[name=t-que]').value.trim(),
+    dia: Number(r.querySelector('[name=t-dia]').value) || null,
+    modalidad: r.querySelector('[name=t-mod]').value,
+  })).filter(t => t.que);
+}
+
 /* ---------------- Cotizaciones (sección nativa) ---------------- */
 // Antes era la página suelta cotizaciones-4c1f6a. Corre en su propio ámbito (IIFE) para no pisar
 // nombres del panel; los ids llevan el prefijo ct-. API: /api/ct/*. Quién cambia un precio: header x-crm-usuario.
@@ -17983,6 +18025,8 @@ async function pintarFormPedido(p, pre = null) {
       <datalist id="ct-ciudades-ped">${ciudades.map((c) => `<option>${esc(c)}</option>`).join('')}</datalist>
       <h2>Excursiones que pidió</h2><p class="nota">Cañón del Colca, Lago Titicaca… No suman noches: se ubican en un día libre de su ciudad (Arequipa, Puno…). Separadas por coma.</p>
       <input name="excursiones" maxlength="400" placeholder="Cañón del Colca, Lago Titicaca" value="${esc((v.excursiones || []).join(', '))}">
+      <h2>Traslados y trenes</h2><p class="nota">Lo que pidió aparte: traslado privado a la estación de tren, al aeropuerto, etc. Sin día, se ubica solo (el tren, el día que viaja a Aguas Calientes). Si no está en el tarifario, entra sin precio y hay que ponérselo antes de aprobar.</p>
+      <div id="ct-tras"></div>
       <h2>Qué quiere hacer</h2><p class="nota">El borrador ubica cada servicio en un día libre de su ciudad.</p>
       <div id="ct-servs" class="servs"></div>
       <h2>Pedidos especiales</h2><textarea name="pedidos_especiales" maxlength="2000">${esc(v.pedidos_especiales)}</textarea>
@@ -17990,6 +18034,7 @@ async function pintarFormPedido(p, pre = null) {
       ${p ? '<p class="nota">Guardar no cambia la cotización. Para rehacerla con los datos nuevos: "Volver a armar" en el pedido.</p>' : ''}
     </form>`;
   const f = $('#ct-fp');
+  const leerTras = trasladosMontar($('#ct-tras'), v.traslados || [], { sugerencias: datos.servicios.filter((s) => s.activo && ['traslado', 'tren'].includes(s.tipo)).map((s) => s.nombre), btn: 'chico', quitar: 'link' });
   const filaDest = (d = { ciudad: '', noches: 1 }) => {
     const el = document.createElement('div'); el.className = 'barra dest';
     el.innerHTML = `<input name="d-ciudad" list="ct-ciudades-ped" placeholder="Ciudad" value="${esc(d.ciudad)}" style="flex:1;min-width:140px">
@@ -18026,7 +18071,7 @@ async function pintarFormPedido(p, pre = null) {
     RAIZ().querySelectorAll('#ct-servs input:checked').forEach((c) => elegidos.add(Number(c.value)));
     RAIZ().querySelectorAll('#ct-servs input:not(:checked)').forEach((c) => elegidos.delete(Number(c.value)));
     const body = { nombre: f.nombre.value, pais: f.pais.value, pasajeros: Number(f.pasajeros.value), fecha_inicio: f.fecha_inicio.value || null, fecha_fin: f.fecha_fin.value || null, dias: f.dias.value || null, fecha_tentativa: f.fecha_tentativa.checked,
-      categoria_hotel: f.categoria_hotel.value, destinos: destinos(), servicios: [...elegidos], excursiones: f.excursiones.value.split(/[,;\n]+/).map((x) => x.trim()).filter(Boolean), pedidos_especiales: f.pedidos_especiales.value, lead_id: v.lead_id ?? null, ...(pre ? { origen: pre.origen === 'web' ? 'web' : 'chat' } : {}) };
+      categoria_hotel: f.categoria_hotel.value, destinos: destinos(), servicios: [...elegidos], excursiones: f.excursiones.value.split(/[,;\n]+/).map((x) => x.trim()).filter(Boolean), traslados: leerTras(), pedidos_especiales: f.pedidos_especiales.value, lead_id: v.lead_id ?? null, ...(pre ? { origen: pre.origen === 'web' ? 'web' : 'chat' } : {}) };
     const btn = f.querySelector('button.prim'); btn.disabled = true;
     try {
       if (p) { await api(`pedidos/${p.id}`, { method: 'PUT', body }); toast('Pedido guardado'); irA('pedido/' + p.id); }
@@ -18056,6 +18101,7 @@ function dibujarPedido() {
       <div><h2 style="margin:0 0 6px">${esc(p.nombre)}${p.pais ? ' · ' + esc(p.pais) : ''}</h2>
         <div class="meta">${p.pasajeros} pasajeros · ${p.fecha_inicio ? `${fecha(p.fecha_inicio)} al ${fecha(p.fecha_fin)}` : 'sin fechas'}${p.fecha_tentativa ? ' <span class="chip pisado" title="El cliente no dio fecha: se eligió un día para poder cotizar">fecha tentativa</span>' : ''} · hotel ${esc({ economico: 'económico', confort: 'confort', premium: 'premium', sin_hotel: 'no' }[p.categoria_hotel] || '—')}</div>
         <div class="meta">${esc(p.destinos.map((d) => `${d.ciudad} (${d.noches} n)`).join(' → '))}</div>
+        ${(p.traslados || []).length ? `<div class="meta">Traslados: ${esc(p.traslados.map((t) => `${t.que} (${t.modalidad === 'GRU' ? 'compartido' : 'privado'}${t.dia ? ', día ' + t.dia : ''})`).join(' · '))}</div>` : ''}
         ${p.pedidos_especiales ? `<div class="meta">Pedidos especiales: ${esc(p.pedidos_especiales)}</div>` : ''}
         <div class="meta">Cargado por ${esc(p.creado_por || '—')} el ${peru(p.creado_en)}</div></div>
       <div class="acc-ped">
@@ -18148,7 +18194,7 @@ function itinerarioHtml(nDias, porDia, ed) {
       ? `Check-in · ${l.unidades} ${esc(l.habitacion || '')} · ${l.cantidad} ${l.cantidad === 1 ? 'noche' : 'noches'} (hasta el día ${d + l.cantidad})`
       : [TIPO_IT[l.tipo] || l.tipo, mod(l.modalidad), s && s.duracion ? s.duracion : '', `${l.pasajeros} pax`].filter(Boolean).map(esc).join(' · ');
     const inc = !hotel && s && s.incluye ? `<span class="it-inc">Incluye: ${esc(s.incluye)}</span>` : '';
-    const marcas = `${l.origen_precio === 'ilustrativa' ? ' <span class="prueba">ILUSTRACIÓN</span>' : l.es_ilustrativa ? ' <span class="prueba">EJEMPLO</span>' : ''}${l.sin_confirmar ? ' <span class="chip pisado">precio web sin confirmar</span>' : ''}`;
+    const marcas = `${l.origen_precio === 'ilustrativa' ? ' <span class="prueba">ILUSTRACIÓN</span>' : l.es_ilustrativa ? ' <span class="prueba">EJEMPLO</span>' : ''}${l.sin_confirmar ? (l.origen_precio === 'pedido' ? ' <span class="chip pisado">falta el precio</span>' : ' <span class="chip pisado">precio web sin confirmar</span>') : ''}`;
     return `<div class="it-item ${l.problema ? 'err' : ''}" id="ct-it-${l.id}">
       <div class="it-hora ${l.horario ? '' : 'vacia'}">${l.horario ? esc(l.horario) : (hotel ? 'Noche' : 'Sin horario')}</div>
       <div class="it-que"><b>${esc(l.descripcion)}</b>${marcas}<span class="it-sub">${sub}</span>${inc}
@@ -18190,7 +18236,7 @@ function dibujarCotizacion() {
   const COLS = '<colgroup><col><col style="width:140px"><col style="width:76px"><col style="width:92px"><col style="width:104px"><col style="width:64px"><col style="width:108px"><col style="width:104px"><col style="width:136px"></colgroup>';
   const fila = (l) => `<tr id="ct-lin-${l.id}" class="${l.problema ? 'fila-err' : ''}">
       <td class="full"><b>${esc(l.descripcion)}</b> <span class="chip">${esc(l.tipo === 'hotel' ? 'hotel' : TIPOS[l.tipo] || l.tipo)}</span>
-        ${l.origen_precio === 'ilustrativa' ? '<span class="prueba" title="La web no publica este destino: hay que armarlo y ponerle precio">ILUSTRACIÓN</span>' : l.es_ilustrativa ? '<span class="prueba">PRUEBA</span>' : ''}${l.sin_confirmar ? ' <span class="chip pisado" title="Precio publicado en la web, sin tarifa propia: confirmalo o corregilo antes de aprobar">precio web sin confirmar</span>' : l.origen_precio === 'web' && l.web_dia ? ' <span class="chip">de la web</span>' : ''}${l.pisado_neto || l.pisado_venta ? ' <span class="chip pisado" title="Precio cambiado a mano">a mano</span>' : ''}${l.precio_es_venta ? ' <span class="chip" title="Tarifa ya es precio de venta">propio</span>' : ''}
+        ${l.origen_precio === 'ilustrativa' ? '<span class="prueba" title="La web no publica este destino: hay que armarlo y ponerle precio">ILUSTRACIÓN</span>' : l.es_ilustrativa ? '<span class="prueba">PRUEBA</span>' : ''}${l.sin_confirmar ? (l.origen_precio === 'pedido' ? ' <span class="chip pisado" title="Lo pidió el cliente y no está en el tarifario: poné el precio con Editar">falta el precio</span>' : ' <span class="chip pisado" title="Precio publicado en la web, sin tarifa propia: confirmalo o corregilo antes de aprobar">precio web sin confirmar</span>') : l.origen_precio === 'web' && l.web_dia ? ' <span class="chip">de la web</span>' : ''}${l.pisado_neto || l.pisado_venta ? ' <span class="chip pisado" title="Precio cambiado a mano">a mano</span>' : ''}${l.precio_es_venta ? ' <span class="chip" title="Tarifa ya es precio de venta">propio</span>' : ''}
         ${l.problema ? `<div class="err">${esc(l.problema)}</div>` : ''}${l.nota ? `<div class="nota" style="margin:0">${esc(l.nota)}</div>` : ''}</td>
       <td data-t="Horario">${l.horario ? esc(l.horario) : '<span class="nota" style="margin:0">—</span>'}</td>
       <td data-t="Modalidad" class="c">${l.modalidad ? `<span class="mod ${l.modalidad === 'PRI' ? 'pri' : ''}" title="${l.modalidad === 'PRI' ? 'Privado' : 'Grupal'}">${l.modalidad}</span>` : ''}</td>
@@ -18199,7 +18245,7 @@ function dibujarCotizacion() {
       <td data-t="Margen" class="num">${l.precio_es_venta ? '—' : l.margen_pct != null ? l.margen_pct + '%' : '—'}</td>
       <td data-t="Total" class="num"><b>${usd(l.venta_cent)}</b></td>
       <td data-t="Ganancia" class="num">${l.precio_es_venta ? '<span class="nota" style="margin:0" title="Precio final cargado con la ganancia adentro: el neto no se conoce">sin definir</span>' : usd(l.venta_cent - l.neto_cent)}</td>
-      <td class="num">${ed && l.sin_confirmar ? `<button type="button" class="link" data-conf-lin="${l.id}">Confirmar</button>` : ''}${ed ? `<button type="button" class="link" data-ed-lin="${l.id}">Editar</button>` : ''}</td></tr>`;
+      <td class="num">${ed && l.sin_confirmar && l.origen_precio !== 'pedido' ? `<button type="button" class="link" data-conf-lin="${l.id}">Confirmar</button>` : ''}${ed ? `<button type="button" class="link" data-ed-lin="${l.id}">Editar</button>` : ''}</td></tr>`;
   let dias = '';
   for (let d = 1; d <= nDias; d++) {
     const ls = porDia.get(d) || [];
