@@ -2378,7 +2378,8 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 #view-cotizaciones .ct-sub{margin:0 0 var(--s4);max-width:100%;overflow-x:auto}
 #view-cotizaciones .ct-sub[hidden]{display:none}
 #view-cotizaciones .ct-main{max-width:1100px;margin:0 auto}
-#view-cotizaciones .ct-main:has(.dias){max-width:none}
+/* El pedido con la cotización abierta se ensancha un poco por la tabla de líneas, pero no a todo el ancho: se lee mejor. */
+#view-cotizaciones .ct-main:has(.dias){max-width:1200px}
 #view-cotizaciones .ct-vacio{padding:var(--s6) var(--s5);text-align:center;color:var(--ink-3)}
 #view-cotizaciones table{white-space:normal}
 #view-cotizaciones tbody td{max-width:none;overflow:visible;text-overflow:clip}
