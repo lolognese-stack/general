@@ -2609,8 +2609,20 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 .ib-ped-prueba{display:inline-block;padding:0 5px;border-radius:3px;background:var(--danger);color:#fff;font-size:9.5px;font-weight:700;letter-spacing:.04em}
 #ib-pedido .ib-np-fila{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:var(--s2)}
 #ib-pedido .ib-np-check{display:flex;gap:6px;align-items:flex-start;font-size:12px;color:var(--ink-2);margin:0 0 var(--s3)}
-#ib-pedido .ib-np-dest{display:grid;grid-template-columns:1fr 64px auto auto;gap:var(--s2);align-items:center;margin-bottom:var(--s2)}
-#ib-pedido .ib-np-dest input{border:1px solid var(--line);border-radius:var(--radius-sm);padding:7px 9px;background:var(--surface-2);font-size:13px;min-height:36px;min-width:0}
+/* Destinos como bloques que se arrastran para cambiar el orden del recorrido. */
+#ib-np-dests{display:flex;flex-direction:column;gap:6px;margin-bottom:var(--s2)}
+#ib-pedido .ib-np-dest{display:grid;grid-template-columns:auto 22px minmax(0,1fr) 56px auto auto;gap:6px;align-items:center;
+  padding:6px 6px 6px 2px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);
+  transition:box-shadow .15s ease,border-color .15s ease}
+#ib-pedido .ib-np-dest input{border:1px solid var(--line);border-radius:var(--radius-sm);padding:7px 9px;background:var(--surface-2);color:var(--ink);font-size:13px;min-height:36px;min-width:0}
+#ib-pedido .ib-np-dest .hint{font-size:11.5px}
+.ib-np-asa{display:grid;place-items:center;width:28px;height:36px;border:none;background:none;color:var(--ink-3);border-radius:6px;cursor:grab;touch-action:none;padding:0}
+.ib-np-asa:hover{color:var(--ink);background:var(--surface-sunk)}
+.ib-np-asa:focus-visible{outline:2px solid var(--glacier);outline-offset:1px}
+.ib-np-num{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--surface-sunk);color:var(--ink-2);font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
+#ib-pedido .ib-np-dest.arrastrando{position:relative;z-index:2;border-color:var(--brand);box-shadow:0 8px 24px rgba(0,0,0,.18);cursor:grabbing}
+#ib-pedido .ib-np-dest.arrastrando .ib-np-asa{cursor:grabbing;color:var(--ink)}
+body.ib-np-moviendo{user-select:none;cursor:grabbing}
 #ib-pedido .ib-falta-campo input,#ib-pedido .ib-falta-campo select{border-color:var(--danger);background:var(--danger-bg)}
 #ib-pedido .ib-falta-campo>label{color:var(--danger)}
 </style>
@@ -16588,7 +16600,7 @@ function ibPintarPedidoForm(v){
       <div class="field" data-np="fecha"><label>Llega *</label><input name="fecha_inicio" type="date" value="${esc(v.fecha_inicio)}"></div>
     </div>
     <label class="ib-np-check"><input type="checkbox" name="fecha_tentativa" ${v.fecha_tentativa ? 'checked' : ''}> Fecha tentativa: el cliente no dio una y se elige un día para poder cotizar</label>
-    <div class="field" data-np="destinos"><label>Destinos, en orden *</label><div id="ib-np-dests"></div>
+    <div class="field" data-np="destinos"><label>Destinos, en orden * <span class="hint" style="font-weight:400">· arrastrá desde la manija para cambiar el orden</span></label><div id="ib-np-dests"></div>
       <div><button type="button" class="btn btn-ghost btn-sm" id="ib-np-mas">+ Destino</button> <span class="hint" id="ib-np-noches"></span></div></div>
     <div class="field"><label>Excursiones que pidió (no suman noches; van en un día libre de su ciudad)</label><input name="excursiones" maxlength="400" placeholder="Cañón del Colca, Lago Titicaca" value="${esc((v.excursiones || []).join(', '))}"></div>
     <div class="field"><label>Traslados y trenes que pidió (sin día, se ubica solo)</label><div id="ib-np-tras"></div></div>
@@ -16599,11 +16611,59 @@ function ibPintarPedidoForm(v){
     <div class="field"><label>Pedidos especiales</label><textarea name="pedidos_especiales" rows="2" maxlength="2000">${esc(v.pedidos_especiales)}</textarea></div>`;
   ibNpTras = trasladosMontar(el('ib-np-tras'), v.traslados || []);
   const filas = el('ib-np-dests');
+  const numerar = () => [...filas.children].forEach((x, i) => { x.querySelector('.ib-np-num').textContent = i + 1; });
+  // Mueve el bloque y anima a los demás desde donde estaban (FLIP), así se ve qué se corrió.
+  const quieto = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reubicar = (r, antes) => {
+    const tops = new Map([...filas.children].map(x => [x, x.getBoundingClientRect().top]));
+    filas.insertBefore(r, antes);
+    if(quieto) return;
+    for(const x of filas.children){
+      if(x === r) continue;
+      const dy = tops.get(x) - x.getBoundingClientRect().top;
+      if(!dy) continue;
+      x.animate([{ transform:`translateY(${dy}px)` }, { transform:'none' }], { duration:160, easing:'cubic-bezier(.2,.8,.2,1)' });
+    }
+  };
   const fila = (d = { ciudad: '', noches: 1 }) => {
     const r = document.createElement('div'); r.className = 'ib-np-dest';
-    r.innerHTML = `<input name="d-ciudad" placeholder="Ciudad" value="${esc(d.ciudad)}"><input name="d-noches" type="number" min="0" max="60" value="${esc(d.noches)}" title="Noches"><span class="hint">noches</span><button type="button" class="btn btn-ghost btn-sm">Quitar</button>`;
-    r.querySelector('button').addEventListener('click', () => { r.remove(); ibNpValidar(); });
+    r.innerHTML = `<button type="button" class="ib-np-asa" aria-label="Mover destino (flechas arriba y abajo)" title="Arrastrá para cambiar el orden">
+        <svg width="12" height="18" viewBox="0 0 12 18" aria-hidden="true" fill="currentColor"><circle cx="3" cy="3" r="1.6"/><circle cx="9" cy="3" r="1.6"/><circle cx="3" cy="9" r="1.6"/><circle cx="9" cy="9" r="1.6"/><circle cx="3" cy="15" r="1.6"/><circle cx="9" cy="15" r="1.6"/></svg></button>
+      <span class="ib-np-num" aria-hidden="true"></span>
+      <input name="d-ciudad" placeholder="Ciudad" aria-label="Ciudad" value="${esc(d.ciudad)}"><input name="d-noches" type="number" min="0" max="60" value="${esc(d.noches)}" title="Noches" aria-label="Noches"><span class="hint">noches</span><button type="button" class="btn btn-ghost btn-sm" data-quitar>Quitar</button>`;
+    r.querySelector('[data-quitar]').addEventListener('click', () => { r.remove(); numerar(); ibNpValidar(); });
+    const asa = r.querySelector('.ib-np-asa');
+    asa.addEventListener('pointerdown', e => {
+      if(e.button !== 0) return;
+      e.preventDefault();
+      // Se escucha en window: al mover el bloque en el DOM el navegador suelta la captura del puntero.
+      r.classList.add('arrastrando'); document.body.classList.add('ib-np-moviendo');
+      const mover = ev => {
+        if(ev.pointerId !== e.pointerId) return;
+        const otros = [...filas.children].filter(x => x !== r);
+        // offsetTop no incluye la animación en curso: se mide contra la posición real de cada bloque.
+        const y = ev.clientY - filas.getBoundingClientRect().top + filas.offsetTop;
+        const sig = otros.find(x => y < x.offsetTop + x.offsetHeight / 2) || null;
+        if(sig !== r.nextElementSibling) { reubicar(r, sig); numerar(); }
+      };
+      const fin = ev => {
+        if(ev.pointerId !== e.pointerId) return;
+        removeEventListener('pointermove', mover); removeEventListener('pointerup', fin); removeEventListener('pointercancel', fin);
+        r.classList.remove('arrastrando'); document.body.classList.remove('ib-np-moviendo');
+        numerar(); ibNpValidar();
+      };
+      addEventListener('pointermove', mover);
+      addEventListener('pointerup', fin);
+      addEventListener('pointercancel', fin);
+    });
+    asa.addEventListener('keydown', e => {
+      if(e.key === 'ArrowUp' && r.previousElementSibling){ e.preventDefault(); reubicar(r, r.previousElementSibling); }
+      else if(e.key === 'ArrowDown' && r.nextElementSibling){ e.preventDefault(); reubicar(r, r.nextElementSibling.nextElementSibling); }
+      else return;
+      asa.focus(); numerar(); ibNpValidar();
+    });
     filas.appendChild(r);
+    numerar();
   };
   (v.destinos.length ? v.destinos : []).forEach(fila);
   el('ib-np-mas').addEventListener('click', () => { fila(); ibNpValidar(); });
