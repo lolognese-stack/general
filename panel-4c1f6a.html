@@ -2194,21 +2194,23 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 /* Alertas: ámbar (pedido +23 h sin cotizar, o seguimiento de cotización atrasado) y rojo (pedido +48 h). */
 [data-alerta="ambar"]{--ib-a:#F59E0B}
 [data-alerta="rojo"]{--ib-a:var(--danger)}
-.ib-item[data-color]::after{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--ib-c)}
+.ib-item[data-color]::after{content:"";position:absolute;left:5px;top:7px;bottom:7px;width:9px;border-left:3px solid var(--ib-c);border-radius:8px 0 0 8px;pointer-events:none}
 /* Cotizado: línea punteada (está en seguimiento). */
-.ib-item[data-color="cotizado"]::after,.card[data-color="cotizado"]::before,.ib-ficha-cab[data-color="cotizado"]::before,.drawer-estado[data-color="cotizado"]::before{background:repeating-linear-gradient(to bottom,var(--ib-c) 0 5px,transparent 5px 9px)}
+.card[data-color="cotizado"]::before,.ib-ficha-cab[data-color="cotizado"]::before,.drawer-estado[data-color="cotizado"]::before{background:repeating-linear-gradient(to bottom,var(--ib-c) 0 5px,transparent 5px 9px)}
 .ib-estado{font-weight:600;color:var(--ib-c)}
 .ib-item[data-color="compro"] .ib-estado,.ib-item[data-color="cotizado"] .ib-estado,.ib-item[data-color="nuevo"] .ib-estado{color:var(--ink-2)}
-.ib-item[data-alerta]{background:color-mix(in srgb,var(--ib-a) 8%,var(--surface))}
-.ib-item[data-alerta]::after{width:5px;background:var(--ib-a);animation:ib-alerta 1.6s ease-in-out infinite}
-.ib-item[data-alerta][data-color="cotizado"]::after{background:repeating-linear-gradient(to bottom,var(--ib-a) 0 5px,transparent 5px 9px)}
+.ib-item[data-color="cotizado"]::after{border-left-style:dashed}
+/* Alerta: solo la línea (sin teñir el chat): más gruesa, del color de la alerta y latiendo. */
+.ib-item[data-alerta]::after{border-left-width:4px;border-left-color:var(--ib-a);animation:ib-alerta-l 1.6s ease-in-out infinite}
 .ib-item[data-alerta="rojo"]::after{animation-duration:.9s}
+@keyframes ib-alerta-l{0%,100%{opacity:1;filter:drop-shadow(0 0 0 transparent)}50%{opacity:.5;filter:drop-shadow(0 0 4px var(--ib-a))}}
 .ib-alerta-tag{display:inline-flex;align-items:center;gap:4px;color:var(--ib-a);font-weight:700}
 [data-alerta="ambar"] .ib-alerta-tag{color:color-mix(in srgb,#F59E0B 70%,var(--ink))}
 .ib-alerta-tag svg{animation:ib-reloj 1.6s ease-in-out infinite;transform-origin:50% 50%}
 @keyframes ib-alerta{0%,100%{box-shadow:0 0 0 0 transparent;opacity:1}50%{box-shadow:0 0 10px 3px color-mix(in srgb,var(--ib-a) 55%,transparent);opacity:.55}}
 @keyframes ib-reloj{0%,70%,100%{transform:rotate(0)}76%{transform:rotate(-14deg)}84%{transform:rotate(12deg)}92%{transform:rotate(-6deg)}}
 @media (prefers-reduced-motion:reduce){.ib-item[data-alerta]::after,.ib-alerta-tag svg,.card[data-alerta]::before{animation:none}}
+.ib-lista .ib-item{padding-left:20px}
 
 /* Pipeline: la franja de la tarjeta usa el mismo color del lead. */
 .card[data-color]::before{background:var(--ib-c)}
@@ -2229,7 +2231,7 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 .ib-ficha-cab .ib-estado{font-size:12px}
 .ib-score{margin-left:auto;font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--ink)}
 .ib-score small{font-size:11px;font-weight:600;color:var(--ink-3)}
-.ib-clave{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;margin:0 0 var(--s4)}
+.ib-clave{display:grid;grid-template-columns:1fr;gap:10px;margin:0 0 var(--s4)}
 .ib-clave div{min-width:0}
 .ib-clave .ib-ancho{grid-column:1/-1}
 .ib-clave span{display:block;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin-bottom:2px}
@@ -2240,6 +2242,8 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 .ib-chicos{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:0 0 var(--s4);font-size:12px;line-height:1.4}
 .ib-chicos dt{color:var(--ink-3)}
 .ib-chicos dd{margin:0;color:var(--ink-2);overflow-wrap:anywhere}
+.ib-ficha .ib-ficha-acc{flex-direction:column;align-items:stretch;gap:8px}
+.ib-ficha .ib-ficha-acc .btn{width:100%;justify-content:center;min-height:40px}
 .ib-desp{margin-top:var(--s4);border-top:1px solid var(--line)}
 .ib-desp>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:6px;padding:10px 0;font-size:13px;font-weight:600;color:var(--ink-2)}
 .ib-desp>summary::-webkit-details-marker{display:none}
