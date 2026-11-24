@@ -481,7 +481,24 @@ export async function agregarLinea(env, cotId, body, por) {
   const max = await env.DB.prepare(`SELECT COALESCE(MAX(orden), -1) + 1 AS o FROM ct_lineas WHERE cotizacion_id = ?`).bind(cotId).first();
   const base = { dia, orden: max.o, fecha: fechaDia(cot.fecha_inicio, dia) };
   let l;
-  if (body.tipo === 'manual') {
+  if (body.tipo === 'traslado') {
+    // Traslado o tren desde "+ Agregar": si el nombre es el de un servicio del tarifario, sale con su tarifa;
+    // si no, línea manual. Sin precio queda "falta el precio" y bloquea la aprobación hasta que se lo pongan.
+    const que = texto(body.que, 120);
+    if (!que) return json({ error: 'falta qué traslado o tren' }, 400);
+    const mod = String(body.modalidad || '').toUpperCase() === 'GRU' ? 'GRU' : 'PRI';
+    const pax = entero(body.pasajeros, 1, 60) || cot.pasajeros;
+    const norm = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    const servs = (await env.DB.prepare(`SELECT id, nombre, tipo FROM ct_servicios WHERE activo = 1 AND tipo IN ('traslado', 'tren')`).all()).results;
+    const s = servs.find((x) => norm(x.nombre) === norm(que));
+    const hayNeto = body.neto !== undefined && body.neto !== '';
+    const neto = hayNeto ? aCentavos(body.neto) : 0;
+    if (neto === null) return json({ error: 'el neto tiene que ser un número (USD)' }, 400);
+    if (s && !hayNeto) l = { ...base, tipo: s.tipo, servicio_id: s.id, descripcion: s.nombre, pasajeros: pax, modalidad: mod };
+    else l = { ...base, tipo: 'manual', descripcion: `${que} (${mod === 'PRI' ? 'privado' : 'compartido'})`.slice(0, 200), pasajeros: pax, modalidad: mod,
+      neto_cent: neto, venta_cent: 0, origen_precio: hayNeto ? 'manual' : 'pedido', sin_confirmar: hayNeto ? 0 : 1,
+      nota: hayNeto ? null : 'Falta el precio: ponelo con Editar para que se pueda aprobar.' };
+  } else if (body.tipo === 'manual') {
     const neto = aCentavos(body.neto ?? '');
     const desc = texto(body.descripcion, 200);
     if (!desc) return json({ error: 'falta la descripción' }, 400);

@@ -18649,7 +18649,12 @@ function agregarLineaDlg(dia) {
   if (!usuario()) { elegirSoy(); return; }
   const c = cot.cotizacion, p = cot.pedido;
   abrirDialogo(`<h3>Agregar al día ${dia}</h3>
-    <label>Qué<select name="tipo"><option value="servicio">Servicio del catálogo</option><option value="hotel">Hotel</option><option value="manual">Línea manual</option></select></label>
+    <label>Qué<select name="tipo"><option value="servicio">Servicio del catálogo</option><option value="traslado">Traslado o tren</option><option value="hotel">Hotel</option><option value="manual">Línea manual</option></select></label>
+    <div data-t="traslado" hidden><label>Traslado o tren<input name="que" list="ct-dlg-tras" maxlength="120" placeholder="Ej.: Hotel → estación de tren (Ollantaytambo)"></label>
+      <datalist id="ct-dlg-tras">${[...new Set([...(datos && datos.servicios || []).filter((s) => s.activo && ['traslado', 'tren'].includes(s.tipo)).map((s) => s.nombre), ...TRASLADOS_SUGERIDOS])].map((o) => `<option value="${esc(o)}">`).join('')}</datalist>
+      <div class="fila"><label>Modalidad<select name="modalidad_t"><option value="PRI">Privado</option><option value="GRU">Compartido</option></select></label>
+        <label>Neto total (USD, vacío = falta el precio)<input name="neto_t" inputmode="decimal"></label></div>
+      <p class="nota" style="margin:0">Si elegís uno del tarifario, toma su tarifa. Si no, queda marcado "falta el precio" hasta que lo cargues.</p></div>
     <div data-t="servicio"><label>Servicio<select name="servicio_id">${opcionesServicio(null)}</select></label></div>
     <div data-t="hotel" hidden><label>Hotel<select name="hotel_id">${opcionesHotel(null)}</select></label>
       <div class="fila"><label>Habitación<select name="habitacion"><option>DBL</option><option>SGL</option><option>TPL</option></select></label><label>Habitaciones<input name="unidades" type="number" min="1" value="1"></label></div>
@@ -18664,6 +18669,7 @@ function agregarLineaDlg(dia) {
       if (tipo === 'servicio') body.servicio_id = Number(f.servicio_id.value);
       if (tipo === 'hotel') Object.assign(body, { hotel_id: Number(f.hotel_id.value), habitacion: f.habitacion.value, unidades: Number(f.unidades.value), noches: Number(f.noches.value) });
       if (tipo === 'manual') Object.assign(body, { descripcion: f.descripcion.value, neto: f.neto.value, venta: f.venta.value });
+      if (tipo === 'traslado') { if (!f.que.value.trim()) return 'Escribí qué traslado o tren'; Object.assign(body, { que: f.que.value, modalidad: f.modalidad_t.value, neto: f.neto_t.value }); }
       cot = await api(`cotizaciones/${c.id}/lineas`, { method: 'POST', body }); dibujarCotizacion(); toast('Agregado');
     });
   const f = $('#ct-dlg-f');
