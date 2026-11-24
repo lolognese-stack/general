@@ -2540,6 +2540,14 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 #view-cotizaciones .it-cab .link{margin-left:auto}
 #view-cotizaciones .it-item{display:grid;grid-template-columns:96px 1fr auto;gap:4px 14px;padding:10px 14px;border-top:1px solid var(--line)}
 #view-cotizaciones .it-item:first-of-type{border-top:0}
+/* Actividades que se arrastran dentro del día (manija a la izquierda). */
+#view-cotizaciones .it-item.mov{grid-template-columns:28px 96px 1fr auto;padding-left:6px;background:var(--paper)}
+#view-cotizaciones .it-asa{display:grid;place-items:center;width:28px;height:34px;border:none!important;background:none!important;padding:0!important;min-height:0!important;color:var(--ink-3)!important;border-radius:6px;cursor:grab;touch-action:none}
+#view-cotizaciones .it-asa:hover{color:var(--ink)!important;background:var(--surface-sunk)!important}
+#view-cotizaciones .it-asa:focus-visible{outline:2px solid var(--glacier);outline-offset:1px}
+#view-cotizaciones .it-item.arrastrando{position:relative;z-index:2;box-shadow:0 8px 24px rgba(0,0,0,.18);outline:1px solid var(--brand)}
+#view-cotizaciones .it-item.arrastrando .it-asa{cursor:grabbing}
+body.it-moviendo{user-select:none;cursor:grabbing}
 #view-cotizaciones .it-hora{font-variant-numeric:tabular-nums;font-weight:600;color:var(--ink)}
 #view-cotizaciones .it-hora.vacia{color:var(--muted);font-weight:400}
 #view-cotizaciones .it-que b{font-size:.95rem}
@@ -2549,7 +2557,7 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 #view-cotizaciones #ct-raiz .it-acc button{padding:2px 8px;font-size:.8rem}
 #view-cotizaciones .it-item.err{background:color-mix(in srgb,var(--danger) 7%,transparent)}
 #view-cotizaciones .it-libre{padding:10px 14px;color:var(--muted);font-size:.88rem}
-@media (max-width:640px){#view-cotizaciones .it-item{grid-template-columns:1fr}#view-cotizaciones .it-acc{justify-content:flex-start}}
+@media (max-width:640px){#view-cotizaciones .it-item{grid-template-columns:1fr}#view-cotizaciones .it-item.mov{grid-template-columns:28px 1fr}#view-cotizaciones .it-item.mov>:not(.it-asa){grid-column:2}#view-cotizaciones .it-acc{justify-content:flex-start}}
 #view-cotizaciones .cab-ped{display:flex;gap:16px;justify-content:space-between;flex-wrap:wrap}
 #view-cotizaciones .cab-ped .meta{color:var(--ink2);font-size:.88rem}
 #view-cotizaciones .acc-ped{display:flex;flex-direction:column;gap:6px;align-items:flex-start;min-width:200px}
@@ -18240,6 +18248,66 @@ function destinoDelDia(destinos, d) {
 let vistaCot = (() => { try { return localStorage.getItem('ct_vista_cot') || 'precios'; } catch { return 'precios'; } })();
 const minutosDe = (h) => { const m = String(h || '').match(/(\d{1,2})\s*[:.h]\s*(\d{2})/); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
 const TIPO_IT = { tour: 'Tour', traslado: 'Traslado', tren: 'Tren', entrada: 'Entrada', paquete: 'Paquete', manual: 'Actividad', hotel: 'Hotel' };
+// Arrastrar actividades dentro de un día. Se guarda al soltar (o con cada flecha) y se redibuja con lo que devuelve el servidor.
+function enlazarOrdenDia(lista, cotId) {
+  const dia = Number(lista.dataset.dia);
+  const movibles = () => [...lista.querySelectorAll('.it-item.mov')];
+  const quieto = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reubicar = (r, antes) => {
+    const tops = new Map([...lista.children].map((x) => [x, x.getBoundingClientRect().top]));
+    lista.insertBefore(r, antes);
+    if (quieto) return;
+    for (const x of lista.children) {
+      const dy = x === r ? 0 : tops.get(x) - x.getBoundingClientRect().top;
+      if (dy) x.animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }], { duration: 160, easing: 'cubic-bezier(.2,.8,.2,1)' });
+    }
+  };
+  const guardar = async (r, antes) => {
+    const ids = movibles().map((x) => Number(x.dataset.lin));
+    if (ids.join() === antes) return;
+    if (!usuario()) { elegirSoy(); dibujarCotizacion(); return; }
+    try {
+      cot = await api(`cotizaciones/${cotId}/orden`, { method: 'POST', body: { dia, ids } });
+      dibujarCotizacion();
+      const x = document.getElementById('ct-it-' + r.dataset.lin);
+      if (x) { x.classList.add('resaltada'); setTimeout(() => x.classList.remove('resaltada'), 1500); const a = x.querySelector('.it-asa'); if (a && r.contains(document.activeElement)) a.focus(); }
+    } catch (e) { toast('No se pudo guardar el orden: ' + e.message); dibujarCotizacion(); }
+  };
+  for (const r of movibles()) {
+    const asa = r.querySelector('.it-asa');
+    asa.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      const antes = movibles().map((x) => x.dataset.lin).join();
+      r.classList.add('arrastrando'); document.body.classList.add('it-moviendo');
+      // En window: al mover el bloque en el DOM el navegador suelta la captura del puntero.
+      const mover = (ev) => {
+        if (ev.pointerId !== e.pointerId) return;
+        const y = ev.clientY - lista.getBoundingClientRect().top + lista.offsetTop;
+        const sig = movibles().filter((x) => x !== r).find((x) => y < x.offsetTop + x.offsetHeight / 2) || null;
+        const destino = sig || lista.querySelector('.it-item:not(.mov)');   // nunca después del hotel
+        if (destino !== r.nextElementSibling) reubicar(r, destino);
+      };
+      const fin = (ev) => {
+        if (ev.pointerId !== e.pointerId) return;
+        removeEventListener('pointermove', mover); removeEventListener('pointerup', fin); removeEventListener('pointercancel', fin);
+        r.classList.remove('arrastrando'); document.body.classList.remove('it-moviendo');
+        guardar(r, antes);
+      };
+      addEventListener('pointermove', mover); addEventListener('pointerup', fin); addEventListener('pointercancel', fin);
+    });
+    asa.addEventListener('keydown', (e) => {
+      const ms = movibles(), i = ms.indexOf(r);
+      const antes = ms.map((x) => x.dataset.lin).join();
+      if (e.key === 'ArrowUp' && i > 0) reubicar(r, ms[i - 1]);
+      else if (e.key === 'ArrowDown' && i < ms.length - 1) reubicar(r, ms[i + 1].nextElementSibling);
+      else return;
+      e.preventDefault(); asa.focus();
+      guardar(r, antes);
+    });
+  }
+}
+
 function itinerarioHtml(nDias, porDia, ed) {
   const p = cot.pedido, lineas = cot.lineas;
   const servicio = (id) => (datos && datos.servicios || []).find((x) => x.id === id);
@@ -18255,7 +18323,9 @@ function itinerarioHtml(nDias, porDia, ed) {
       : [TIPO_IT[l.tipo] || l.tipo, mod(l.modalidad), s && s.duracion ? s.duracion : '', `${l.pasajeros} pax`].filter(Boolean).map(esc).join(' · ');
     const inc = !hotel && s && s.incluye ? `<span class="it-inc">Incluye: ${esc(s.incluye)}</span>` : '';
     const marcas = `${l.origen_precio === 'ilustrativa' ? ' <span class="prueba">ILUSTRACIÓN</span>' : l.es_ilustrativa ? ' <span class="prueba">EJEMPLO</span>' : ''}${l.sin_confirmar ? (l.origen_precio === 'pedido' ? ' <span class="chip pisado">falta el precio</span>' : ' <span class="chip pisado">precio web sin confirmar</span>') : ''}`;
-    return `<div class="it-item ${l.problema ? 'err' : ''}" id="ct-it-${l.id}">
+    const mov = ed && !hotel;
+    return `<div class="it-item ${l.problema ? 'err' : ''} ${mov ? 'mov' : ''}" id="ct-it-${l.id}" data-lin="${l.id}">
+      ${mov ? `<button type="button" class="it-asa" aria-label="Mover en el día (flechas arriba y abajo)" title="Arrastrá para cambiar el orden en el día"><svg width="12" height="18" viewBox="0 0 12 18" aria-hidden="true" fill="currentColor"><circle cx="3" cy="3" r="1.6"/><circle cx="9" cy="3" r="1.6"/><circle cx="3" cy="9" r="1.6"/><circle cx="9" cy="9" r="1.6"/><circle cx="3" cy="15" r="1.6"/><circle cx="9" cy="15" r="1.6"/></svg></button>` : ''}
       <div class="it-hora ${l.horario ? '' : 'vacia'}">${l.horario ? esc(l.horario) : (hotel ? 'Noche' : 'Sin horario')}</div>
       <div class="it-que"><b>${esc(l.descripcion)}</b>${marcas}<span class="it-sub">${sub}</span>${inc}
         ${l.nota ? `<span class="it-sub">Nota: ${esc(l.nota)}</span>` : ''}${l.problema ? `<span class="it-sub err">${esc(l.problema)}</span>` : ''}</div>
@@ -18264,22 +18334,17 @@ function itinerarioHtml(nDias, porDia, ed) {
         <button type="button" class="chico" data-ed-lin="${l.id}">Cambiar</button>` : ''}</div></div>`;
   };
   let html = `<div class="it-resumen"><b>${esc(p.nombre)}</b><span>${p.pasajeros} pasajeros</span><span>${p.fecha_inicio ? `${fecha(p.fecha_inicio)} al ${fecha(p.fecha_fin)}` : 'sin fechas'}</span><span>${nDias} días</span><div class="it-ruta">${ruta}</div></div>
-    ${ed ? '<p class="nota" style="margin:0 0 10px">Movés una actividad de día con ↑ ↓; con <b>Cambiar</b> editás horario, modalidad, hotel, pasajeros o la quitás. <b>+ Agregar</b> suma algo a ese día. Los precios se recalculan solos (se ven en la vista Precios).</p>' : '<p class="nota" style="margin:0 0 10px">Esta versión no se edita: para cambiar algo, creá una versión nueva.</p>'}`;
+    ${ed ? '<p class="nota" style="margin:0 0 10px">Cambiás el orden dentro del día arrastrando desde la manija ⠿ (o con las flechas del teclado); la pasás a otro día con ↑ Día / ↓ Día; con <b>Cambiar</b> editás horario, modalidad, hotel, pasajeros o la quitás. <b>+ Agregar</b> suma algo a ese día. Los precios se recalculan solos (se ven en la vista Precios).</p>' : '<p class="nota" style="margin:0 0 10px">Esta versión no se edita: para cambiar algo, creá una versión nueva.</p>'}`;
   for (let d = 1; d <= nDias; d++) {
-    const ls = (porDia.get(d) || []).slice().sort((a, b) => {
-      if ((a.tipo === 'hotel') !== (b.tipo === 'hotel')) return a.tipo === 'hotel' ? 1 : -1;   // el hotel, al final del día
-      const ma = minutosDe(a.horario), mb = minutosDe(b.horario);
-      if (ma === null && mb === null) return 0;
-      if (ma === null) return 1; if (mb === null) return -1;
-      return ma - mb;
-    });
+    // Orden del día: el que se guardó (se cambia arrastrando); el hotel, al final.
+    const ls = (porDia.get(d) || []).slice().sort((a, b) => ((a.tipo === 'hotel') - (b.tipo === 'hotel')) || ((a.orden ?? 0) - (b.orden ?? 0)) || (a.id - b.id));
     const dd = destinoDelDia(p.destinos, d);
     const duerme = hoteles.find((h) => d >= h.dia && d < h.dia + (h.cantidad || 1));
     html += `<section class="it-dia"><div class="it-cab"><span class="it-n">Día ${d}</span><span class="nota" style="margin:0">${diaTxt(fechaDe(d))}</span>
         ${dd ? `<span class="chip">${esc(dd.txt)}</span>` : ''}
         <span class="it-duerme">${duerme ? 'Duerme en ' + esc(duerme.descripcion) : d === nDias ? 'Último día · salida' : dd && dd.duerme ? '<span class="err">Sin hotel cargado para esta noche</span>' : ''}</span>
         ${ed ? `<button type="button" class="link" data-mas="${d}">+ Agregar</button>` : ''}</div>
-      ${ls.length ? ls.map((l) => item(l, d)).join('') : '<div class="it-libre">Día libre</div>'}</section>`;
+      ${ls.length ? `<div class="it-lista" data-dia="${d}">${ls.map((l) => item(l, d)).join('')}</div>` : '<div class="it-libre">Día libre</div>'}</section>`;
   }
   const fuera = lineas.filter((l) => !l.dia || l.dia > nDias);
   if (fuera.length) html += `<p class="err">Fuera de los días del viaje: ${fuera.map((l) => `${esc(l.descripcion)} (día ${l.dia}) ${ed ? `<button type="button" class="link" data-ed-lin="${l.id}">Cambiar</button>` : ''}`).join(', ')}</p>`;
@@ -18427,6 +18492,7 @@ function dibujarCotizacion() {
     try { cot = await api(`cotizaciones/${c.id}/lineas/${id}`, { method: 'PUT', body: { dia } }); dibujarCotizacion(); const x = document.getElementById('ct-it-' + id); if (x) { x.scrollIntoView({ block: 'center' }); x.classList.add('resaltada'); setTimeout(() => x.classList.remove('resaltada'), 2500); } toast('Pasó al día ' + dia); }
     catch (x) { alert(x.message); b.disabled = false; }
   }));
+  RAIZ().querySelectorAll('.it-lista').forEach((lista) => enlazarOrdenDia(lista, c.id));
   RAIZ().querySelectorAll('[data-ir-lin]').forEach((b) => b.addEventListener('click', () => irALinea(Number(b.dataset.irLin))));
   RAIZ().querySelectorAll('[data-ed-falta]').forEach((b) => b.addEventListener('click', () => editarLineaDlg(cot.lineas.find((l) => l.id == b.dataset.edFalta))));
   if ($('#ct-gen-prop')) $('#ct-gen-prop').addEventListener('click', async () => {

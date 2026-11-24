@@ -540,6 +540,22 @@ async function tarifaDesdeLinea(env, l, { neto, venta }, por, motivo) {
   return { id: j.id, es_venta: esVenta, texto: `${padre.nombre} · ${esVenta ? 'precio final' : 'neto'} ${unidad}`, antes: actual ? `${actual.moneda} ${(actual.neto_cent / 100).toFixed(2)}` : null, precio: `USD ${(unit / 100).toFixed(2)}` };
 }
 
+// Orden de las actividades dentro de un día (lo que se arrastra en el itinerario). body = { dia, ids: [lineas en orden] }.
+// Solo cambia `orden`; el hotel del día queda al final. La propuesta y la vista leen por (dia, orden).
+export async function ordenarLineas(env, cotId, body) {
+  const { err } = await cotEditable(env, cotId);
+  if (err) return err;
+  const dia = entero(body.dia, 1, 120);
+  const ids = (Array.isArray(body.ids) ? body.ids : []).map(Number).filter((n) => Number.isInteger(n) && n > 0).slice(0, 60);
+  if (!dia || !ids.length) return json({ error: 'falta el día o el orden' }, 400);
+  const del = (await env.DB.prepare(`SELECT id, tipo FROM ct_lineas WHERE cotizacion_id = ? AND dia = ?`).bind(cotId, dia).all()).results;
+  const delDia = new Set(del.map((l) => l.id));
+  if (ids.some((id) => !delDia.has(id))) return json({ error: 'Alguna actividad ya no está en ese día: recargá' }, 409);
+  const resto = del.filter((l) => !ids.includes(l.id)).sort((a, b) => (a.tipo === 'hotel') - (b.tipo === 'hotel')).map((l) => l.id);
+  await env.DB.batch([...ids, ...resto].map((id, i) => env.DB.prepare(`UPDATE ct_lineas SET orden = ? WHERE id = ? AND cotizacion_id = ?`).bind(i, id, cotId)));
+  return json(await vistaCotizacion(env, cotId));
+}
+
 export async function editarLinea(env, cotId, lid, body, por) {
   const { cot, err } = await cotEditable(env, cotId);
   if (err) return err;

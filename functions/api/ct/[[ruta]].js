@@ -14,6 +14,7 @@
 //   GET    /api/ct/pedidos/:id/chat            chat del cliente (sin notas internas), solo lectura
 //   GET|PUT /api/ct/cotizaciones/:id          ver (recalcula) / { notas_alvaro, usar_config_actual }
 //   POST   /api/ct/cotizaciones/:id/lineas     agregar línea   PUT|DELETE /api/ct/cotizaciones/:id/lineas/:lid
+//   POST   /api/ct/cotizaciones/:id/orden      orden de las actividades de un día { dia, ids }
 //   POST   /api/ct/cotizaciones/:id/nueva-version          GET /api/ct/cotizaciones/:id/cambios
 //   POST   /api/ct/cotizaciones/:id/revision   "Pasar a Álvaro": { revisor, nota, urgente } -> { link, mensaje para WhatsApp }
 //   GET    /api/ct/cotizaciones/:id/propuesta  { slug, propuesta_json, texto_armador } para la propuesta web (solo aprobadas)
@@ -26,7 +27,7 @@ import {
 } from '../../_lib/tarifario.js';
 import {
   listarPedidos, pedidosDe, crearPedido, crearPedidoExcel, verPedido, editarPedido, borrarPedido, estadoPedido, rearmar, nuevaVersion,
-  vistaCotizacion, editarCotizacion, agregarLinea, editarLinea, borrarLinea, cambiosCotizacion, chatDePedido,
+  vistaCotizacion, editarCotizacion, agregarLinea, editarLinea, borrarLinea, cambiosCotizacion, chatDePedido, ordenarLineas,
 } from '../../_lib/ct-cotizaciones.js';
 import { mandarARevision, aprobar, pedirCambios } from '../../_lib/ct-revision.js';
 import { paraPropuesta } from '../../_lib/ct-propuesta.js';
@@ -339,6 +340,7 @@ export async function onRequest({ request, env, params }) {
       if (sub === 'lineas' && !subId && m === 'POST') return agregarLinea(env, id, body, por);
       if (sub === 'lineas' && subId && m === 'PUT') return editarLinea(env, id, subId, body, por);
       if (sub === 'lineas' && subId && m === 'DELETE') return borrarLinea(env, id, subId, por);
+      if (sub === 'orden' && m === 'POST') return ordenarLineas(env, id, body);
       if (sub === 'nueva-version' && m === 'POST') return nuevaVersion(env, id, por);
       if (sub === 'cambios' && m === 'GET') return cambiosCotizacion(env, id);
       if (sub === 'revision' && m === 'POST') return soloEquipo(rol) || mandarARevision(env, id, body, por, { origen: new URL(request.url).origin });
