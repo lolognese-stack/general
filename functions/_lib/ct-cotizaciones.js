@@ -168,11 +168,44 @@ export async function vistaCotizacion(env, cotId, { catalogo = null } = {}) {
     const ap = await env.DB.prepare(`SELECT id FROM ct_cotizaciones WHERE pedido_id = ? AND id != ? AND aprobada_en IS NOT NULL ORDER BY version DESC LIMIT 1`).bind(cot.pedido_id, cotId).first();
     if (ap) chico = cambioChico(lineas, pendientes, (await env.DB.prepare(`SELECT * FROM ct_lineas WHERE cotizacion_id = ?`).bind(ap.id).all()).results);
   }
+  lineas = await conFotos(env, lineas);
   return {
     cotizacion: { ...publica, total_neto_cent: tot.neto_cent, total_venta_cent: tot.venta_cent, usa_prueba: prueba, problemas: tot.problemas, config: config, avisos: parse(cot.avisos, []), editable, tiene_link: !!token_hash },
     pedido, lineas, totales: tot,
     pendientes, cambio_chico: chico,
   };
+}
+
+// Foto interna de cada línea (solo para el equipo, en Itinerario y Precios): hotel y traslado, siempre la misma;
+// actividades, la del día de la web o la primera de la ficha del tour (vía la línea o su servicio). Sin foto: null.
+export const FOTO_HOTEL = '/p-assets/ct-hotel.jpg', FOTO_TRASLADO = '/p-assets/ct-traslado.jpg';
+async function conFotos(env, lineas) {
+  const otras = lineas.filter((l) => l.tipo !== 'hotel' && l.tipo !== 'traslado');
+  if (!otras.length) return lineas.map((l) => ({ ...l, foto: l.tipo === 'hotel' ? FOTO_HOTEL : FOTO_TRASLADO }));
+  const sIds = [...new Set(otras.map((l) => l.servicio_id).filter(Boolean))];
+  const webDe = new Map();
+  if (sIds.length) {
+    const r = await env.DB.prepare(`SELECT id, web_id FROM ct_servicios WHERE id IN (${sIds.map(() => '?').join(',')})`).bind(...sIds).all();
+    for (const x of r.results) if (x.web_id) webDe.set(x.id, x.web_id);
+  }
+  const wId = (l) => l.web_producto_id || webDe.get(l.servicio_id) || null;
+  const wIds = [...new Set(otras.map(wId).filter(Boolean))];
+  const fichas = new Map(), dias = new Map();
+  if (wIds.length) {
+    const q = wIds.map(() => '?').join(',');
+    const [f, d] = await env.DB.batch([
+      env.DB.prepare(`SELECT id, fotos FROM ct_web_productos WHERE id IN (${q})`).bind(...wIds),
+      env.DB.prepare(`SELECT producto_id, dia, foto FROM ct_web_dias WHERE producto_id IN (${q}) AND foto IS NOT NULL`).bind(...wIds),
+    ]);
+    for (const x of f.results) { const fs = parse(x.fotos, []).filter((u) => /^https:\/\//.test(u)); if (fs.length) fichas.set(x.id, fs[0]); }
+    for (const x of d.results) if (/^https:\/\//.test(x.foto || '')) dias.set(`${x.producto_id}|${x.dia}`, x.foto);
+  }
+  return lineas.map((l) => {
+    if (l.tipo === 'hotel') return { ...l, foto: FOTO_HOTEL };
+    if (l.tipo === 'traslado') return { ...l, foto: FOTO_TRASLADO };
+    const w = wId(l);
+    return { ...l, foto: (w && ((l.web_dia && dias.get(`${w}|${l.web_dia}`)) || fichas.get(w))) || null };
+  });
 }
 
 async function crearCotizacion(env, pedido, por, { version = 1, lineas = null, catalogo = null, extra = {} } = {}) {
