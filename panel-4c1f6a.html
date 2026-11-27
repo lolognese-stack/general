@@ -2632,6 +2632,37 @@ body.ob-weekly .view{padding:var(--s5) var(--s6)}
 #view-cotizaciones .ct-vistas{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
 #view-cotizaciones #ct-raiz .ct-vistas button{border:0;border-radius:0;background:transparent;padding:5px 12px;font:inherit;font-size:.85rem;cursor:pointer;color:var(--ink2)}
 #view-cotizaciones #ct-raiz .ct-vistas button[aria-pressed="true"]{background:var(--ink);color:var(--paper);font-weight:600}
+#view-cotizaciones .xl-barra{margin:0 0 8px;align-items:baseline}
+#view-cotizaciones .xl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:4px;background:var(--paper);margin:0 0 12px}
+#view-cotizaciones table.xl{border-collapse:collapse;width:100%;min-width:1060px;table-layout:fixed;font-size:.84rem;font-variant-numeric:tabular-nums}
+#view-cotizaciones table.xl th,#view-cotizaciones table.xl td{border:1px solid var(--line);padding:0;height:30px;vertical-align:middle;text-align:left}
+#view-cotizaciones table.xl thead th{position:sticky;top:0;z-index:1;background:var(--surface-sunk);font-size:.7rem;font-weight:700;letter-spacing:.04em;color:var(--ink2);padding:6px 8px;text-transform:none}
+#view-cotizaciones table.xl .xl-n{text-align:right}
+#view-cotizaciones table.xl .xl-c{text-align:center}
+#view-cotizaciones table.xl td.xl-c,#view-cotizaciones table.xl td.xl-gris,#view-cotizaciones table.xl .xl-ro,#view-cotizaciones table.xl .xl-sub td,#view-cotizaciones table.xl .xl-tot td,#view-cotizaciones table.xl .xl-sec td{padding:0 8px}
+#view-cotizaciones table.xl .xl-gris{color:var(--muted)}
+#view-cotizaciones table.xl .xl-dia{font-weight:700;padding:4px 8px;background:var(--surface-sunk);vertical-align:top;white-space:nowrap}
+#view-cotizaciones table.xl .xl-dia.err{color:var(--danger)}
+#view-cotizaciones table.xl .xl-mas{display:block;margin-top:2px;font-weight:400;font-size:1rem;line-height:1;padding:2px 0}
+#view-cotizaciones table.xl .xl-in{display:block;width:100%;height:30px;box-sizing:border-box;border:0;border-radius:0;background:transparent;padding:0 8px;font:inherit;color:var(--ink);margin:0;min-width:0}
+#view-cotizaciones table.xl select.xl-in{padding:0 4px;cursor:pointer}
+#view-cotizaciones table.xl .xl-in:hover{background:var(--surface-sunk)}
+#view-cotizaciones table.xl .xl-in:focus{outline:2px solid var(--brand);outline-offset:-2px;background:var(--paper)}
+#view-cotizaciones table.xl .xl-num{text-align:right}
+#view-cotizaciones table.xl .xl-in::placeholder{color:var(--muted);font-style:italic}
+#view-cotizaciones table.xl .xl-guardando{opacity:.5}
+#view-cotizaciones table.xl td.xl-n{position:relative}
+#view-cotizaciones table.xl .xl-mano,#view-cotizaciones table.xl .xl-falta{position:absolute;top:0;left:0;width:0;height:0;border-style:solid;border-width:7px 7px 0 0;border-color:var(--brand) transparent transparent transparent}
+#view-cotizaciones table.xl .xl-falta{border-color:var(--danger) transparent transparent transparent}
+#view-cotizaciones table.xl tr.xl-err td{background:color-mix(in srgb, var(--danger) 8%, transparent)}
+#view-cotizaciones table.xl .xl-acc{text-align:center}
+#view-cotizaciones table.xl .xl-acc .link{padding:0 6px;font-size:1rem}
+#view-cotizaciones table.xl .xl-sec td{font-weight:700;background:var(--surface-sunk);font-size:.74rem;letter-spacing:.04em}
+#view-cotizaciones table.xl .xl-sep td{border-left:0;border-right:0;height:10px}
+#view-cotizaciones table.xl .xl-sub td{font-size:.68rem;font-weight:700;letter-spacing:.04em;color:var(--muted);border-top:0}
+#view-cotizaciones table.xl .xl-tot td{font-weight:600}
+#view-cotizaciones table.xl .xl-gran td{font-weight:700;background:color-mix(in srgb, var(--brand) 12%, transparent)}
+#view-cotizaciones table.xl .xl-menor td{font-weight:400;color:var(--ink2)}
 #view-cotizaciones .it-resumen{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;margin:0 0 12px;padding:12px 14px;border:1px solid var(--line);border-radius:6px;background:var(--paper)}
 #view-cotizaciones .it-resumen b{font-size:1rem}
 #view-cotizaciones .it-ruta{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
@@ -18452,7 +18483,7 @@ function destinoDelDia(destinos, d) {
 
 // Dos vistas de la cotización: "precios" (la tabla de siempre) e "itinerario" (día por día, sin precios,
 // para leer y corregir cómo quedó armado el viaje). Se recuerda por navegador.
-let vistaCot = 'itinerario';   // al abrir un pedido arranca siempre en Itinerario; Precios es un toque
+let vistaCot = 'itinerario';   // al abrir un pedido arranca siempre en Itinerario; Precios y Excel son un toque
 const minutosDe = (h) => { const m = String(h || '').match(/(\d{1,2})\s*[:.h]\s*(\d{2})/); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
 const TIPO_IT = { tour: 'Tour', traslado: 'Traslado', tren: 'Tren', entrada: 'Entrada', paquete: 'Paquete', manual: 'Actividad', hotel: 'Hotel' };
 // Arrastrar actividades dentro de un día. Se guarda al soltar (o con cada flecha) y se redibuja con lo que devuelve el servidor.
@@ -18561,6 +18592,267 @@ function itinerarioHtml(nDias, porDia, ed) {
   return html;
 }
 
+// Vista "Excel": la cotización con el formato de presupuesto de Álvaro (día, itinerario, duración, servicio, horario,
+// precio y ganancia por pasajero, totales solo tours / solo hotel). Las celdas se editan ahí y guardan al salir
+// (mismo PUT que "Editar línea"). Se baja como .xlsx con fórmulas o se copia para pegar en Google Sheets.
+const XL_MOD = { PRI: 'PRIVADO', GRU: 'GRUPAL' };
+const xlOrden = (a, b) => ((a.dia || 999) - (b.dia || 999)) || ((a.orden ?? 0) - (b.orden ?? 0)) || (a.id - b.id);
+function xlModelo(nDias, porDia) {
+  const p = cot.pedido;
+  const servicio = (id) => (datos && datos.servicios || []).find((x) => x.id === id);
+  const pax = Math.max(1, Number(p.pasajeros) || 1);
+  const fila = (l) => {
+    const hotel = l.tipo === 'hotel';
+    const div = hotel ? pax : Math.max(1, Number(l.pasajeros) || 1);
+    // Precio final sin ganancia conocida (neto = venta y nadie lo tocó): la ganancia queda en blanco, no en cero.
+    const g = l.precio_es_venta && !l.pisado_neto && l.neto_cent === l.venta_cent ? null : l.venta_cent - l.neto_cent;
+    const s = l.servicio_id ? servicio(l.servicio_id) : null;
+    return { l, hotel, div, precio: Math.round(l.venta_cent / div), ganancia: g == null ? null : Math.round(g / div), ganancia_total: g,
+      dur: hotel ? `${l.cantidad} ${l.cantidad === 1 ? 'noche' : 'noches'}` : (s && s.duracion) || '',
+      mod: XL_MOD[l.modalidad] || '' };
+  };
+  const dias = [];
+  for (let d = 1; d <= nDias; d++) dias.push({ d, filas: (porDia.get(d) || []).filter((l) => !['hotel', 'entrada'].includes(l.tipo)).sort(xlOrden).map(fila) });
+  const fuera = cot.lineas.filter((l) => !['hotel', 'entrada'].includes(l.tipo) && (!l.dia || l.dia > nDias)).sort(xlOrden).map(fila);
+  const entradas = cot.lineas.filter((l) => l.tipo === 'entrada').sort(xlOrden).map(fila);
+  const hoteles = cot.lineas.filter((l) => l.tipo === 'hotel').sort(xlOrden).map(fila);
+  const suma = (fs, k) => fs.reduce((s, f) => s + (f[k] || 0), 0);
+  const tours = [...dias.flatMap((x) => x.filas), ...fuera, ...entradas];
+  return { pax, dias, fuera, entradas, hoteles,
+    tours_cent: tours.reduce((s, f) => s + f.l.venta_cent, 0), tours_g: suma(tours, 'ganancia_total'),
+    hotel_cent: hoteles.reduce((s, f) => s + f.l.venta_cent, 0), hotel_g: suma(hoteles, 'ganancia_total'),
+    sin_ganancia: [...tours, ...hoteles].some((f) => f.ganancia == null && f.l.venta_cent > 0) };
+}
+const xlDia = (d) => 'DÍA ' + String(d).padStart(2, '0');
+const xlNum = (c) => c == null ? '' : (c / 100).toFixed(2);
+const xlMonto = (c) => c == null ? '' : (c / 100).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function excelHtml(nDias, porDia, ed) {
+  const p = cot.pedido, c = cot.cotizacion, t = cot.totales;
+  const m = xlModelo(nDias, porDia);
+  const inp = (f, k, val, cls, extra = '') => ed
+    ? `<input class="xl-in ${cls || ''}" data-cell="${f.l.id}:${k}" data-col="${k}" data-lin="${f.l.id}" value="${esc(val)}" data-orig="${esc(val)}" ${extra} aria-label="${esc(f.l.descripcion)} · ${k}">`
+    : `<span class="xl-ro ${cls || ''}">${esc(val)}</span>`;
+  const sel = (f) => ed
+    ? `<select class="xl-in" data-cell="${f.l.id}:mod" data-col="mod" data-lin="${f.l.id}" aria-label="${esc(f.l.descripcion)} · servicio">${[['', ''], ['PRI', 'PRIVADO'], ['GRU', 'GRUPAL']].map(([k, n]) => `<option value="${k}" ${k === (f.l.modalidad || '') ? 'selected' : ''}>${n}</option>`).join('')}</select>`
+    : `<span class="xl-ro">${f.mod}</span>`;
+  const marca = (l) => `${l.pisado_neto || l.pisado_venta ? '<i class="xl-mano" title="Precio cambiado a mano"></i>' : ''}${l.origen_precio === 'ilustrativa' ? '<i class="xl-falta" title="Ilustración: hay que ponerle precio"></i>' : l.sin_confirmar ? '<i class="xl-falta" title="Precio sin confirmar"></i>' : ''}`;
+  const filaHtml = (f, nCell) => `<tr class="${f.l.problema ? 'xl-err' : ''}" ${f.l.problema ? `title="${esc(f.l.problema)}"` : ''}>${nCell}
+      <td>${inp(f, 'desc', f.l.descripcion, 'xl-txt')}</td>
+      <td class="xl-gris">${esc(f.dur)}</td>
+      <td>${f.hotel ? '' : sel(f)}</td>
+      <td>${f.hotel ? '' : inp(f, 'hora', f.l.horario || '', 'xl-txt', 'maxlength="60" placeholder="—"')}</td>
+      <td class="xl-c">${f.div}</td>
+      <td class="xl-n">${marca(f.l)}${inp(f, 'precio', xlNum(f.precio), 'xl-num', 'inputmode="decimal"')}</td>
+      <td class="xl-n">${inp(f, 'gan', f.ganancia == null ? '' : xlNum(f.ganancia), 'xl-num', `inputmode="decimal" ${f.ganancia == null ? 'placeholder="sin definir"' : ''}`)}</td>
+      <td class="xl-n xl-gris">${xlMonto(f.l.venta_cent)}</td>
+      <td class="xl-acc">${ed ? `<button type="button" class="link" data-ed-lin="${f.l.id}" title="Más: día, pasajeros, hotel, nota, borrar" aria-label="Editar ${esc(f.l.descripcion)}">⋯</button>` : ''}</td></tr>`;
+  const masDia = (d) => ed ? `<button type="button" class="link xl-mas" data-mas="${d}" title="Agregar al día ${d}" aria-label="Agregar al día ${d}">+</button>` : '';
+  let filas = '';
+  for (const { d, filas: fs } of m.dias) {
+    if (!fs.length) { filas += `<tr class="xl-libre"><td class="xl-dia">${xlDia(d)}${masDia(d)}</td><td colspan="9" class="xl-gris">Libre</td></tr>`; continue; }
+    fs.forEach((f, i) => { filas += filaHtml(f, i ? '' : `<td class="xl-dia" rowspan="${fs.length}">${xlDia(d)}${masDia(d)}</td>`); });
+  }
+  if (m.fuera.length) m.fuera.forEach((f, i) => { filas += filaHtml(f, i ? '' : `<td class="xl-dia err" rowspan="${m.fuera.length}" title="Fuera de los días del viaje">FUERA</td>`); });
+  const extra = [...m.entradas, ...m.hoteles];
+  const extraHtml = extra.length ? `<tr class="xl-sec"><td></td><td colspan="9">PAGOS, INGRESOS Y HOTEL</td></tr>${extra.map((f) => filaHtml(f, '<td></td>')).join('')}` : '';
+  const tot = (txt, cent, g, cls = '') => `<tr class="xl-tot ${cls}"><td></td><td colspan="5">${txt}</td><td class="xl-n">${xlMonto(Math.round(cent / m.pax))}</td><td class="xl-n">${g == null ? '' : xlMonto(Math.round(g / m.pax))}</td><td class="xl-n">${xlMonto(cent)}</td><td></td></tr>`;
+  const totalCent = m.tours_cent + m.hotel_cent;
+  return `<div class="barra xl-barra"><b>${esc(p.nombre)}</b><span class="nota" style="margin:0">${p.pasajeros} pasajeros · ${nDias} días / ${nDias - 1} noches${p.fecha_inicio ? ` · ${fecha(p.fecha_inicio)} al ${fecha(p.fecha_fin)}` : ''}</span>
+      <span style="flex:1"></span>
+      <button type="button" class="chico prim" id="ct-xl-bajar">Descargar Excel</button>
+      <button type="button" class="chico" id="ct-xl-sheets" title="Copia la tabla y abre una hoja nueva de Google Sheets: pegás con Ctrl+V">Copiar para Google Sheets</button></div>
+    ${ed ? '<p class="nota" style="margin:0 0 8px">Tocá una celda y escribí: se guarda al salir (Enter baja a la fila siguiente, Tab pasa a la de al lado). Precio y ganancia van <b>por pasajero</b>, en dólares. <b>+</b> agrega algo al día; <b>⋯</b> abre el resto (día, pasajeros, hotel, nota, borrar).</p>' : '<p class="nota" style="margin:0 0 8px">Esta versión no se edita: para cambiar algo, creá una versión nueva.</p>'}
+    <div class="xl-wrap"><table class="xl" id="ct-xl"><colgroup><col style="width:72px"><col style="min-width:240px"><col style="width:120px"><col style="width:96px"><col style="width:150px"><col style="width:44px"><col style="width:104px"><col style="width:104px"><col style="width:104px"><col style="width:34px"></colgroup>
+      <thead><tr><th>N°</th><th>ITINERARIO</th><th>DURACIÓN</th><th>SERVICIO</th><th>HORARIO</th><th class="xl-c">PAX</th><th class="xl-n">PRECIO PAX</th><th class="xl-n">GANANCIA PAX</th><th class="xl-n">TOTAL</th><th></th></tr></thead>
+      <tbody>${filas}${extraHtml}
+        <tr class="xl-sep"><td colspan="10"></td></tr>
+        <tr class="xl-sub"><td></td><td colspan="5"></td><td class="xl-n">POR PASAJERO</td><td class="xl-n">GANANCIA</td><td class="xl-n">GRUPO</td><td></td></tr>
+        ${tot('PRECIO TOTAL SOLO TOURS', m.tours_cent, m.tours_g)}
+        ${m.hoteles.length ? tot('PRECIO TOTAL SOLO HOTEL', m.hotel_cent, m.hotel_g) : ''}
+        ${tot('PRECIO TOTAL TOURS Y HOTEL', totalCent, m.tours_g + m.hotel_g, 'xl-gran')}
+        ${tot(`CON FACTURA (+${c.config.igv_pct}% IGV)`, t.con_factura_cent, null, 'xl-menor')}
+        ${tot(`PAGO CON TARJETA (+${c.config.recargo_tarjeta_pct}%)`, t.con_tarjeta_cent, null, 'xl-menor')}
+      </tbody></table></div>
+    ${t.modo === 'paquete_web' && t.paquete_web_cent != null ? `<p class="aviso">Ojo: en esta cotización vale el <b>precio del paquete web</b> (${usd(t.paquete_web_cent)}), no la suma de las filas.</p>` : ''}
+    ${m.sin_ganancia ? '<p class="nota">Las celdas de ganancia vacías son precios finales sin costo cargado: escribí la ganancia y queda guardada en la línea.</p>' : ''}`;
+}
+
+// Lee "20", "20.5", "20,50", "1.544,00" o "US$ 1,544.00" → "1544.00" (o null si no es un número).
+function xlLeerMonto(s) {
+  let x = String(s || '').replace(/[^\d.,]/g, '');
+  if (!x) return null;
+  const pc = x.lastIndexOf(','), pp = x.lastIndexOf('.');
+  if (pc !== -1 && pp !== -1) x = pc > pp ? x.replace(/\./g, '').replace(',', '.') : x.replace(/,/g, '');   // el último separador es el decimal
+  else if (pc !== -1) x = /^\d{1,3}(,\d{3})+$/.test(x) ? x.replace(/,/g, '') : x.replace(',', '.');
+  else if (/^\d{1,3}(\.\d{3})+$/.test(x)) x = x.replace(/\./g, '');   // "1.544" como en los presupuestos de Álvaro
+  const n = Number(x);
+  return Number.isFinite(n) && n >= 0 ? n.toFixed(2) : null;
+}
+
+let xlCola = Promise.resolve();
+function enlazarExcel(c) {
+  const tabla = $('#ct-xl');
+  if ($('#ct-xl-bajar')) $('#ct-xl-bajar').addEventListener('click', bajarExcelCot);
+  if ($('#ct-xl-sheets')) $('#ct-xl-sheets').addEventListener('click', copiarSheetsCot);
+  if (!tabla) return;
+  const celdas = () => [...tabla.querySelectorAll('.xl-in')];
+  const guardar = (el) => {
+    const lid = Number(el.dataset.lin), k = el.dataset.col;
+    const l = cot.lineas.find((x) => x.id === lid);
+    if (!l) return;
+    const v = el.value;
+    if (k !== 'mod' && v === el.dataset.orig) return;
+    if (!usuario()) { elegirSoy(); el.value = el.dataset.orig || ''; return; }
+    const div = l.tipo === 'hotel' ? Math.max(1, Number(cot.pedido.pasajeros) || 1) : Math.max(1, Number(l.pasajeros) || 1);
+    let body;
+    if (k === 'desc') { if (!v.trim()) { toast('El itinerario no puede quedar vacío'); el.value = el.dataset.orig; return; } body = { descripcion: v.trim() }; }
+    else if (k === 'hora') body = { horario: v.trim() };
+    else if (k === 'mod') { if ((l.modalidad || '') === v) return; body = { modalidad: v }; }
+    else {
+      const n = xlLeerMonto(v);
+      if (n === null) { toast('Poné un número en dólares (por ejemplo 20 o 20.50)'); el.value = el.dataset.orig; return; }
+      // Por pasajero → total de la línea. La ganancia fija el costo (neto = venta − ganancia) sin mover la venta.
+      if (k === 'precio') body = { venta: (Math.round(Number(n) * 100) * div / 100).toFixed(2), motivo: 'Vista Excel' };
+      else {
+        const neto = l.venta_cent - Math.round(Number(n) * 100) * div;
+        if (neto < 0) { toast('La ganancia no puede ser mayor que el precio'); el.value = el.dataset.orig; return; }
+        body = { neto: (neto / 100).toFixed(2), venta: (l.venta_cent / 100).toFixed(2), motivo: 'Vista Excel' };
+      }
+    }
+    el.classList.add('xl-guardando');
+    xlCola = xlCola.then(async () => {
+      try {
+        cot = await api(`cotizaciones/${c.id}/lineas/${lid}`, { method: 'PUT', body });
+        // Redibuja sin perder la celda en la que está la persona (ni lo que ya escribió ahí).
+        const a = document.activeElement, foco = a && a.dataset && a.dataset.cell;
+        const sinGuardar = foco && a.value !== a.dataset.orig ? a.value : null;
+        dibujarCotizacion();
+        const n = foco && document.querySelector(`#ct-xl [data-cell="${foco}"]`);
+        if (n) { if (sinGuardar !== null) n.value = sinGuardar; n.focus(); if (n.select && sinGuardar === null) n.select(); }
+      } catch (x) { toast('No se guardó: ' + x.message); el.classList.remove('xl-guardando'); el.value = el.dataset.orig || ''; }
+    });
+  };
+  for (const el of celdas()) {
+    el.addEventListener('change', () => guardar(el));
+    if (el.tagName === 'INPUT') {
+      el.addEventListener('focus', () => el.select());
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { el.value = el.dataset.orig || ''; el.blur(); return; }
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        const misma = celdas().filter((x) => x.dataset.col === el.dataset.col);
+        const sig = misma[misma.indexOf(el) + (e.shiftKey ? -1 : 1)];
+        if (sig) sig.focus(); else el.blur();
+      });
+    }
+  }
+}
+
+// Hoja para Excel/Sheets: filas con valores y fórmulas (las sumas y los totales siguen vivos al editar la planilla).
+// Cada celda: texto, número (centavos → dólares) o { f: fórmula A1, v: valor }.
+function xlHoja() {
+  const p = cot.pedido, c = cot.cotizacion;
+  const nDias = Math.max(1, p.destinos.reduce((s, d) => s + d.noches, 0) + 1);
+  const porDia = new Map();
+  for (const l of cot.lineas) (porDia.get(l.dia) || porDia.set(l.dia, []).get(l.dia)).push(l);
+  const m = xlModelo(nDias, porDia);
+  const agencia = (document.title.split(' · ')[0] || '').replace(/^CRM$/, '') || 'Agencia de viajes';
+  const filas = [], estilos = {};
+  const usdN = (cent) => cent == null ? '' : { n: cent / 100 };
+  const add = (r, est) => { filas.push(r); if (est) estilos[filas.length - 1] = est; return filas.length; };   // devuelve el número de fila (1-based)
+  add([`PRESUPUESTO ${agencia.toUpperCase()}`], 'titulo');
+  add([`ITINERARIO ${nDias} DÍAS - ${nDias - 1} NOCHES · ${p.nombre}`], 'titulo');
+  const filaPax = add(['', 'PASAJEROS', { n: m.pax, plano: true }, p.fecha_inicio ? `${fecha(p.fecha_inicio)} al ${fecha(p.fecha_fin)}` : 'Sin fechas', '', '', '', '', '', `Versión ${c.version}${c.variante ? ' · ' + c.variante : ''}`]);
+  add([]);
+  add(['N°', 'ITINERARIO', 'DURACIÓN', 'SERVICIO', 'HORARIO', 'PAX', 'PRECIO PAX', 'GANANCIA PAX', 'TOTAL', 'GANANCIA TOTAL'], 'cab');
+  const filaLinea = (f, n) => {
+    const r = filas.length + 1;
+    return add([n, f.l.descripcion, f.dur, f.mod, f.hotel ? '' : f.l.horario || '', { n: f.div, plano: true }, usdN(f.precio), usdN(f.ganancia),
+      { f: `F${r}*G${r}`, n: f.l.venta_cent / 100 }, { f: `F${r}*H${r}`, n: f.ganancia == null ? 0 : (f.ganancia * f.div) / 100 }]);
+  };
+  const tours = [], hoteles = [];
+  for (const { d, filas: fs } of m.dias) {
+    if (!fs.length) { add([xlDia(d), 'Libre']); continue; }
+    fs.forEach((f, i) => tours.push(filaLinea(f, i ? '' : xlDia(d))));
+  }
+  m.fuera.forEach((f) => tours.push(filaLinea(f, 'FUERA')));
+  if (m.entradas.length || m.hoteles.length) { add([]); add(['', 'PAGOS, INGRESOS Y HOTEL'], 'sec'); }
+  m.entradas.forEach((f) => tours.push(filaLinea(f, '')));
+  m.hoteles.forEach((f) => hoteles.push(filaLinea(f, '')));
+  const rangos = (col, rs) => rs.length ? rs.map((r) => `${col}${r}`).join(',') : '0';
+  const sumaDe = (col, rs) => rs.length ? `SUM(${rangos(col, rs)})` : '0';
+  add([]);
+  add(['', '', '', '', '', '', 'POR PASAJERO', 'GANANCIA PAX', 'GRUPO', 'GANANCIA GRUPO'], 'cab');
+  const tot = (txt, fI, vI, fJ, vJ, est) => { const r = filas.length + 1; return add(['', txt, '', '', '', '', { f: `I${r}/$C$${filaPax}`, n: vI / m.pax }, fJ == null ? '' : { f: `J${r}/$C$${filaPax}`, n: vJ / m.pax }, { f: fI, n: vI }, fJ == null ? '' : { f: fJ, n: vJ }], est || 'tot'); };
+  const rT = tot('PRECIO TOTAL SOLO TOURS', sumaDe('I', tours), m.tours_cent / 100, sumaDe('J', tours), m.tours_g / 100);
+  const rH = m.hoteles.length ? tot('PRECIO TOTAL SOLO HOTEL', sumaDe('I', hoteles), m.hotel_cent / 100, sumaDe('J', hoteles), m.hotel_g / 100) : null;
+  const total = (m.tours_cent + m.hotel_cent) / 100;
+  const rTot = tot('PRECIO TOTAL TOURS Y HOTEL', rH ? `I${rT}+I${rH}` : `I${rT}`, total, rH ? `J${rT}+J${rH}` : `J${rT}`, (m.tours_g + m.hotel_g) / 100, 'gran');
+  const igv = Number(c.config.igv_pct) || 0, tar = Number(c.config.recargo_tarjeta_pct) || 0;
+  tot(`CON FACTURA (+${igv}% IGV)`, `I${rTot}*(1+${igv}/100)`, total * (1 + igv / 100), null, null);
+  tot(`PAGO CON TARJETA (+${tar}%)`, `I${rTot}*(1+${tar}/100)`, total * (1 + tar / 100), null, null);
+  add([]);
+  add(['', 'CONDICIONES'], 'sec');
+  add(['', '50% del total al inicio para las reservas; el otro 50% al llegar a Cusco.']);
+  add(['', `Pago con tarjeta: +${tar}% del monto total. Con factura: +${igv}% de IGV.`]);
+  if (cot.totales.modo === 'paquete_web' && cot.totales.paquete_web_cent != null) add(['', `Vale el precio del paquete web: US$ ${(cot.totales.paquete_web_cent / 100).toFixed(2)} (no la suma de las filas).`]);
+  if (c.notas_alvaro) add(['', 'Notas: ' + c.notas_alvaro.replace(/\s+/g, ' ')]);
+  return { filas, estilos, nombre: `Presupuesto ${p.nombre} v${c.version}`.replace(/[\\/:*?"<>|]+/g, ' ').trim() };
+}
+
+async function bajarExcelCot() {
+  const b = $('#ct-xl-bajar'); if (b) b.disabled = true;
+  try {
+    const X = await xlsx();
+    const { filas, nombre } = xlHoja();
+    const FMT = '"US$" #,##0.00';
+    const aoa = filas.map((r) => r.map((v) => {
+      if (v && typeof v === 'object') {
+        const cel = { t: 'n', v: Math.round(v.n * 100) / 100 };
+        if (v.f) cel.f = v.f;
+        if (!v.plano) cel.z = FMT;
+        return cel;
+      }
+      return v;
+    }));
+    const ws = X.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [{ wch: 9 }, { wch: 52 }, { wch: 18 }, { wch: 11 }, { wch: 22 }, { wch: 6 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 16 }];
+    ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 9 } }, { s: { r: 1, c: 0 }, e: { r: 1, c: 9 } }];
+    const wb = X.utils.book_new();
+    X.utils.book_append_sheet(wb, ws, 'Presupuesto');
+    X.writeFile(wb, nombre + '.xlsx');
+  } catch (x) { toast('No se pudo armar el Excel: ' + x.message); }
+  finally { if (b) b.disabled = false; }
+}
+
+// Google Sheets: se copia como tabla (con fórmulas en el formato que entiende Sheets al pegar) y se abre una hoja nueva.
+async function copiarSheetsCot() {
+  const { filas, estilos } = xlHoja();
+  const ESTILO = { titulo: 'font-weight:bold;font-size:12pt', cab: 'font-weight:bold;background:#eeeeee', sec: 'font-weight:bold', tot: 'font-weight:bold', gran: 'font-weight:bold;background:#fff1e0' };
+  // Fórmula A1 → R1C1 relativa a la celda (lo que usa data-sheets-formula). $C$3 queda absoluta.
+  const aR1C1 = (f, r, c) => '=' + f.replace(/(\$?)([A-J])(\$?)(\d+)/g, (_, da, col, dr, row) => {
+    const cc = col.charCodeAt(0) - 64, rr = Number(row);
+    return `R${dr ? rr : `[${rr - r}]`}C${da ? cc : `[${cc - c}]`}`;
+  });
+  const escA = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  const html = '<google-sheets-html-origin><table>' + filas.map((fila, i) => `<tr${estilos[i] ? ` style="${ESTILO[estilos[i]] || ''}"` : ''}>${fila.map((v, j) => {
+    if (v && typeof v === 'object') {
+      const n = Math.round(v.n * 100) / 100;
+      const fmt = v.plano ? '' : ` data-sheets-numberformat="${escA(JSON.stringify({ 1: 2, 2: '"US$"#,##0.00', 3: 1 }))}"`;
+      return `<td data-sheets-value="${escA(JSON.stringify({ 1: 3, 3: n }))}"${fmt}${v.f ? ` data-sheets-formula="${escA(aR1C1(v.f, i + 1, j + 1))}"` : ''}>${v.plano ? n : n.toFixed(2)}</td>`;
+    }
+    return `<td>${esc(v == null ? '' : v)}</td>`;
+  }).join('')}</tr>`).join('') + '</table></google-sheets-html-origin>';
+  const tsv = filas.map((fila) => fila.map((v) => v && typeof v === 'object' ? (Math.round(v.n * 100) / 100).toFixed(v.plano ? 0 : 2) : String(v ?? '').replace(/[\t\r\n]+/g, ' ')).join('\t')).join('\n');
+  try {
+    await navigator.clipboard.write([new ClipboardItem({ 'text/html': new Blob([html], { type: 'text/html' }), 'text/plain': new Blob([tsv], { type: 'text/plain' }) })]);
+  } catch {
+    try { await navigator.clipboard.writeText(tsv); } catch (x) { toast('No se pudo copiar: ' + x.message); return; }
+  }
+  toast('Tabla copiada. En la hoja nueva tocá la celda A1 y pegá con Ctrl+V');
+  window.open('https://sheets.new', '_blank', 'noopener');
+}
+
 function dibujarCotizacion() {
   const el = $('#ct-cot');
   if (!cot) { el.innerHTML = `<div class="vacio">Sin cotización. <button type="button" id="ct-armar">Armar borrador</button></div>${cabPedidoHtml()}`; $('#ct-armar').addEventListener('click', rearmarCot); enlazarCabPedido(); return; }
@@ -18608,7 +18900,7 @@ function dibujarCotizacion() {
   const chicoOk = ed && vig && !hayPar && !esCotizador() && c.estado === 'borrador' && cc.hay_aprobada && cc.ok;
   el.innerHTML = `
     <div class="barra"><h2 style="margin:0">Cotización</h2>
-      <span class="ct-vistas" role="group" aria-label="Vista"><button type="button" data-vista-cot="itinerario" aria-pressed="${vistaCot === 'itinerario'}">Itinerario</button><button type="button" data-vista-cot="precios" aria-pressed="${vistaCot !== 'itinerario'}">Precios</button></span>
+      <span class="ct-vistas" role="group" aria-label="Vista"><button type="button" data-vista-cot="itinerario" aria-pressed="${vistaCot === 'itinerario'}">Itinerario</button><button type="button" data-vista-cot="precios" aria-pressed="${vistaCot === 'precios'}">Precios</button><button type="button" data-vista-cot="excel" aria-pressed="${vistaCot === 'excel'}" title="Formato de presupuesto en planilla: se edita acá y se baja a Excel o Google Sheets">Excel</button></span>
       <select id="ct-ver">${versiones.map((v) => `<option value="${v.id}" ${v.id === c.id ? 'selected' : ''}>Versión ${v.version}${v.variante ? ' · ' + v.variante : ''} · ${COT_ESTADO[v.estado] || v.estado}</option>`).join('')}</select>
       <span style="flex:1"></span>
       ${ed && vig && !hayPar && !esCotizador() && c.estado === 'en_revision' ? `<button type="button" class="chico" id="ct-a-revision" title="Cambiar la nota o la urgencia y volver a copiar el mensaje">Mensaje para ${REVISOR}</button>` : ''}
@@ -18625,7 +18917,7 @@ function dibujarCotizacion() {
     ${c.estado === 'aprobada' ? `<p class="ok">Aprobada por ${esc(c.aprobada_por || '—')} el ${peru(c.aprobada_en)}. No se edita: para cambiar algo, versión nueva.</p>` : ''}
     ${p.fecha_tentativa ? `<p class="aviso"><b>Fecha tentativa:</b> el cliente no dio fecha, se cotiza con el ${fecha(p.fecha_inicio)}. Hay que confirmarla antes de mandar la propuesta.</p>` : ''}
     ${!ed && c.avisos.length ? `<ul class="avisos-cot">${c.avisos.map((a) => `<li>${esc(a)}</li>`).join('')}</ul>` : ''}
-    ${vistaCot === 'itinerario' ? itinerarioHtml(nDias, porDia, ed) : `    <div class="card dias"><table class="t-resp lin lin-cab">${COLS}<thead><tr><th>Servicio</th><th>Horario</th><th class="c">Mod.</th><th>Pax</th><th class="num">Neto</th><th class="num">Margen</th><th class="num">Total</th><th class="num">Ganancia</th><th></th></tr></thead></table>${dias}</div>
+    ${vistaCot === 'itinerario' ? itinerarioHtml(nDias, porDia, ed) : vistaCot === 'excel' ? excelHtml(nDias, porDia, ed) : `    <div class="card dias"><table class="t-resp lin lin-cab">${COLS}<thead><tr><th>Servicio</th><th>Horario</th><th class="c">Mod.</th><th>Pax</th><th class="num">Neto</th><th class="num">Margen</th><th class="num">Total</th><th class="num">Ganancia</th><th></th></tr></thead></table>${dias}</div>
     ${sinDia.length ? `<p class="err">Hay líneas fuera de los días del viaje: ${sinDia.map((l) => esc(l.descripcion) + ' (día ' + l.dia + ')').join(', ')}</p>` : ''}
     <div class="panel totales">
       <div><span>Neto total</span><b>${usd(t.neto_cent)}</b></div>
@@ -18704,6 +18996,7 @@ function dibujarCotizacion() {
     catch (x) { alert(x.message); b.disabled = false; }
   }));
   RAIZ().querySelectorAll('.it-lista').forEach((lista) => enlazarOrdenDia(lista, c.id));
+  if (vistaCot === 'excel') enlazarExcel(c);
   RAIZ().querySelectorAll('[data-ir-lin]').forEach((b) => b.addEventListener('click', () => irALinea(Number(b.dataset.irLin))));
   RAIZ().querySelectorAll('[data-ed-falta]').forEach((b) => b.addEventListener('click', () => editarLineaDlg(cot.lineas.find((l) => l.id == b.dataset.edFalta))));
   if ($('#ct-gen-prop')) $('#ct-gen-prop').addEventListener('click', async () => {
